@@ -103,12 +103,16 @@ init() {
 	lr35902_set_reg regDE 0150
 	lr35902_set_reg regHL 8000
 	lr35902_set_reg regB 90
-	lr35902_copy_to_from regA ptrDE
-	lr35902_copy_to_from ptrHL regA
-	lr35902_inc regDE
-	lr35902_inc regHL
-	lr35902_dec regB
-	lr35902_rel_jump_with_cond NZ $(two_comp 07)
+	(
+		lr35902_copy_to_from regA ptrDE
+		lr35902_copy_to_from ptrHL regA
+		lr35902_inc regDE
+		lr35902_inc regHL
+		lr35902_dec regB
+	) >src/init.loop.o
+	cat src/init.loop.o
+	local loop_sz=$(stat -c '%s' src/init.loop.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((loop_sz + 2)))
 
 	# VRAMの背景用タイルマップ領域を白タイル(タイル番号0)で初期化
 	clear_bg
