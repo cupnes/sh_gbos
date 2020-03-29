@@ -607,6 +607,61 @@ lr35902_dec() {
 	esac
 }
 
+lr35902_add_to_regHL() {
+	local reg=$1
+	case $reg in
+	regBC)
+		echo -en '\x09'	# add hl,bc
+		;;
+	regDE)
+		echo -en '\x19'	# add hl,de
+		;;
+	regHL)
+		echo -en '\x29'	# add hl,hl
+		;;
+	regSP)
+		echo -en '\x39'	# add hl,sp
+		;;
+	*)
+		echo -n 'Error: no such instruction: ' 1>&2
+		echo "lr35902_add_to_regHL $reg" 1>&2
+		return 1
+	esac
+}
+
+lr35902_and_to_regA() {
+	local reg_or_val=$1
+	case $reg_or_val in
+	regB)
+		echo -en '\xa0'	# and b
+		;;
+	regC)
+		echo -en '\xa1'	# and c
+		;;
+	regD)
+		echo -en '\xa2'	# and d
+		;;
+	regE)
+		echo -en '\xa3'	# and e
+		;;
+	regH)
+		echo -en '\xa4'	# and h
+		;;
+	regL)
+		echo -en '\xa5'	# and l
+		;;
+	ptrHL)
+		echo -en '\xa6'	# and [hl]
+		;;
+	regA)
+		echo -en '\xa7'	# and a
+		;;
+	*)
+		echo -en "\xe6\x${reg_or_val}"	# cp ${reg_or_val}
+		;;
+	esac
+}
+
 lr35902_rel_jump() {
 	local offset=$1
 	echo -en "\x18\x${offset}"	# jr ${offset}

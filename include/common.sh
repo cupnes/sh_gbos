@@ -10,6 +10,50 @@ echo_2bytes() {
 	echo -en "\x${bottom_half}\x${top_half}"
 }
 
+two_digits() {
+	local val=$1
+	local current_digits=$(echo -n $val | wc -m)
+	case $current_digits in
+	1)
+		echo "0$val"
+		;;
+	2)
+		echo $val
+		;;
+	*)
+		echo "Error: Invalid digits: %val" 1>&2
+		return 1
+	esac
+}
+
+two_digits_d() {
+	local val_d=$1
+	local val=$(echo "obase=16;$val_d" | bc)
+	two_digits $val
+}
+
+four_digits() {
+	local val=$1
+	local current_digits=$(echo -n $val | wc -m)
+	case $current_digits in
+	1)
+		echo "000$val"
+		;;
+	2)
+		echo "00$val"
+		;;
+	3)
+		echo "0$val"
+		;;
+	4)
+		echo $val
+		;;
+	*)
+		echo "Error: Invalid digits: %val" 1>&2
+		return 1
+	esac
+}
+
 two_comp() {
 	local val=$1
 	local val_up=$(echo $val | tr [:lower:] [:upper:])

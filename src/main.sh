@@ -5,44 +5,202 @@ SRC_MAIN_SH=true
 
 . include/gb.sh
 
+GBOS_ROM_TILE_DATA_START=$GB_ROM_START_ADDR
+GBOS_TILE_DATA_START=8000
+GBOS_BG_TILEMAP_START=9800
+
 gbos_vec() {
 	gb_all_intr_reti_vector_table
 }
 
+GBOS_NUM_ALL_TILES=31
+GBOS_NUM_ALL_TILE_BYTES=0310
 gbos_const() {
+	### タイルデータ(計49タイル,784(310)バイト) ###
+	# [文字コード]
+	# - 記号(13文字,208(d0)バイト)
 	# ' '
 	echo -en '\x00\x00\x00\x00\x00\x00\x00\x00'
 	echo -en '\x00\x00\x00\x00\x00\x00\x00\x00'
-
-	# S
+	# ┌
+	echo -en '\xff\xff\x80\x80\x80\x80\x80\x80'
+	echo -en '\x80\x80\x80\x80\x80\x80\x80\x80'
+	# ─(上)
+	echo -en '\xff\xff\x00\x00\x00\x00\x00\x00'
+	echo -en '\x00\x00\x00\x00\x00\x00\x00\x00'
+	# ┐
+	echo -en '\xff\xff\x01\x01\x01\x01\x01\x01'
+	echo -en '\x01\x01\x01\x01\x01\x01\x01\x01'
+	# │(右)
+	echo -en '\x01\x01\x01\x01\x01\x01\x01\x01'
+	echo -en '\x01\x01\x01\x01\x01\x01\x01\x01'
+	# ┘
+	echo -en '\x01\x01\x01\x01\x01\x01\x01\x01'
+	echo -en '\x01\x01\x01\x01\x01\x01\xff\xff'
+	# ─(下)
+	echo -en '\x00\x00\x00\x00\x00\x00\x00\x00'
+	echo -en '\x00\x00\x00\x00\x00\x00\xff\xff'
+	# └
+	echo -en '\x80\x80\x80\x80\x80\x80\x80\x80'
+	echo -en '\x80\x80\x80\x80\x80\x80\xff\xff'
+	# │(左)
+	echo -en '\x80\x80\x80\x80\x80\x80\x80\x80'
+	echo -en '\x80\x80\x80\x80\x80\x80\x80\x80'
+	# →
+	echo -en '\x00\x00\x08\x08\x04\x04\x02\x02'
+	echo -en '\x7f\x7f\x02\x02\x04\x04\x08\x08'
+	# ←
+	echo -en '\x00\x00\x08\x08\x10\x10\x20\x20'
+	echo -en '\x7f\x7f\x20\x20\x10\x10\x08\x08'
+	# ↑
+	echo -en '\x00\x00\x08\x08\x1c\x1c\x2a\x2a'
+	echo -en '\x49\x49\x08\x08\x08\x08\x08\x08'
+	# ↓
+	echo -en '\x00\x00\x08\x08\x08\x08\x08\x08'
+	echo -en '\x49\x49\x2a\x2a\x1c\x1c\x08\x08'
+	# - 数字(10文字,160(a0)バイト)
+	# 0
+	echo -en '\x00\x00\x3e\x3e\x43\x43\x45\x45'
+	echo -en '\x49\x49\x51\x51\x61\x61\x3e\x3e'
+	# 1
+	echo -en '\x00\x00\x08\x08\x18\x18\x08\x08'
+	echo -en '\x08\x08\x08\x08\x08\x08\x3e\x3e'
+	# 2
+	echo -en '\x00\x00\x3e\x3e\x41\x41\x02\x02'
+	echo -en '\x0c\x0c\x10\x10\x20\x20\x7f\x7f'
+	# 3
+	echo -en '\x00\x00\x3e\x3e\x41\x41\x02\x02'
+	echo -en '\x0c\x0c\x02\x02\x41\x41\x3e\x3e'
+	# 4
+	echo -en '\x00\x00\x04\x04\x0c\x0c\x14\x14'
+	echo -en '\x24\x24\x7f\x7f\x04\x04\x04\x04'
+	# 5
+	echo -en '\x00\x00\x7f\x7f\x40\x40\x40\x40'
+	echo -en '\x7e\x7e\x01\x01\x41\x41\x3e\x3e'
+	# 6
 	echo -en '\x00\x00\x3e\x3e\x41\x41\x40\x40'
-	echo -en '\x3e\x3e\x01\x01\x41\x41\x3e\x3e'
-	# L
-	echo -en '\x00\x00\x40\x40\x40\x40\x40\x40'
-	echo -en '\x40\x40\x40\x40\x40\x40\x7f\x7f'
-	# B
-	echo -en '\x00\x00\x7e\x7e\x41\x41\x41\x41'
-	echo -en '\x7e\x7e\x41\x41\x41\x41\x7e\x7e'
+	echo -en '\x7e\x7e\x41\x41\x41\x41\x3e\x3e'
+	# 7
+	echo -en '\x00\x00\x7f\x7f\x41\x41\x01\x01'
+	echo -en '\x02\x02\x04\x04\x08\x08\x10\x10'
+	# 8
+	echo -en '\x00\x00\x3e\x3e\x41\x41\x41\x41'
+	echo -en '\x3e\x3e\x41\x41\x41\x41\x3e\x3e'
+	# 9
+	echo -en '\x00\x00\x3e\x3e\x41\x41\x41\x41'
+	echo -en '\x3f\x3f\x01\x01\x41\x41\x3e\x3e'
+	# - アルファベット(26文字,416(1a0)バイト)
 	# A
 	echo -en '\x00\x00\x1c\x1c\x22\x22\x41\x41'
 	echo -en '\x41\x41\x7f\x7f\x41\x41\x41\x41'
+	# B
+	echo -en '\x00\x00\x7e\x7e\x41\x41\x41\x41'
+	echo -en '\x7e\x7e\x41\x41\x41\x41\x7e\x7e'
+	# C
+	echo -en '\x00\x00\x3e\x3e\x41\x41\x40\x40'
+	echo -en '\x40\x40\x40\x40\x41\x41\x3e\x3e'
+	# D
+	echo -en '\x00\x00\x7c\x7c\x42\x42\x41\x41'
+	echo -en '\x41\x41\x41\x41\x42\x42\x7c\x7c'
+	# E
+	echo -en '\x00\x00\x7f\x7f\x40\x40\x40\x40'
+	echo -en '\x7f\x7f\x40\x40\x40\x40\x7f\x7f'
+	# F
+	echo -en '\x00\x00\x7f\x7f\x40\x40\x40\x40'
+	echo -en '\x7e\x7e\x40\x40\x40\x40\x40\x40'
+	# G
+	echo -en '\x00\x00\x3e\x3e\x41\x41\x40\x40'
+	echo -en '\x4f\x4f\x41\x41\x41\x41\x3e\x3e'
+	# H
+	echo -en '\x00\x00\x41\x41\x41\x41\x41\x41'
+	echo -en '\x7f\x7f\x41\x41\x41\x41\x41\x41'
+	# I
+	echo -en '\x00\x00\x3e\x3e\x08\x08\x08\x08'
+	echo -en '\x08\x08\x08\x08\x08\x08\x3e\x3e'
+	# J
+	echo -en '\x00\x00\x07\x07\x02\x02\x02\x02'
+	echo -en '\x02\x02\x02\x02\x22\x22\x1c\x1c'
+	# K
+	echo -en '\x00\x00\x43\x43\x44\x44\x48\x48'
+	echo -en '\x50\x50\x68\x68\x44\x44\x43\x43'
+	# L
+	echo -en '\x00\x00\x40\x40\x40\x40\x40\x40'
+	echo -en '\x40\x40\x40\x40\x40\x40\x7f\x7f'
+	# M
+	echo -en '\x00\x00\x41\x41\x41\x41\x63\x63'
+	echo -en '\x55\x55\x49\x49\x41\x41\x41\x41'
+	# N
+	echo -en '\x00\x00\x41\x41\x61\x61\x51\x51'
+	echo -en '\x49\x49\x45\x45\x43\x43\x41\x41'
+	# O
+	echo -en '\x00\x00\x3e\x3e\x41\x41\x41\x41'
+	echo -en '\x41\x41\x41\x41\x41\x41\x3e\x3e'
+	# P
+	echo -en '\x00\x00\x7e\x7e\x41\x41\x41\x41'
+	echo -en '\x7e\x7e\x40\x40\x40\x40\x40\x40'
+	# Q
+	echo -en '\x00\x00\x3e\x3e\x41\x41\x41\x41'
+	echo -en '\x41\x41\x4d\x4d\x43\x43\x3f\x3f'
+	# R
+	echo -en '\x00\x00\x7e\x7e\x41\x41\x41\x41'
+	echo -en '\x7e\x7e\x41\x41\x41\x41\x41\x41'
+	# S
+	echo -en '\x00\x00\x3e\x3e\x41\x41\x40\x40'
+	echo -en '\x3e\x3e\x01\x01\x41\x41\x3e\x3e'
+	# T
+	echo -en '\x00\x00\x7f\x7f\x08\x08\x08\x08'
+	echo -en '\x08\x08\x08\x08\x08\x08\x08\x08'
+	# U
+	echo -en '\x00\x00\x41\x41\x41\x41\x41\x41'
+	echo -en '\x41\x41\x41\x41\x41\x41\x3e\x3e'
+	# V
+	echo -en '\x00\x00\x41\x41\x41\x41\x41\x41'
+	echo -en '\x41\x41\x22\x22\x14\x14\x08\x08'
+	# W
+	echo -en '\x00\x00\x41\x41\x41\x41\x49\x49'
+	echo -en '\x49\x49\x55\x55\x55\x55\x22\x22'
+	# X
+	echo -en '\x00\x00\x41\x41\x22\x22\x14\x14'
+	echo -en '\x08\x08\x14\x14\x22\x22\x41\x41'
+	# Y
+	echo -en '\x00\x00\x41\x41\x22\x22\x14\x14'
+	echo -en '\x08\x08\x08\x08\x08\x08\x08\x08'
+	# Z
+	echo -en '\x00\x00\x7f\x7f\x02\x02\x04\x04'
+	echo -en '\x08\x08\x10\x10\x20\x20\x7f\x7f'
+}
 
-	# Down
-	echo -en '\x00\x00\x08\x08\x08\x08\x08\x08'
-	echo -en '\x49\x49\x2a\x2a\x1c\x1c\x08\x08'
-	# Up
-	echo -en '\x00\x00\x08\x08\x1c\x1c\x2a\x2a'
-	echo -en '\x49\x49\x08\x08\x08\x08\x08\x08'
-	# Left
-	echo -en '\x00\x00\x08\x08\x10\x10\x20\x20'
-	echo -en '\x7f\x7f\x20\x20\x10\x10\x08\x08'
-	# Right
-	echo -en '\x00\x00\x08\x08\x04\x04\x02\x02'
-	echo -en '\x7f\x7f\x02\x02\x04\x04\x08\x08'
+load_all_tiles() {
+	local rel_sz
+	local bc_radix='obase=16;ibase=16;'
+	local bc_form="${GBOS_TILE_DATA_START}+${GBOS_NUM_ALL_TILE_BYTES}"
+	local end_addr=$(echo "${bc_radix}${bc_form}" | bc)
+	local end_addr_th=$(echo $end_addr | cut -c-2)
+	local end_addr_bh=$(echo $end_addr | cut -c3-)
+	lr35902_set_reg regDE $GBOS_ROM_TILE_DATA_START
+	lr35902_set_reg regHL $GBOS_TILE_DATA_START
+	(
+		lr35902_copy_to_from regA ptrDE
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_copy_to_from regA regH
+		lr35902_compare_regA_and $end_addr_th
+		(
+			lr35902_copy_to_from regA regL
+			lr35902_compare_regA_and $end_addr_bh
+			lr35902_rel_jump_with_cond Z 03
+		) >src/load_all_tiles.1.o
+		rel_sz=$(stat -c '%s' src/load_all_tiles.1.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $rel_sz)
+		cat src/load_all_tiles.1.o
+		lr35902_inc regDE
+	) >src/load_all_tiles.2.o
+	cat src/load_all_tiles.2.o
+	rel_sz=$(stat -c '%s' src/load_all_tiles.2.o)
+	lr35902_rel_jump $(two_comp_d $((rel_sz + 2)))
 }
 
 clear_bg() {
-	lr35902_set_reg regHL 9800
+	lr35902_set_reg regHL $GBOS_BG_TILEMAP_START
 	lr35902_set_reg regB 20
 	lr35902_clear_reg regA
 	# >>loopB
@@ -56,6 +214,37 @@ clear_bg() {
 	lr35902_rel_jump_with_cond NZ $(two_comp 07)	# 2
 	# <<loopB
 }
+
+dump_all_tiles() {
+	local rel_sz
+	lr35902_set_reg regHL $GBOS_BG_TILEMAP_START
+	lr35902_set_reg regB $GBOS_NUM_ALL_TILES
+	lr35902_set_reg regDE $(four_digits $GB_NON_DISP_WIDTH_TILES)
+	lr35902_clear_reg regC
+	(
+		lr35902_copy_to_from regA regC
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_copy_to_from regA regL
+		lr35902_and_to_regA 1f
+		lr35902_compare_regA_and $GB_DISP_WIDTH_TILES
+		(
+			lr35902_add_to_regHL regDE
+		) >src/dump_all_tiles.1.o
+		rel_sz=$(stat -c '%s' src/dump_all_tiles.1.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $rel_sz)
+		cat src/dump_all_tiles.1.o
+		lr35902_inc regC
+		lr35902_dec regB
+	) >src/dump_all_tiles.2.o
+	cat src/dump_all_tiles.2.o
+	rel_sz=$(stat -c '%s' src/dump_all_tiles.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((rel_sz + 2)))
+}
+
+# 変数
+var_crr_cur_1=c000	# キータイルを次に配置する場所(下位)
+var_crr_cur_2=c001	# キータイルを次に配置する場所(上位)
+var_btn_stat=c002	# 現在のキー状態を示す変数
 
 init() {
 	# 割り込みは一旦無効にする
@@ -100,35 +289,17 @@ init() {
 	lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
 
 	# タイルデータをVRAMのタイルデータ領域へロード
-	lr35902_set_reg regDE 0150
-	lr35902_set_reg regHL 8000
-	lr35902_set_reg regB 90
-	(
-		lr35902_copy_to_from regA ptrDE
-		lr35902_copy_to_from ptrHL regA
-		lr35902_inc regDE
-		lr35902_inc regHL
-		lr35902_dec regB
-	) >src/init.loop.o
-	cat src/init.loop.o
-	local loop_sz=$(stat -c '%s' src/init.loop.o)
-	lr35902_rel_jump_with_cond NZ $(two_comp_d $((loop_sz + 2)))
+	load_all_tiles
 
 	# VRAMの背景用タイルマップ領域を白タイル(タイル番号0)で初期化
 	clear_bg
 
+	# 画面へ全タイルをダンプ
+	dump_all_tiles
+
 	# V-Blank(b0)の割り込みのみ有効化
 	lr35902_set_reg regA 01
 	lr35902_copy_to_ioport_from_regA $GB_IO_IE
-}
-
-gbos_main() {
-	init
-
-	# 変数
-	local var_crr_cur_1=c000	# キータイルを次に配置する場所(下位)
-	local var_crr_cur_2=c001	# キータイルを次に配置する場所(上位)
-	local var_btn_stat=c002	# 現在のキー状態を示す変数
 
 	# 変数初期化
 	# - キータイルを次に配置する背景マップのアドレスを初期化
@@ -145,6 +316,11 @@ gbos_main() {
 	# LCD再開
 	lr35902_set_reg regA d1
 	lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
+}
+
+gbos_main() {
+	init >src/init.o
+	cat src/init.o
 
 	# 以降、割り込み駆動の処理部
 	lr35902_halt					# 2
@@ -309,5 +485,13 @@ gbos_main() {
 	# 割り込み待ち(halt)へ戻る
 	# lr35902_rel_jump $(two_comp 76)			# 2
 	# (+ 2 4 (* 2 (+ 8 5 40)) 4 2)118
-	echo -en '\xc3\x2b\x02'	# jp $022b
+	gbos_const >src/gbos_const.o
+	local const_bytes=$(stat -c '%s' src/gbos_const.o)
+	local init_bytes=$(stat -c '%s' src/init.o)
+	local bc_form="obase=16;${const_bytes}+${init_bytes}"
+	local const_init=$(echo $bc_form | bc)
+	bc_form="obase=16;ibase=16;${GB_ROM_START_ADDR}+${const_init}"
+	local halt_addr=$(echo $bc_form | bc)
+	echo -en "\xc3"
+	echo_2bytes $(four_digits $halt_addr)	# jp $halt_addr
 }
