@@ -19,7 +19,12 @@ GB_IO_SCX=43
 GB_IO_LY=44
 GB_IO_LYC=45
 GB_IO_BGP=47
+GB_IO_WY=4a
+GB_IO_WX=4b
 GB_IO_IE=ff
+
+GB_LCDC_BIT_DE=80
+GB_WX_ORIG=07
 
 GB_GBP_DEFAULT=e4		# %11100100
 
@@ -79,6 +84,15 @@ gb_reset_scroll_pos() {
 	lr35902_clear_reg regA
 	lr35902_copy_to_ioport_from_regA $GB_IO_SCY
 	lr35902_copy_to_ioport_from_regA $GB_IO_SCX
+}
+
+gb_set_window_pos() {
+	local x=$1
+	local y=$2
+	lr35902_set_reg regA $(calc16_2 "${GB_WX_ORIG}+$x")
+	lr35902_copy_to_ioport_from_regA $GB_IO_WX
+	lr35902_set_reg regA $y
+	lr35902_copy_to_ioport_from_regA $GB_IO_WY
 }
 
 gb_set_palette_to_default() {

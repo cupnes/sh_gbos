@@ -5,9 +5,34 @@ SRC_MAIN_SH=true
 
 . include/gb.sh
 
+GBOS_WIN_DEF_X=02
+GBOS_WIN_DEF_Y=02
+
 GBOS_ROM_TILE_DATA_START=$GB_ROM_START_ADDR
 GBOS_TILE_DATA_START=8000
 GBOS_BG_TILEMAP_START=9800
+GBOS_WINDOW_TILEMAP_START=9c00
+
+# [LCD制御レジスタのベース設定値]
+# - Bit 7: LCD Display Enable (0=Off, 1=On)
+#   -> LCDはOn/Offは変わるためベースでは0
+# - Bit 6: Window Tile Map Display Select (0=9800-9BFF, 1=9C00-9FFF)
+#   -> ウィンドウタイルマップには9C00-9FFF(1)を使う
+# - Bit 5: Window Display Enable (0=Off, 1=On)
+#   -> ウィンドウは使うので1
+#      TODO:都度切り替えるようになったらベースは0にする
+# - Bit 4: BG & Window Tile Data Select (0=8800-97FF, 1=8000-8FFF)
+#   -> タイルデータの配置領域は8000-8FFF(1)にする
+# - Bit 3: BG Tile Map Display Select (0=9800-9BFF, 1=9C00-9FFF)
+#   -> 背景用のタイルマップ領域に9800-9BFF(0)を使う
+# - Bit 2: OBJ (Sprite) Size (0=8x8, 1=8x16)
+#   -> スプライトサイズは今の所8x8(0)のみの想定
+# - Bit 1: OBJ (Sprite) Display Enable (0=Off, 1=On)
+#   -> スプライトはまだ使わないので0
+#      TODO:使うようになったら1にしたりする
+# - Bit 0: BG Display (0=Off, 1=On)
+#   -> 背景は使うので1
+GBOS_LCDC_BASE=71	# %0111 0001($71)
 
 gbos_vec() {
 	gb_all_intr_reti_vector_table
@@ -215,6 +240,24 @@ clear_bg() {
 	# <<loopB
 }
 
+lay_tiles_in_grid() {
+	lr35902_set_reg regHL 9800
+	lr35902_set_reg regB 20
+	lr35902_clear_reg regA
+	# (
+		lr35902_set_reg regC 20
+		echo -en '\xee\x01'	# xor 1
+		# (
+			lr35902_copyinc_to_ptrHL_from_regA
+			echo -en '\xee\x01'	# xor 1
+			lr35902_dec regC
+			lr35902_rel_jump_with_cond NZ $(two_comp 06)
+		# )
+		lr35902_dec regB
+		lr35902_rel_jump_with_cond NZ $(two_comp 0d)
+	# )
+}
+
 dump_all_tiles() {
 	local rel_sz
 	lr35902_set_reg regHL $GBOS_BG_TILEMAP_START
@@ -241,6 +284,11 @@ dump_all_tiles() {
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((rel_sz + 2)))
 }
 
+draw_blank_window() {
+	# タイトルバーの上辺
+	lr35902_set_reg regHL $(calc16 "${GBOS_WINDOW_TILEMAP_START}+1")
+}
+
 # 変数
 var_crr_cur_1=c000	# キータイルを次に配置する場所(下位)
 var_crr_cur_2=c001	# キータイルを次に配置する場所(上位)
@@ -256,6 +304,9 @@ init() {
 	# スクロールレジスタクリア
 	gb_reset_scroll_pos
 
+	# ウィンドウ座標レジスタへ初期値設定
+	gb_set_window_pos $GBOS_WIN_DEF_X $GBOS_WIN_DEF_Y
+
 	# パレット初期化
 	gb_set_palette_to_default
 
@@ -264,38 +315,21 @@ init() {
 
 	# LCDを停止する
 	# - 停止の間はVRAMとOAMに自由にアクセスできる(vblankとか関係なく)
-	# - Bit 7の他も明示的に設定
-
-	# [LCD制御レジスタの設定値]
-	# - Bit 7: LCD Display Enable (0=Off, 1=On)
-	#   -> LCDを停止させるため0
-	# - Bit 6: Window Tile Map Display Select (0=9800-9BFF, 1=9C00-9FFF)
-	#   -> 9800-9BFFは背景に使うため、
-	#      ウィンドウタイルマップには9C00-9FFFを設定
-	# - Bit 5: Window Display Enable (0=Off, 1=On)
-	#   -> ウィンドウは使わないので0
-	# - Bit 4: BG & Window Tile Data Select (0=8800-97FF, 1=8000-8FFF)
-	#   -> タイルデータの配置領域は8000-8FFFにする
-	# - Bit 3: BG Tile Map Display Select (0=9800-9BFF, 1=9C00-9FFF)
-	#   -> 背景用のタイルマップ領域に9800-9BFFを使う
-	# - Bit 2: OBJ (Sprite) Size (0=8x8, 1=8x16)
-	#   -> スプライトはまだ使わないので適当に8x8を設定
-	# - Bit 1: OBJ (Sprite) Display Enable (0=Off, 1=On)
-	#   -> スプライトはまだ使わないので0
-	# - Bit 0: BG Display (0=Off, 1=On)
-	#   -> 背景は使うので1
-
-	lr35902_set_reg regA 51
+	lr35902_set_reg regA ${GBOS_LCDC_BASE}
 	lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
 
 	# タイルデータをVRAMのタイルデータ領域へロード
 	load_all_tiles
 
-	# VRAMの背景用タイルマップ領域を白タイル(タイル番号0)で初期化
-	clear_bg
+	# 背景とウィンドウタイルマップを白タイル(タイル番号0)で初期化
+	# clear_bg
+	## 背景を格子状に描画してみる
+	lay_tiles_in_grid
+	## ウィンドウでも0は透過色になるか？
+	# clear_window
 
-	# 画面へ全タイルをダンプ
-	dump_all_tiles
+	# タイトル・中身空のウィンドウを描画
+	draw_blank_window
 
 	# V-Blank(b0)の割り込みのみ有効化
 	lr35902_set_reg regA 01
@@ -314,7 +348,7 @@ init() {
 	lr35902_enable_interrupts
 
 	# LCD再開
-	lr35902_set_reg regA d1
+	lr35902_set_reg regA $(calc16 "${GBOS_LCDC_BASE}+${GB_LCDC_BIT_DE}")
 	lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
 }
 
