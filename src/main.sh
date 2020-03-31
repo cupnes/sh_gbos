@@ -4,10 +4,14 @@ fi
 SRC_MAIN_SH=true
 
 . include/gb.sh
+. src/tiles.sh
 
-GBOS_WIN_DEF_X=02
-GBOS_WIN_DEF_Y=02
+GBOS_WIN_DEF_X_T=02
+GBOS_WIN_DEF_Y_T=02
+GBOS_WIN_WIDTH_T=1a
 
+GBOS_WX_DEF=00
+GBOS_WY_DEF=00
 GBOS_ROM_TILE_DATA_START=$GB_ROM_START_ADDR
 GBOS_TILE_DATA_START=8000
 GBOS_BG_TILEMAP_START=9800
@@ -17,10 +21,9 @@ GBOS_WINDOW_TILEMAP_START=9c00
 # - Bit 7: LCD Display Enable (0=Off, 1=On)
 #   -> LCDはOn/Offは変わるためベースでは0
 # - Bit 6: Window Tile Map Display Select (0=9800-9BFF, 1=9C00-9FFF)
-#   -> ウィンドウタイルマップには9C00-9FFF(1)を使う
+#   -> ウィンドウタイルマップには9C00-9FFF(1)を設定
 # - Bit 5: Window Display Enable (0=Off, 1=On)
-#   -> ウィンドウは使うので1
-#      TODO:都度切り替えるようになったらベースは0にする
+#   -> ウィンドウはまずは使わないので0
 # - Bit 4: BG & Window Tile Data Select (0=8800-97FF, 1=8000-8FFF)
 #   -> タイルデータの配置領域は8000-8FFF(1)にする
 # - Bit 3: BG Tile Map Display Select (0=9800-9BFF, 1=9C00-9FFF)
@@ -32,167 +35,50 @@ GBOS_WINDOW_TILEMAP_START=9c00
 #      TODO:使うようになったら1にしたりする
 # - Bit 0: BG Display (0=Off, 1=On)
 #   -> 背景は使うので1
-GBOS_LCDC_BASE=71	# %0111 0001($71)
+GBOS_LCDC_BASE=51	# %0101 0001($51)
+
+# 変数
+var_crr_cur_1=c000	# キータイルを次に配置する場所(下位)
+var_crr_cur_2=c001	# キータイルを次に配置する場所(上位)
+var_btn_stat=c002	# 現在のキー状態を示す変数
+var_win_xt=c003	# ウィンドウのX座標(タイル番目)
+var_win_yt=c004	# ウィンドウのY座標(タイル番目)
 
 gbos_vec() {
 	gb_all_intr_reti_vector_table
 }
 
-GBOS_NUM_ALL_TILES=31
-GBOS_NUM_ALL_TILE_BYTES=0310
+# in : regD  - タイル座標Y
+#      regE  - タイル座標X
+# out: regHL - 9800h〜のアドレスを格納
+f_tcoord_to_addr() {
+	lr35902_push_reg regBC
+
+	lr35902_set_reg regHL $GBOS_BG_TILEMAP_START
+	lr35902_set_reg regBC $(four_digits $GB_SC_WIDTH_T)
+	(
+		lr35902_add_to_regHL regBC
+		lr35902_dec regD
+	) >src/f_tcoord_to_addr.1.o
+	cat src/f_tcoord_to_addr.1.o
+	sz=$(stat -c '%s' src/f_tcoord_to_addr.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+	lr35902_add_to_regHL regDE
+
+	lr35902_pop_reg regBC
+	lr35902_return
+}
+
+# 0500h〜の領域に配置される
+global_functions() {
+	a_tcoord_to_addr=0500
+	f_tcoord_to_addr
+}
+
 gbos_const() {
-	### タイルデータ(計49タイル,784(310)バイト) ###
-	# [文字コード]
-	# - 記号(13文字,208(d0)バイト)
-	# ' '
-	echo -en '\x00\x00\x00\x00\x00\x00\x00\x00'
-	echo -en '\x00\x00\x00\x00\x00\x00\x00\x00'
-	# ┌
-	echo -en '\xff\xff\x80\x80\x80\x80\x80\x80'
-	echo -en '\x80\x80\x80\x80\x80\x80\x80\x80'
-	# ─(上)
-	echo -en '\xff\xff\x00\x00\x00\x00\x00\x00'
-	echo -en '\x00\x00\x00\x00\x00\x00\x00\x00'
-	# ┐
-	echo -en '\xff\xff\x01\x01\x01\x01\x01\x01'
-	echo -en '\x01\x01\x01\x01\x01\x01\x01\x01'
-	# │(右)
-	echo -en '\x01\x01\x01\x01\x01\x01\x01\x01'
-	echo -en '\x01\x01\x01\x01\x01\x01\x01\x01'
-	# ┘
-	echo -en '\x01\x01\x01\x01\x01\x01\x01\x01'
-	echo -en '\x01\x01\x01\x01\x01\x01\xff\xff'
-	# ─(下)
-	echo -en '\x00\x00\x00\x00\x00\x00\x00\x00'
-	echo -en '\x00\x00\x00\x00\x00\x00\xff\xff'
-	# └
-	echo -en '\x80\x80\x80\x80\x80\x80\x80\x80'
-	echo -en '\x80\x80\x80\x80\x80\x80\xff\xff'
-	# │(左)
-	echo -en '\x80\x80\x80\x80\x80\x80\x80\x80'
-	echo -en '\x80\x80\x80\x80\x80\x80\x80\x80'
-	# →
-	echo -en '\x00\x00\x08\x08\x04\x04\x02\x02'
-	echo -en '\x7f\x7f\x02\x02\x04\x04\x08\x08'
-	# ←
-	echo -en '\x00\x00\x08\x08\x10\x10\x20\x20'
-	echo -en '\x7f\x7f\x20\x20\x10\x10\x08\x08'
-	# ↑
-	echo -en '\x00\x00\x08\x08\x1c\x1c\x2a\x2a'
-	echo -en '\x49\x49\x08\x08\x08\x08\x08\x08'
-	# ↓
-	echo -en '\x00\x00\x08\x08\x08\x08\x08\x08'
-	echo -en '\x49\x49\x2a\x2a\x1c\x1c\x08\x08'
-	# - 数字(10文字,160(a0)バイト)
-	# 0
-	echo -en '\x00\x00\x3e\x3e\x43\x43\x45\x45'
-	echo -en '\x49\x49\x51\x51\x61\x61\x3e\x3e'
-	# 1
-	echo -en '\x00\x00\x08\x08\x18\x18\x08\x08'
-	echo -en '\x08\x08\x08\x08\x08\x08\x3e\x3e'
-	# 2
-	echo -en '\x00\x00\x3e\x3e\x41\x41\x02\x02'
-	echo -en '\x0c\x0c\x10\x10\x20\x20\x7f\x7f'
-	# 3
-	echo -en '\x00\x00\x3e\x3e\x41\x41\x02\x02'
-	echo -en '\x0c\x0c\x02\x02\x41\x41\x3e\x3e'
-	# 4
-	echo -en '\x00\x00\x04\x04\x0c\x0c\x14\x14'
-	echo -en '\x24\x24\x7f\x7f\x04\x04\x04\x04'
-	# 5
-	echo -en '\x00\x00\x7f\x7f\x40\x40\x40\x40'
-	echo -en '\x7e\x7e\x01\x01\x41\x41\x3e\x3e'
-	# 6
-	echo -en '\x00\x00\x3e\x3e\x41\x41\x40\x40'
-	echo -en '\x7e\x7e\x41\x41\x41\x41\x3e\x3e'
-	# 7
-	echo -en '\x00\x00\x7f\x7f\x41\x41\x01\x01'
-	echo -en '\x02\x02\x04\x04\x08\x08\x10\x10'
-	# 8
-	echo -en '\x00\x00\x3e\x3e\x41\x41\x41\x41'
-	echo -en '\x3e\x3e\x41\x41\x41\x41\x3e\x3e'
-	# 9
-	echo -en '\x00\x00\x3e\x3e\x41\x41\x41\x41'
-	echo -en '\x3f\x3f\x01\x01\x41\x41\x3e\x3e'
-	# - アルファベット(26文字,416(1a0)バイト)
-	# A
-	echo -en '\x00\x00\x1c\x1c\x22\x22\x41\x41'
-	echo -en '\x41\x41\x7f\x7f\x41\x41\x41\x41'
-	# B
-	echo -en '\x00\x00\x7e\x7e\x41\x41\x41\x41'
-	echo -en '\x7e\x7e\x41\x41\x41\x41\x7e\x7e'
-	# C
-	echo -en '\x00\x00\x3e\x3e\x41\x41\x40\x40'
-	echo -en '\x40\x40\x40\x40\x41\x41\x3e\x3e'
-	# D
-	echo -en '\x00\x00\x7c\x7c\x42\x42\x41\x41'
-	echo -en '\x41\x41\x41\x41\x42\x42\x7c\x7c'
-	# E
-	echo -en '\x00\x00\x7f\x7f\x40\x40\x40\x40'
-	echo -en '\x7f\x7f\x40\x40\x40\x40\x7f\x7f'
-	# F
-	echo -en '\x00\x00\x7f\x7f\x40\x40\x40\x40'
-	echo -en '\x7e\x7e\x40\x40\x40\x40\x40\x40'
-	# G
-	echo -en '\x00\x00\x3e\x3e\x41\x41\x40\x40'
-	echo -en '\x4f\x4f\x41\x41\x41\x41\x3e\x3e'
-	# H
-	echo -en '\x00\x00\x41\x41\x41\x41\x41\x41'
-	echo -en '\x7f\x7f\x41\x41\x41\x41\x41\x41'
-	# I
-	echo -en '\x00\x00\x3e\x3e\x08\x08\x08\x08'
-	echo -en '\x08\x08\x08\x08\x08\x08\x3e\x3e'
-	# J
-	echo -en '\x00\x00\x07\x07\x02\x02\x02\x02'
-	echo -en '\x02\x02\x02\x02\x22\x22\x1c\x1c'
-	# K
-	echo -en '\x00\x00\x43\x43\x44\x44\x48\x48'
-	echo -en '\x50\x50\x68\x68\x44\x44\x43\x43'
-	# L
-	echo -en '\x00\x00\x40\x40\x40\x40\x40\x40'
-	echo -en '\x40\x40\x40\x40\x40\x40\x7f\x7f'
-	# M
-	echo -en '\x00\x00\x41\x41\x41\x41\x63\x63'
-	echo -en '\x55\x55\x49\x49\x41\x41\x41\x41'
-	# N
-	echo -en '\x00\x00\x41\x41\x61\x61\x51\x51'
-	echo -en '\x49\x49\x45\x45\x43\x43\x41\x41'
-	# O
-	echo -en '\x00\x00\x3e\x3e\x41\x41\x41\x41'
-	echo -en '\x41\x41\x41\x41\x41\x41\x3e\x3e'
-	# P
-	echo -en '\x00\x00\x7e\x7e\x41\x41\x41\x41'
-	echo -en '\x7e\x7e\x40\x40\x40\x40\x40\x40'
-	# Q
-	echo -en '\x00\x00\x3e\x3e\x41\x41\x41\x41'
-	echo -en '\x41\x41\x4d\x4d\x43\x43\x3f\x3f'
-	# R
-	echo -en '\x00\x00\x7e\x7e\x41\x41\x41\x41'
-	echo -en '\x7e\x7e\x41\x41\x41\x41\x41\x41'
-	# S
-	echo -en '\x00\x00\x3e\x3e\x41\x41\x40\x40'
-	echo -en '\x3e\x3e\x01\x01\x41\x41\x3e\x3e'
-	# T
-	echo -en '\x00\x00\x7f\x7f\x08\x08\x08\x08'
-	echo -en '\x08\x08\x08\x08\x08\x08\x08\x08'
-	# U
-	echo -en '\x00\x00\x41\x41\x41\x41\x41\x41'
-	echo -en '\x41\x41\x41\x41\x41\x41\x3e\x3e'
-	# V
-	echo -en '\x00\x00\x41\x41\x41\x41\x41\x41'
-	echo -en '\x41\x41\x22\x22\x14\x14\x08\x08'
-	# W
-	echo -en '\x00\x00\x41\x41\x41\x41\x49\x49'
-	echo -en '\x49\x49\x55\x55\x55\x55\x22\x22'
-	# X
-	echo -en '\x00\x00\x41\x41\x22\x22\x14\x14'
-	echo -en '\x08\x08\x14\x14\x22\x22\x41\x41'
-	# Y
-	echo -en '\x00\x00\x41\x41\x22\x22\x14\x14'
-	echo -en '\x08\x08\x08\x08\x08\x08\x08\x08'
-	# Z
-	echo -en '\x00\x00\x7f\x7f\x02\x02\x04\x04'
-	echo -en '\x08\x08\x10\x10\x20\x20\x7f\x7f'
+	char_tiles
+	dd if=/dev/zero bs=1 count=$GBOS_TILERSV_AREA_BYTES
+	global_functions
 }
 
 load_all_tiles() {
@@ -262,14 +148,14 @@ dump_all_tiles() {
 	local rel_sz
 	lr35902_set_reg regHL $GBOS_BG_TILEMAP_START
 	lr35902_set_reg regB $GBOS_NUM_ALL_TILES
-	lr35902_set_reg regDE $(four_digits $GB_NON_DISP_WIDTH_TILES)
+	lr35902_set_reg regDE $(four_digits $GB_NON_DISP_WIDTH_T)
 	lr35902_clear_reg regC
 	(
 		lr35902_copy_to_from regA regC
 		lr35902_copyinc_to_ptrHL_from_regA
 		lr35902_copy_to_from regA regL
 		lr35902_and_to_regA 1f
-		lr35902_compare_regA_and $GB_DISP_WIDTH_TILES
+		lr35902_compare_regA_and $GB_DISP_WIDTH_T
 		(
 			lr35902_add_to_regHL regDE
 		) >src/dump_all_tiles.1.o
@@ -284,15 +170,65 @@ dump_all_tiles() {
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((rel_sz + 2)))
 }
 
-draw_blank_window() {
-	# タイトルバーの上辺
-	lr35902_set_reg regHL $(calc16 "${GBOS_WINDOW_TILEMAP_START}+1")
+set_win_coord() {
+	local xt=$1
+	local yt=$2
+	lr35902_set_reg regA $xt
+	lr35902_copy_to_addr_from_regA $var_win_xt
+	lr35902_set_reg regA $yt
+	lr35902_copy_to_addr_from_regA $var_win_yt
 }
 
-# 変数
-var_crr_cur_1=c000	# キータイルを次に配置する場所(下位)
-var_crr_cur_2=c001	# キータイルを次に配置する場所(上位)
-var_btn_stat=c002	# 現在のキー状態を示す変数
+draw_blank_window() {
+	local sz
+
+	# タイトルバーを描画
+
+	lr35902_copy_to_regA_from_addr $var_win_yt
+	lr35902_copy_to_from regD regA
+	lr35902_copy_to_regA_from_addr $var_win_xt
+	lr35902_inc regA
+	lr35902_copy_to_from regE regA
+	lr35902_call $a_tcoord_to_addr
+
+	lr35902_set_reg regA 06	# _のタイル番号
+	lr35902_set_reg regB $GBOS_WIN_WIDTH_T
+	(
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_dec regB
+	) >src/draw_blank_window.1.o
+	cat src/draw_blank_window.1.o
+	sz=$(stat -c '%s' src/draw_blank_window.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+
+	lr35902_copy_to_regA_from_addr $var_win_yt
+	lr35902_add_to_regA 02
+	lr35902_copy_to_from regD regA
+	lr35902_copy_to_regA_from_addr $var_win_xt
+	lr35902_inc regA
+	lr35902_copy_to_from regE regA
+	lr35902_call $a_tcoord_to_addr
+
+	lr35902_set_reg regA 02	# 上付きの-
+	lr35902_set_reg regB $GBOS_WIN_WIDTH_T
+	(
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_dec regB
+	) >src/draw_blank_window.2.o
+	cat src/draw_blank_window.2.o
+	sz=$(stat -c '%s' src/draw_blank_window.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+
+
+
+	# 無限ループ待ち
+	# (
+	# 	lr35902_halt
+	# ) >src/draw_blank_window.x.o
+	# cat src/draw_blank_window.x.o
+	# sz=$(stat -c '%s' src/draw_blank_window.x.o)
+	# lr35902_rel_jump $(two_comp_d $((sz + 2)))
+}
 
 init() {
 	# 割り込みは一旦無効にする
@@ -305,7 +241,7 @@ init() {
 	gb_reset_scroll_pos
 
 	# ウィンドウ座標レジスタへ初期値設定
-	gb_set_window_pos $GBOS_WIN_DEF_X $GBOS_WIN_DEF_Y
+	gb_set_window_pos $GBOS_WX_DEF $GBOS_WY_DEF
 
 	# パレット初期化
 	gb_set_palette_to_default
@@ -321,12 +257,11 @@ init() {
 	# タイルデータをVRAMのタイルデータ領域へロード
 	load_all_tiles
 
-	# 背景とウィンドウタイルマップを白タイル(タイル番号0)で初期化
-	# clear_bg
-	## 背景を格子状に描画してみる
-	lay_tiles_in_grid
-	## ウィンドウでも0は透過色になるか？
-	# clear_window
+	# 背景タイルマップを白タイル(タイル番号0)で初期化
+	clear_bg
+
+	# ウィンドウ座標(タイル番目)の変数へデフォルト値設定
+	set_win_coord $GBOS_WIN_DEF_X_T $GBOS_WIN_DEF_Y_T
 
 	# タイトル・中身空のウィンドウを描画
 	draw_blank_window

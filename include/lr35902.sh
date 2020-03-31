@@ -18,6 +18,16 @@ lr35902_halt() {
 	lr35902_nop
 }
 
+lr35902_call() {
+	local addr=$1
+	echo -en '\xcd'
+	echo_2bytes $addr
+}
+
+lr35902_return() {
+	echo -en '\xc9'	# ret
+}
+
 lr35902_disable_interrupts() {
 	echo -en '\xf3'		# di
 }
@@ -603,6 +613,39 @@ lr35902_dec() {
 		;;
 	ptrHL)
 		echo -en '\x35'	# dec [hl]
+		;;
+	esac
+}
+
+lr35902_add_to_regA() {
+	local reg_or_val=$1
+	case $reg_or_val in
+	regB)
+		echo -en '\x80'	# add a,b
+		;;
+	regC)
+		echo -en '\x81'	# add a,c
+		;;
+	regD)
+		echo -en '\x82'	# add a,d
+		;;
+	regE)
+		echo -en '\x83'	# add a,e
+		;;
+	regH)
+		echo -en '\x84'	# add a,h
+		;;
+	regL)
+		echo -en '\x85'	# add a,l
+		;;
+	ptrHL)
+		echo -en '\x86'	# add a,[hl]
+		;;
+	regA)
+		echo -en '\x87'	# add a,a
+		;;
+	*)
+		echo -en "\xc6\x${reg_or_val}"	# add a,${reg_or_val}
 		;;
 	esac
 }
