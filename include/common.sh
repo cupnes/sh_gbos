@@ -75,3 +75,8 @@ calc16_2() {
 	local bc_form=$1
 	two_digits $(calc16 $bc_form)
 }
+
+to16() {
+	local val=$1
+	echo "obase=16;$val" | bc
+}

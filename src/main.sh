@@ -8,11 +8,16 @@ SRC_MAIN_SH=true
 
 GBOS_WIN_DEF_X_T=02
 GBOS_WIN_DEF_Y_T=02
+
+# ウィンドウの見かけ上の幅/高さ
+# (描画用の1タイル分の幅/高さは除く)
 GBOS_WIN_WIDTH_T=1a
+GBOS_WIN_HEIGHT_T=17
 
 GBOS_WX_DEF=00
 GBOS_WY_DEF=00
 GBOS_ROM_TILE_DATA_START=$GB_ROM_START_ADDR
+GBOS_GFUNC_START=0500
 GBOS_TILE_DATA_START=8000
 GBOS_BG_TILEMAP_START=9800
 GBOS_WINDOW_TILEMAP_START=9c00
@@ -48,9 +53,11 @@ gbos_vec() {
 	gb_all_intr_reti_vector_table
 }
 
+# タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
 #      regE  - タイル座標X
 # out: regHL - 9800h〜のアドレスを格納
+a_tcoord_to_addr=$GBOS_GFUNC_START
 f_tcoord_to_addr() {
 	lr35902_push_reg regBC
 
@@ -61,7 +68,7 @@ f_tcoord_to_addr() {
 		lr35902_dec regD
 	) >src/f_tcoord_to_addr.1.o
 	cat src/f_tcoord_to_addr.1.o
-	sz=$(stat -c '%s' src/f_tcoord_to_addr.1.o)
+	local sz=$(stat -c '%s' src/f_tcoord_to_addr.1.o)
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
 	lr35902_add_to_regHL regDE
 
@@ -69,10 +76,75 @@ f_tcoord_to_addr() {
 	lr35902_return
 }
 
+# ウィンドウタイル座標をタイル座標へ変換
+# in : regD  - ウィンドウタイル座標Y
+#      regE  - ウィンドウタイル座標X
+# out: regD  - タイル座標Y
+#      regE  - タイル座標X
+f_tcoord_to_addr >src/f_tcoord_to_addr.o
+fsz=$(to16 $(stat -c '%s' src/f_tcoord_to_addr.o))
+a_wtcoord_to_tcoord=$(four_digits $(calc16 "${a_tcoord_to_addr}+${fsz}"))
+f_wtcoord_to_tcoord() {
+	lr35902_push_reg regAF
+
+	lr35902_copy_to_regA_from_addr $var_win_yt
+	lr35902_add_to_regA regD
+	lr35902_copy_to_from regD regA
+	lr35902_copy_to_regA_from_addr $var_win_xt
+	lr35902_add_to_regA regE
+	lr35902_copy_to_from regE regA
+
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
+# タイル座標の位置から右へ指定されたタイルを並べる
+# in : regA  - 並べるタイル番号
+#      regC  - 並べる個数
+#      regD  - タイル座標Y
+#      regE  - タイル座標X
+f_wtcoord_to_tcoord >src/f_wtcoord_to_tcoord.o
+fsz=$(to16 $(stat -c '%s' src/f_wtcoord_to_tcoord.o))
+fadr=$(calc16 "${a_wtcoord_to_tcoord}+${fsz}")
+a_lay_tiles_at_tcoord_to_right=$(four_digits $fadr)
+f_lay_tiles_at_tcoord_to_right() {
+	lr35902_push_reg regHL
+
+	lr35902_call $a_tcoord_to_addr
+	(
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_dec regC
+	) >src/f_lay_tiles_to_right.1.o
+	cat src/f_lay_tiles_to_right.1.o
+	local sz=$(stat -c '%s' src/f_lay_tiles_to_right.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+
+	lr35902_pop_reg regHL
+	lr35902_return
+}
+
+# ウィンドウタイル座標の位置から右へ指定されたタイルを並べる
+# in : regB  - 並べるタイル番号
+#      regC  - 並べる個数
+#      regD  - ウィンドウタイル座標Y
+#      regE  - ウィンドウタイル座標X
+f_lay_tiles_at_tcoord_to_right >src/f_lay_tiles_at_tcoord_to_right.o
+fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_tcoord_to_right.o))
+fadr=$(calc16 "${a_lay_tiles_at_tcoord_to_right}+${fsz}")
+a_lay_tiles_at_wtcoord_to_right=$(four_digits $fadr)
+f_lay_tiles_at_wtcoord_to_right() {
+	lr35902_call $a_wtcoord_to_tcoord
+	lr35902_call $a_lay_tiles_at_tcoord_to_right
+
+	lr35902_return
+}
+
 # 0500h〜の領域に配置される
 global_functions() {
-	a_tcoord_to_addr=0500
 	f_tcoord_to_addr
+	f_wtcoord_to_tcoord
+	f_lay_tiles_at_tcoord_to_right
+	f_lay_tiles_at_wtcoord_to_right
 }
 
 gbos_const() {
@@ -180,46 +252,68 @@ set_win_coord() {
 }
 
 draw_blank_window() {
-	local sz
+	# local sz
 
 	# タイトルバーを描画
 
-	lr35902_copy_to_regA_from_addr $var_win_yt
-	lr35902_copy_to_from regD regA
-	lr35902_copy_to_regA_from_addr $var_win_xt
-	lr35902_inc regA
-	lr35902_copy_to_from regE regA
-	lr35902_call $a_tcoord_to_addr
+	lr35902_set_reg regB 06	# _
+	lr35902_set_reg regC $GBOS_WIN_WIDTH_T
+	lr35902_set_reg regD 01
+	lr35902_set_reg regE 01
+	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 
-	lr35902_set_reg regA 06	# _のタイル番号
-	lr35902_set_reg regB $GBOS_WIN_WIDTH_T
-	(
-		lr35902_copyinc_to_ptrHL_from_regA
-		lr35902_dec regB
-	) >src/draw_blank_window.1.o
-	cat src/draw_blank_window.1.o
-	sz=$(stat -c '%s' src/draw_blank_window.1.o)
-	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+	# lr35902_copy_to_regA_from_addr $var_win_yt
+	# lr35902_copy_to_from regD regA
+	# lr35902_copy_to_regA_from_addr $var_win_xt
+	# lr35902_inc regA
+	# lr35902_copy_to_from regE regA
+	# lr35902_call $a_tcoord_to_addr
 
-	lr35902_copy_to_regA_from_addr $var_win_yt
-	lr35902_add_to_regA 02
-	lr35902_copy_to_from regD regA
-	lr35902_copy_to_regA_from_addr $var_win_xt
-	lr35902_inc regA
-	lr35902_copy_to_from regE regA
-	lr35902_call $a_tcoord_to_addr
+	# lr35902_set_reg regA 06	# _のタイル番号
+	# lr35902_set_reg regB $GBOS_WIN_WIDTH_T
+	# (
+	# 	lr35902_copyinc_to_ptrHL_from_regA
+	# 	lr35902_dec regB
+	# ) >src/draw_blank_window.1.o
+	# cat src/draw_blank_window.1.o
+	# sz=$(stat -c '%s' src/draw_blank_window.1.o)
+	# lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
 
-	lr35902_set_reg regA 02	# 上付きの-
-	lr35902_set_reg regB $GBOS_WIN_WIDTH_T
-	(
-		lr35902_copyinc_to_ptrHL_from_regA
-		lr35902_dec regB
-	) >src/draw_blank_window.2.o
-	cat src/draw_blank_window.2.o
-	sz=$(stat -c '%s' src/draw_blank_window.2.o)
-	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+	# lr35902_copy_to_regA_from_addr $var_win_yt
+	# lr35902_add_to_regA 02
+	# lr35902_copy_to_from regD regA
+	# lr35902_copy_to_regA_from_addr $var_win_xt
+	# lr35902_inc regA
+	# lr35902_copy_to_from regE regA
+	# lr35902_call $a_tcoord_to_addr
 
+	# lr35902_set_reg regA 02	# 上付きの-
+	# lr35902_set_reg regB $GBOS_WIN_WIDTH_T
+	# (
+	# 	lr35902_copyinc_to_ptrHL_from_regA
+	# 	lr35902_dec regB
+	# ) >src/draw_blank_window.2.o
+	# cat src/draw_blank_window.2.o
+	# sz=$(stat -c '%s' src/draw_blank_window.2.o)
+	# lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
 
+	# lr35902_copy_to_regA_from_addr $var_win_yt
+	# lr35902_add_to_regA $GBOS_WIN_HEIGHT_T
+	# lr35902_copy_to_from regD regA
+	# lr35902_copy_to_regA_from_addr $var_win_xt
+	# lr35902_inc regA
+	# lr35902_copy_to_from regE regA
+	# lr35902_call $a_tcoord_to_addr
+
+	# lr35902_set_reg regA 06	# _
+	# lr35902_set_reg regB $GBOS_WIN_WIDTH_T
+	# (
+	# 	lr35902_copyinc_to_ptrHL_from_regA
+	# 	lr35902_dec regB
+	# ) >src/draw_blank_window.3.o
+	# cat src/draw_blank_window.3.o
+	# sz=$(stat -c '%s' src/draw_blank_window.3.o)
+	# lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
 
 	# 無限ループ待ち
 	# (
