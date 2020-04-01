@@ -111,6 +111,7 @@ fadr=$(calc16 "${a_wtcoord_to_tcoord}+${fsz}")
 a_lay_tiles_at_tcoord_to_right=$(four_digits $fadr)
 f_lay_tiles_at_tcoord_to_right() {
 	lr35902_push_reg regBC
+	lr35902_push_reg regDE
 	lr35902_push_reg regHL
 
 	lr35902_call $a_tcoord_to_addr
@@ -123,6 +124,7 @@ f_lay_tiles_at_tcoord_to_right() {
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
 
 	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
 	lr35902_return
 }
@@ -137,9 +139,12 @@ fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_tcoord_to_right.o))
 fadr=$(calc16 "${a_lay_tiles_at_tcoord_to_right}+${fsz}")
 a_lay_tiles_at_wtcoord_to_right=$(four_digits $fadr)
 f_lay_tiles_at_wtcoord_to_right() {
+	lr35902_push_reg regDE
+
 	lr35902_call $a_wtcoord_to_tcoord
 	lr35902_call $a_lay_tiles_at_tcoord_to_right
 
+	lr35902_pop_reg regDE
 	lr35902_return
 }
 
@@ -262,66 +267,16 @@ draw_blank_window() {
 
 	lr35902_set_reg regA 06	# _
 	lr35902_set_reg regC $GBOS_WIN_WIDTH_T
-	lr35902_set_reg regD 01
+	lr35902_set_reg regD 00
 	lr35902_set_reg regE 01
 	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 
 	lr35902_set_reg regD 17
-	lr35902_set_reg regE 01
 	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 
-	# lr35902_copy_to_regA_from_addr $var_win_yt
-	# lr35902_copy_to_from regD regA
-	# lr35902_copy_to_regA_from_addr $var_win_xt
-	# lr35902_inc regA
-	# lr35902_copy_to_from regE regA
-	# lr35902_call $a_tcoord_to_addr
-
-	# lr35902_set_reg regA 06	# _のタイル番号
-	# lr35902_set_reg regB $GBOS_WIN_WIDTH_T
-	# (
-	# 	lr35902_copyinc_to_ptrHL_from_regA
-	# 	lr35902_dec regB
-	# ) >src/draw_blank_window.1.o
-	# cat src/draw_blank_window.1.o
-	# sz=$(stat -c '%s' src/draw_blank_window.1.o)
-	# lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
-
-	# lr35902_copy_to_regA_from_addr $var_win_yt
-	# lr35902_add_to_regA 02
-	# lr35902_copy_to_from regD regA
-	# lr35902_copy_to_regA_from_addr $var_win_xt
-	# lr35902_inc regA
-	# lr35902_copy_to_from regE regA
-	# lr35902_call $a_tcoord_to_addr
-
-	# lr35902_set_reg regA 02	# 上付きの-
-	# lr35902_set_reg regB $GBOS_WIN_WIDTH_T
-	# (
-	# 	lr35902_copyinc_to_ptrHL_from_regA
-	# 	lr35902_dec regB
-	# ) >src/draw_blank_window.2.o
-	# cat src/draw_blank_window.2.o
-	# sz=$(stat -c '%s' src/draw_blank_window.2.o)
-	# lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
-
-	# lr35902_copy_to_regA_from_addr $var_win_yt
-	# lr35902_add_to_regA $GBOS_WIN_HEIGHT_T
-	# lr35902_copy_to_from regD regA
-	# lr35902_copy_to_regA_from_addr $var_win_xt
-	# lr35902_inc regA
-	# lr35902_copy_to_from regE regA
-	# lr35902_call $a_tcoord_to_addr
-
-	# lr35902_set_reg regA 06	# _
-	# lr35902_set_reg regB $GBOS_WIN_WIDTH_T
-	# (
-	# 	lr35902_copyinc_to_ptrHL_from_regA
-	# 	lr35902_dec regB
-	# ) >src/draw_blank_window.3.o
-	# cat src/draw_blank_window.3.o
-	# sz=$(stat -c '%s' src/draw_blank_window.3.o)
-	# lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+	lr35902_set_reg regA 02	# -(上付き)
+	lr35902_set_reg regD 02
+	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 
 	# 無限ループ待ち
 	# (
