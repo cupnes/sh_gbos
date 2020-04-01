@@ -60,6 +60,7 @@ gbos_vec() {
 a_tcoord_to_addr=$GBOS_GFUNC_START
 f_tcoord_to_addr() {
 	lr35902_push_reg regBC
+	lr35902_push_reg regDE
 
 	lr35902_set_reg regHL $GBOS_BG_TILEMAP_START
 	lr35902_set_reg regBC $(four_digits $GB_SC_WIDTH_T)
@@ -72,6 +73,7 @@ f_tcoord_to_addr() {
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
 	lr35902_add_to_regHL regDE
 
+	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
 	lr35902_return
 }
@@ -108,6 +110,7 @@ fsz=$(to16 $(stat -c '%s' src/f_wtcoord_to_tcoord.o))
 fadr=$(calc16 "${a_wtcoord_to_tcoord}+${fsz}")
 a_lay_tiles_at_tcoord_to_right=$(four_digits $fadr)
 f_lay_tiles_at_tcoord_to_right() {
+	lr35902_push_reg regBC
 	lr35902_push_reg regHL
 
 	lr35902_call $a_tcoord_to_addr
@@ -120,11 +123,12 @@ f_lay_tiles_at_tcoord_to_right() {
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
 
 	lr35902_pop_reg regHL
+	lr35902_pop_reg regBC
 	lr35902_return
 }
 
 # ウィンドウタイル座標の位置から右へ指定されたタイルを並べる
-# in : regB  - 並べるタイル番号
+# in : regA  - 並べるタイル番号
 #      regC  - 並べる個数
 #      regD  - ウィンドウタイル座標Y
 #      regE  - ウィンドウタイル座標X
@@ -256,9 +260,13 @@ draw_blank_window() {
 
 	# タイトルバーを描画
 
-	lr35902_set_reg regB 06	# _
+	lr35902_set_reg regA 06	# _
 	lr35902_set_reg regC $GBOS_WIN_WIDTH_T
 	lr35902_set_reg regD 01
+	lr35902_set_reg regE 01
+	lr35902_call $a_lay_tiles_at_wtcoord_to_right
+
+	lr35902_set_reg regD 17
 	lr35902_set_reg regE 01
 	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 
