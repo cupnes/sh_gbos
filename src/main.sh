@@ -118,9 +118,9 @@ f_lay_tiles_at_tcoord_to_right() {
 	(
 		lr35902_copyinc_to_ptrHL_from_regA
 		lr35902_dec regC
-	) >src/f_lay_tiles_to_right.1.o
-	cat src/f_lay_tiles_to_right.1.o
-	local sz=$(stat -c '%s' src/f_lay_tiles_to_right.1.o)
+	) >src/f_lay_tiles_at_tcoord_to_right.1.o
+	cat src/f_lay_tiles_at_tcoord_to_right.1.o
+	local sz=$(stat -c '%s' src/f_lay_tiles_at_tcoord_to_right.1.o)
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
 
 	lr35902_pop_reg regHL
@@ -148,12 +148,64 @@ f_lay_tiles_at_wtcoord_to_right() {
 	lr35902_return
 }
 
+# タイル座標の位置から下へ指定されたタイルを並べる
+# in : regA  - 並べるタイル番号
+#      regC  - 並べる個数
+#      regD  - タイル座標Y
+#      regE  - タイル座標X
+f_lay_tiles_at_wtcoord_to_right >src/f_lay_tiles_at_wtcoord_to_right.o
+fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_wtcoord_to_right.o))
+fadr=$(calc16 "${a_lay_tiles_at_wtcoord_to_right}+${fsz}")
+a_lay_tiles_at_tcoord_to_low=$(four_digits $fadr)
+f_lay_tiles_at_tcoord_to_low() {
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	lr35902_call $a_tcoord_to_addr
+	lr35902_set_reg regDE $(four_digits $GB_SC_WIDTH_T)
+	(
+		lr35902_copy_to_ptrHL_from regA
+		lr35902_add_to_regHL regDE
+		lr35902_dec regC
+	) >src/f_lay_tiles_at_tcoord_to_low.1.o
+	cat src/f_lay_tiles_at_tcoord_to_low.1.o
+	local sz=$(stat -c '%s' src/f_lay_tiles_at_tcoord_to_low.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_return
+}
+
+# ウィンドウタイル座標の位置から下へ指定されたタイルを並べる
+# in : regA  - 並べるタイル番号
+#      regC  - 並べる個数
+#      regD  - ウィンドウタイル座標Y
+#      regE  - ウィンドウタイル座標X
+f_lay_tiles_at_tcoord_to_low >src/f_lay_tiles_at_tcoord_to_low.o
+fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_tcoord_to_low.o))
+fadr=$(calc16 "${a_lay_tiles_at_tcoord_to_low}+${fsz}")
+a_lay_tiles_at_wtcoord_to_low=$(four_digits $fadr)
+f_lay_tiles_at_wtcoord_to_low() {
+	lr35902_push_reg regDE
+
+	lr35902_call $a_wtcoord_to_tcoord
+	lr35902_call $a_lay_tiles_at_tcoord_to_low
+
+	lr35902_pop_reg regDE
+	lr35902_return
+}
+
 # 0500h〜の領域に配置される
 global_functions() {
 	f_tcoord_to_addr
 	f_wtcoord_to_tcoord
 	f_lay_tiles_at_tcoord_to_right
 	f_lay_tiles_at_wtcoord_to_right
+	f_lay_tiles_at_tcoord_to_low
+	f_lay_tiles_at_wtcoord_to_low
 }
 
 gbos_const() {
@@ -277,6 +329,12 @@ draw_blank_window() {
 	lr35902_set_reg regA 02	# -(上付き)
 	lr35902_set_reg regD 02
 	lr35902_call $a_lay_tiles_at_wtcoord_to_right
+
+	lr35902_set_reg regA 04	# |(右付き)
+	lr35902_set_reg regC $GBOS_WIN_HEIGHT_T
+	lr35902_set_reg regD 01
+	lr35902_set_reg regE 00
+	lr35902_call $a_lay_tiles_at_wtcoord_to_low
 
 	# 無限ループ待ち
 	# (
