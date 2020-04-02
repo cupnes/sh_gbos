@@ -34,13 +34,12 @@ GBOS_WINDOW_TILEMAP_START=9c00
 # - Bit 3: BG Tile Map Display Select (0=9800-9BFF, 1=9C00-9FFF)
 #   -> 背景用のタイルマップ領域に9800-9BFF(0)を使う
 # - Bit 2: OBJ (Sprite) Size (0=8x8, 1=8x16)
-#   -> スプライトサイズは今の所8x8(0)のみの想定
+#   -> スプライトサイズは8x16(1)
 # - Bit 1: OBJ (Sprite) Display Enable (0=Off, 1=On)
-#   -> スプライトはまだ使わないので0
-#      TODO:使うようになったら1にしたりする
+#   -> スプライト使うので1
 # - Bit 0: BG Display (0=Off, 1=On)
 #   -> 背景は使うので1
-GBOS_LCDC_BASE=51	# %0101 0001($51)
+GBOS_LCDC_BASE=57	# %0101 0111($57)
 
 # 変数
 var_crr_cur_1=c000	# キータイルを次に配置する場所(下位)
@@ -334,6 +333,14 @@ draw_blank_window() {
 	lr35902_set_reg regC $GBOS_WIN_HEIGHT_T
 	lr35902_set_reg regD 01
 	lr35902_set_reg regE 00
+	lr35902_call $a_lay_tiles_at_wtcoord_to_low
+
+	lr35902_set_reg regA 08	# |(左付き)
+	lr35902_set_reg regE $(calc16 "${GBOS_WIN_WIDTH_T}+1")
+	lr35902_call $a_lay_tiles_at_wtcoord_to_low
+
+	lr35902_set_reg regC 01
+	lr35902_set_reg regE 02
 	lr35902_call $a_lay_tiles_at_wtcoord_to_low
 
 	# 無限ループ待ち

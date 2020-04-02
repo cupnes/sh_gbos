@@ -3,15 +3,18 @@ if [ "${SRC_TILES_SH+is_defined}" ]; then
 fi
 SRC_TILES_SH=true
 
-GBOS_TILEDATA_AREA_BYTES=03B0
-GBOS_NUM_ALL_TILES=31
-GBOS_NUM_ALL_TILE_BYTES=0310
+. include/common.sh
 
-GBOS_TILERSV_AREA_BYTES=160	# [TILEDATA_AREA_BYTES] - [TILE_BYTES]
+GBOS_TILEDATA_AREA_BYTES=03B0
+GBOS_NUM_ALL_TILES=34
+GBOS_NUM_ALL_TILE_BYTES=$(four_digits $(calc16 "${GBOS_NUM_ALL_TILES}*10"))
+
+tiles_bc_form="ibase=16;${GBOS_TILEDATA_AREA_BYTES}-${GBOS_NUM_ALL_TILE_BYTES}"
+GBOS_TILERSV_AREA_BYTES=$(echo $tiles_bc_form | bc)
 ## ddでゼロ埋めするのに使うので10進数で
 
 char_tiles() {
-	### タイルデータ(計49タイル,784(310)バイト) ###
+	### タイルデータ(計52タイル,832(0x340)バイト) ###
 	# [文字コード]
 	# - 記号(13文字,208(d0)バイト)
 	# 00: ' '
@@ -163,4 +166,16 @@ char_tiles() {
 	# 30: Z
 	echo -en '\x00\x00\x7f\x7f\x02\x02\x04\x04'
 	echo -en '\x08\x08\x10\x10\x20\x20\x7f\x7f'
+
+	# 31: all 1
+	echo -en '\xff\xff\xff\xff\xff\xff\xff\xff'
+	echo -en '\xff\xff\xff\xff\xff\xff\xff\xff'
+
+	# マウスカーソル(8x16)
+	# 32: 上半分
+	echo -en '\xc0\xc0\xe0\xa0\xf0\x90\xf8\x88'
+	echo -en '\xfc\x84\xfe\x82\xff\x81\xff\x81'
+	# 33: 下半分
+	echo -en '\xfe\x86\xfc\x84\xfe\xb2\xde\xd2'
+	echo -en '\x0f\x09\x0f\x09\x07\x05\x07\x07'
 }
