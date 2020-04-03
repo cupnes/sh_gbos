@@ -41,6 +41,14 @@ GBOS_WINDOW_TILEMAP_START=9c00
 #   -> 背景は使うので1
 GBOS_LCDC_BASE=57	# %0101 0111($57)
 
+GBOS_OBJ_WIDTH=08
+GBOS_OBJ_HEIGHT=10
+GBOS_OBJ_DEF_ATTR=80	# %1000 0000($80)
+
+GBOS_OAM_BASE=fe00
+GBOS_OAM_SZ=04	# 4 bytes
+GBOS_OAM_NUM_CSL=00
+
 # 変数
 var_crr_cur_1=c000	# キータイルを次に配置する場所(下位)
 var_crr_cur_2=c001	# キータイルを次に配置する場所(上位)
@@ -352,6 +360,31 @@ draw_blank_window() {
 	# lr35902_rel_jump $(two_comp_d $((sz + 2)))
 }
 
+# TODO グローバル関数化
+# TODO 後のためにDMA転送するようにする
+obj_init() {
+	local oam_num=$1
+	local y=$2
+	local x=$3
+	local tile_num=$4
+	local attr=$5
+
+	local oam_addr=$(calc16 "${GBOS_OAM_BASE}+(${oam_num}*${GBOS_OAM_SZ})")
+	lr35902_set_reg regHL $oam_addr
+
+	lr35902_set_reg regA $y
+	lr35902_copyinc_to_ptrHL_from_regA
+
+	lr35902_set_reg regA $x
+	lr35902_copyinc_to_ptrHL_from_regA
+
+	lr35902_set_reg regA $tile_num
+	lr35902_copyinc_to_ptrHL_from_regA
+
+	lr35902_set_reg regA $attr
+	lr35902_copyinc_to_ptrHL_from_regA
+}
+
 init() {
 	# 割り込みは一旦無効にする
 	lr35902_disable_interrupts
@@ -382,11 +415,23 @@ init() {
 	# 背景タイルマップを白タイル(タイル番号0)で初期化
 	clear_bg
 
+	# OAMを初期化(全て非表示にする)
+	## TODO 全てのOBJの位置を非表示領域に設定する
+	## TODO obj_move を用意して、全objを非表示領域へ移動させる
+	##      Y=0にすれば良い
+
 	# ウィンドウ座標(タイル番目)の変数へデフォルト値設定
 	set_win_coord $GBOS_WIN_DEF_X_T $GBOS_WIN_DEF_Y_T
 
 	# タイトル・中身空のウィンドウを描画
 	draw_blank_window
+
+	# マウスカーソルを描画
+	obj_init $GBOS_OAM_NUM_CSL $GBOS_OBJ_HEIGHT $GBOS_OBJ_WIDTH \
+		 $GBOS_TILE_NUM_CSL $GBOS_OBJ_DEF_ATTR
+	# 別途 obj_move とかの関数も作る
+	# TODO グローバル関数化
+	# TODO 後のためにDMA転送するようにする
 
 	# V-Blank(b0)の割り込みのみ有効化
 	lr35902_set_reg regA 01

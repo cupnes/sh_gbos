@@ -13,6 +13,8 @@ tiles_bc_form="ibase=16;${GBOS_TILEDATA_AREA_BYTES}-${GBOS_NUM_ALL_TILE_BYTES}"
 GBOS_TILERSV_AREA_BYTES=$(echo $tiles_bc_form | bc)
 ## ddでゼロ埋めするのに使うので10進数で
 
+GBOS_TILE_NUM_CSL=32
+
 char_tiles() {
 	### タイルデータ(計52タイル,832(0x340)バイト) ###
 	# [文字コード]
