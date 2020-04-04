@@ -205,6 +205,37 @@ f_lay_tiles_at_wtcoord_to_low() {
 	lr35902_return
 }
 
+# V-Blankハンドラ
+f_lay_tiles_at_wtcoord_to_low >src/f_lay_tiles_at_wtcoord_to_low.o
+fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_wtcoord_to_low.o))
+fadr=$(calc16 "${a_lay_tiles_at_wtcoord_to_low}+${fsz}")
+a_vblank_hdlr=$(four_digits $fadr)
+f_vblank_hdlr() {
+	# 入力状態の変数値に応じてタイルを配置し配置場所更新
+	## 同時押しがあればキーの数だけ実施する
+
+	# 現在の入力状態と次のタイル配置アドレスをメモリから取得
+	lr35902_copy_to_regA_from_addr $var_btn_stat	# 3
+	lr35902_copy_to_from regC regA			# 1
+	lr35902_copy_to_regA_from_addr $var_crr_cur_1	# 3
+	lr35902_copy_to_from regL regA			# 1
+	lr35902_copy_to_regA_from_addr $var_crr_cur_2	# 3
+	lr35902_copy_to_from regH regA			# 1
+
+	# - b7 スタートボタン の処理
+	lr35902_test_bitN_of_reg 7 regC
+	lr35902_rel_jump_with_cond Z 05			# 2
+	lr35902_set_reg regA 01				# 2
+	echo -en '\xcb\xb9'	# res 7,c		# 2
+	lr35902_copyinc_to_ptrHL_from_regA		# 1
+
+	# 次のタイル配置アドレスをメモリへ格納
+	lr35902_copy_to_from regA regL			# 1
+	lr35902_copy_to_addr_from_regA $var_crr_cur_1	# 3
+	lr35902_copy_to_from regA regH			# 1
+	lr35902_copy_to_addr_from_regA $var_crr_cur_2	# 3
+}
+
 # 0500h〜の領域に配置される
 global_functions() {
 	f_tcoord_to_addr
@@ -213,6 +244,7 @@ global_functions() {
 	f_lay_tiles_at_wtcoord_to_right
 	f_lay_tiles_at_tcoord_to_low
 	f_lay_tiles_at_wtcoord_to_low
+	f_vblank_hdlr
 }
 
 gbos_const() {
@@ -470,32 +502,6 @@ gbos_main() {
 	# lr35902_rel_jump_with_cond NZ 02		# 2
 	# lr35902_rel_jump $(two_comp 0c)	# 必ずこちらに入る	# 2
 	# lr35902_rel_jump $(two_comp 0e)			# 2
-
-	# 入力状態の変数値に応じてタイルを配置し配置場所更新
-	## 同時押しがあればキーの数だけ実施する
-
-	# 現在の入力状態と次のタイル配置アドレスをメモリから取得
-	lr35902_copy_to_regA_from_addr $var_btn_stat	# 3
-	lr35902_copy_to_from regC regA			# 1
-	lr35902_copy_to_regA_from_addr $var_crr_cur_1	# 3
-	lr35902_copy_to_from regL regA			# 1
-	lr35902_copy_to_regA_from_addr $var_crr_cur_2	# 3
-	lr35902_copy_to_from regH regA			# 1
-
-	# - b7 スタートボタン の処理
-	echo -en '\xcb\x79'	# bit 7,c		# 2
-	lr35902_rel_jump_with_cond Z 05			# 2
-	lr35902_set_reg regA 01				# 2
-	echo -en '\xcb\xb9'	# res 7,c		# 2
-	lr35902_copyinc_to_ptrHL_from_regA		# 1
-
-	# 次のタイル配置アドレスをメモリへ格納
-	lr35902_copy_to_from regA regL			# 1
-	lr35902_copy_to_addr_from_regA $var_crr_cur_1	# 3
-	lr35902_copy_to_from regA regH			# 1
-	lr35902_copy_to_addr_from_regA $var_crr_cur_2	# 3
-
-
 
 	# [キー入力処理]
 	# チャタリング(あるのか？)等のノイズ除去は未実装
