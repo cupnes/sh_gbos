@@ -9,6 +9,125 @@ LR35902_ENTRY_ADDR=0100
 
 ASM_LIST_FILE=asm.lst
 
+to_regname() {
+	local reg=$1
+	case $reg in
+	regA)
+		echo a
+		;;
+	regB)
+		echo b
+		;;
+	regC)
+		echo c
+		;;
+	regD)
+		echo d
+		;;
+	regE)
+		echo e
+		;;
+	regH)
+		echo h
+		;;
+	regL)
+		echo l
+		;;
+	regAF)
+		echo af
+		;;
+	regBC)
+		echo bc
+		;;
+	regDE)
+		echo de
+		;;
+	regHL)
+		echo hl
+		;;
+	regSP)
+		echo sp
+		;;
+	ptrBC)
+		echo '[bc]'
+		;;
+	ptrDE)
+		echo '[de]'
+		;;
+	ptrHL)
+		echo '[hl]'
+		;;
+	*)
+		echo -n 'Error: no such register string: ' 1>&2
+		echo "to_regname $reg" 1>&2
+		return 1
+	esac
+}
+
+to_regnum_pat0() {
+	local reg=$1
+	case $reg in
+	regB)
+		echo 0
+		;;
+	regC)
+		echo 1
+		;;
+	regD)
+		echo 2
+		;;
+	regE)
+		echo 3
+		;;
+	regH)
+		echo 4
+		;;
+	regL)
+		echo 5
+		;;
+	ptrHL)
+		echo 6
+		;;
+	regA)
+		echo 7
+		;;
+	*)
+		echo error
+	esac
+}
+
+to_regnum_pat1() {
+	local reg=$1
+	case $reg in
+	regB)
+		echo 8
+		;;
+	regC)
+		echo 9
+		;;
+	regD)
+		echo a
+		;;
+	regE)
+		echo b
+		;;
+	regH)
+		echo c
+		;;
+	regL)
+		echo d
+		;;
+	ptrHL)
+		echo e
+		;;
+	regA)
+		echo f
+		;;
+	*)
+		echo error
+	esac
+}
+
 lr35902_nop() {
 	echo -en '\x00'	# nop
 	echo -e 'nop\t;4' >>$ASM_LIST_FILE
@@ -860,6 +979,65 @@ lr35902_and_to_regA() {
 		echo -en "\xe6\x${reg_or_val}"	# and ${reg_or_val}
 		echo -e "and \$$reg_or_val\t;8" >>$ASM_LIST_FILE
 		;;
+	esac
+}
+
+lr35902_test_bitN_of_reg_impl() {
+	local n=$1
+	local reg=$2
+	local to_regnum=$3
+	local pref=$4
+
+	local regnum=$($to_regnum $reg)
+	if [ "$regnum" = 'error' ]; then
+		echo -n 'Error: no such instruction: ' 1>&2
+		echo "lr35902_test_bit${n}_of_reg $reg" 1>&2
+		return 1
+	fi
+	echo -en "\xcb\x${pref}${regnum}"
+
+	local regname=$(to_regname $reg)
+	local cyc
+	if [ "$regnum" = "$($to_regnum ptrHL)" ]; then
+		cyc=16
+	else
+		cyc=8
+	fi
+	echo -e "bit ${n},$regname\t;$cyc" >>$ASM_LIST_FILE
+}
+
+lr35902_test_bitN_of_reg() {
+	local n=$1
+	local reg=$2
+	case $n in
+	0)
+		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat0 4
+		;;
+	1)
+		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat1 4
+		;;
+	2)
+		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat0 5
+		;;
+	3)
+		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat1 5
+		;;
+	4)
+		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat0 6
+		;;
+	5)
+		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat1 6
+		;;
+	6)
+		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat0 7
+		;;
+	7)
+		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat1 7
+		;;
+	*)
+		echo -n 'Error: no such instruction: ' 1>&2
+		echo "lr35902_test_bitN_of_reg $n $reg" 1>&2
+		return 1
 	esac
 }
 
