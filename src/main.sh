@@ -501,22 +501,10 @@ init() {
 	lr35902_enable_interrupts
 }
 
-gbos_main() {
-	init >src/init.o
-	cat src/init.o
-
-	# 以降、割り込み駆動の処理部
+event_driven() {
 	lr35902_halt					# 2
 
 	# [VRAMタイルマップ更新]
-
-	# V-Blank期間中であることを確認(おそらくこの処理は不要)
-	# lr35902_copy_to_regA_from_ioport $GB_IO_STAT	# 2
-	# echo -en '\xe6\x03'	# and $03		# 2
-	# echo -en '\xfe\x01'	# cp $01		# 2
-	# lr35902_rel_jump_with_cond NZ 02		# 2
-	# lr35902_rel_jump $(two_comp 0c)	# 必ずこちらに入る	# 2
-	# lr35902_rel_jump $(two_comp 0e)			# 2
 
 	# 入力状態の変数値に応じてタイルを配置し配置場所更新
 	## 同時押しがあればキーの数だけ実施する
@@ -673,6 +661,13 @@ gbos_main() {
 	local const_init=$(echo $bc_form | bc)
 	bc_form="obase=16;ibase=16;${GB_ROM_START_ADDR}+${const_init}"
 	local halt_addr=$(echo $bc_form | bc)
-	echo -en "\xc3"
-	echo_2bytes $(four_digits $halt_addr)	# jp $halt_addr
+	lr35902_abs_jump $(four_digits $halt_addr)
+}
+
+gbos_main() {
+	init >src/init.o
+	cat src/init.o
+
+	# 以降、割り込み駆動の処理部
+	event_driven
 }
