@@ -34,7 +34,8 @@ GB_IO_IE=ff
 GB_LCDC_BIT_DE=80
 GB_WX_ORIG=07
 
-GB_GBP_DEFAULT=e4		# %11100100
+GB_BGP_DEFAULT=e4		# %11100100
+GB_OBP_DEFAULT=e0		# %11100000
 
 # Nintendoロゴデータ
 gb_nintendo_logo() {
@@ -105,8 +106,9 @@ gb_set_window_pos() {
 
 gb_set_palette_to_default() {
 	# パレット初期化
-	lr35902_set_reg regA $GB_GBP_DEFAULT
+	lr35902_set_reg regA $GB_BGP_DEFAULT
 	lr35902_copy_to_ioport_from_regA $GB_IO_BGP
+	lr35902_set_reg regA $GB_OBP_DEFAULT
 	lr35902_copy_to_ioport_from_regA $GB_IO_OBP0
 	lr35902_copy_to_ioport_from_regA $GB_IO_OBP1
 }
