@@ -982,6 +982,32 @@ lr35902_and_to_regA() {
 	esac
 }
 
+# MEMO: rl/rlcやrr/rrcを実装する際は
+#       rl側をrotate_left_through_carryという名前で実装する
+#       ∵ 振る舞いからしてrl側がCarryを通してシフトしている
+
+lr35902_shift_left_arithmetic() {
+	local reg=$1
+
+	local regnum=$(to_regnum_pat0 $reg)
+	if [ "$regnum" = 'error' ]; then
+		echo -n 'Error: no such instruction: ' 1>&2
+		echo "lr35902_shift_left_arithmetic $reg" 1>&2
+		return 1
+	fi
+	local pref=2
+	echo -en "\xcb\x${pref}${regnum}"
+
+	local regname=$(to_regname $reg)
+	local cyc
+	if [ "$regnum" = "$(to_regnum_pat0 ptrHL)" ]; then
+		cyc=16
+	else
+		cyc=8
+	fi
+	echo -e "sla $regname\t;$cyc" >>$ASM_LIST_FILE
+}
+
 lr35902_test_bitN_of_reg_impl() {
 	local n=$1
 	local reg=$2
