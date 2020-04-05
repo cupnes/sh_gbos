@@ -43,7 +43,7 @@ GBOS_LCDC_BASE=57	# %0101 0111($57)
 
 GBOS_OBJ_WIDTH=08
 GBOS_OBJ_HEIGHT=10
-GBOS_OBJ_DEF_ATTR=80	# %1000 0000($80)
+GBOS_OBJ_DEF_ATTR=00	# %0000 0000($00)
 
 GBOS_OAM_BASE=fe00
 GBOS_OAM_SZ=04	# 4 bytes
@@ -55,10 +55,6 @@ var_crr_cur_2=c001	# キータイルを次に配置する場所(上位)
 var_btn_stat=c002	# 現在のキー状態を示す変数
 var_win_xt=c003	# ウィンドウのX座標(タイル番目)
 var_win_yt=c004	# ウィンドウのY座標(タイル番目)
-
-gbos_vec() {
-	gb_all_intr_reti_vector_table
-}
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -211,29 +207,19 @@ fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_wtcoord_to_low.o))
 fadr=$(calc16 "${a_lay_tiles_at_wtcoord_to_low}+${fsz}")
 a_vblank_hdlr=$(four_digits $fadr)
 f_vblank_hdlr() {
-	# 入力状態の変数値に応じてタイルを配置し配置場所更新
-	## 同時押しがあればキーの数だけ実施する
+	:
 
-	# 現在の入力状態と次のタイル配置アドレスをメモリから取得
-	lr35902_copy_to_regA_from_addr $var_btn_stat	# 3
-	lr35902_copy_to_from regC regA			# 1
-	lr35902_copy_to_regA_from_addr $var_crr_cur_1	# 3
-	lr35902_copy_to_from regL regA			# 1
-	lr35902_copy_to_regA_from_addr $var_crr_cur_2	# 3
-	lr35902_copy_to_from regH regA			# 1
+	# V-Blank/H-Blank時の処理は、
+	# mainのHaltループ内でその他の処理と直列に実施する
+	# ∵ 割り込み時にフラグレジスタをスタックへプッシュしない上に
+	#    手動でプッシュする命令も無いため
+	#    任意のタイミングで割り込みハンドラが実施される設計にするには
+	#    割り込まれる可能性のある処理全てで
+	#    「フラグレジスタへ影響を与える命令〜条件付きジャンプ」
+	#    をdi〜eiで保護する必要が出てくる
+	#    また、現状の分量であれば全てV-Blank期間に収まる
 
-	# - b7 スタートボタン の処理
-	lr35902_test_bitN_of_reg 7 regC
-	lr35902_rel_jump_with_cond Z 05			# 2
-	lr35902_set_reg regA 01				# 2
-	echo -en '\xcb\xb9'	# res 7,c		# 2
-	lr35902_copyinc_to_ptrHL_from_regA		# 1
-
-	# 次のタイル配置アドレスをメモリへ格納
-	lr35902_copy_to_from regA regL			# 1
-	lr35902_copy_to_addr_from_regA $var_crr_cur_1	# 3
-	lr35902_copy_to_from regA regH			# 1
-	lr35902_copy_to_addr_from_regA $var_crr_cur_2	# 3
+	# lr35902_ei_and_ret
 }
 
 # 0500h〜の領域に配置される
@@ -245,6 +231,32 @@ global_functions() {
 	f_lay_tiles_at_tcoord_to_low
 	f_lay_tiles_at_wtcoord_to_low
 	f_vblank_hdlr
+}
+
+gbos_vec() {
+	dd if=/dev/zero bs=1 count=64 2>/dev/null
+
+	# V-Blank (INT 40h)
+	# lr35902_abs_jump $a_vblank_hdlr
+	# dd if=/dev/zero bs=1 count=$((8 - 3)) 2>/dev/null
+	lr35902_ei_and_ret
+	dd if=/dev/zero bs=1 count=7 2>/dev/null
+
+	# LCD STAT (INT 48h)
+	lr35902_ei_and_ret
+	dd if=/dev/zero bs=1 count=7 2>/dev/null
+
+	# Timer (INT 50h)
+	lr35902_ei_and_ret
+	dd if=/dev/zero bs=1 count=7 2>/dev/null
+
+	# Serial (INT 58h)
+	lr35902_ei_and_ret
+	dd if=/dev/zero bs=1 count=7 2>/dev/null
+
+	# Joypad (INT 60h)
+	lr35902_ei_and_ret
+	dd if=/dev/zero bs=1 count=159 2>/dev/null
 }
 
 gbos_const() {
@@ -283,19 +295,24 @@ load_all_tiles() {
 }
 
 clear_bg() {
+	local sz
 	lr35902_set_reg regHL $GBOS_BG_TILEMAP_START
-	lr35902_set_reg regB 20
+	lr35902_set_reg regB $GB_SC_HEIGHT_T
 	lr35902_clear_reg regA
-	# >>loopB
-	lr35902_set_reg regC 20				# 2
-	# >>loopA
-	lr35902_copyinc_to_ptrHL_from_regA		# 1
-	lr35902_dec regC				# 1
-	lr35902_rel_jump_with_cond NZ $(two_comp 04)	# 2
-	# <<loopA
-	lr35902_dec regB				# 1
-	lr35902_rel_jump_with_cond NZ $(two_comp 07)	# 2
-	# <<loopB
+	(
+		lr35902_set_reg regC $GB_SC_WIDTH_T
+		(
+			lr35902_copyinc_to_ptrHL_from_regA
+			lr35902_dec regC
+		) >src/clear_bg.1.o
+		cat src/clear_bg.1.o
+		sz=$(stat -c '%s' src/clear_bg.1.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz+2)))
+		lr35902_dec regB
+	) >src/clear_bg.2.o
+	cat src/clear_bg.2.o
+	sz=$(stat -c '%s' src/clear_bg.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz+2)))
 }
 
 lay_tiles_in_grid() {
@@ -393,7 +410,6 @@ draw_blank_window() {
 }
 
 # TODO グローバル関数化
-# TODO 後のためにDMA転送するようにする
 obj_init() {
 	local oam_num=$1
 	local y=$2
@@ -463,7 +479,6 @@ init() {
 		 $GBOS_TILE_NUM_CSL $GBOS_OBJ_DEF_ATTR
 	# 別途 obj_move とかの関数も作る
 	# TODO グローバル関数化
-	# TODO 後のためにDMA転送するようにする
 
 	# V-Blank(b0)の割り込みのみ有効化
 	lr35902_set_reg regA 01
@@ -478,12 +493,12 @@ init() {
 	# - 入力状態を示す変数をゼロクリア
 	lr35902_copy_to_addr_from_regA $var_btn_stat
 
-	# 割り込み有効化
-	lr35902_enable_interrupts
-
 	# LCD再開
 	lr35902_set_reg regA $(calc16 "${GBOS_LCDC_BASE}+${GB_LCDC_BIT_DE}")
 	lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
+
+	# 割り込み有効化
+	lr35902_enable_interrupts
 }
 
 gbos_main() {
@@ -502,6 +517,30 @@ gbos_main() {
 	# lr35902_rel_jump_with_cond NZ 02		# 2
 	# lr35902_rel_jump $(two_comp 0c)	# 必ずこちらに入る	# 2
 	# lr35902_rel_jump $(two_comp 0e)			# 2
+
+	# 入力状態の変数値に応じてタイルを配置し配置場所更新
+	## 同時押しがあればキーの数だけ実施する
+
+	# 現在の入力状態と次のタイル配置アドレスをメモリから取得
+	lr35902_copy_to_regA_from_addr $var_btn_stat	# 3
+	lr35902_copy_to_from regC regA			# 1
+	lr35902_copy_to_regA_from_addr $var_crr_cur_1	# 3
+	lr35902_copy_to_from regL regA			# 1
+	lr35902_copy_to_regA_from_addr $var_crr_cur_2	# 3
+	lr35902_copy_to_from regH regA			# 1
+
+	# - b7 スタートボタン の処理
+	lr35902_test_bitN_of_reg 7 regC
+	lr35902_rel_jump_with_cond Z 05			# 2
+	lr35902_set_reg regA 01				# 2
+	echo -en '\xcb\xb9'	# res 7,c		# 2
+	lr35902_copyinc_to_ptrHL_from_regA		# 1
+
+	# 次のタイル配置アドレスをメモリへ格納
+	lr35902_copy_to_from regA regL			# 1
+	lr35902_copy_to_addr_from_regA $var_crr_cur_1	# 3
+	lr35902_copy_to_from regA regH			# 1
+	lr35902_copy_to_addr_from_regA $var_crr_cur_2	# 3
 
 	# [キー入力処理]
 	# チャタリング(あるのか？)等のノイズ除去は未実装

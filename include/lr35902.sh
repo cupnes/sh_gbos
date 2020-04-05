@@ -722,13 +722,13 @@ lr35902_copy_to_high_addr_from_regA() {
 lr35902_copy_to_regA_from_ioport() {
 	local ioport=$1
 	echo -en "\xf0\x${ioport}"	# ld a,[0xff00+${ioport}]
-	echo -e "ld a,[\$ff00+\$$addr]\t;12" >>$ASM_LIST_FILE
+	echo -e "ld a,[\$ff00+\$$ioport]\t;12" >>$ASM_LIST_FILE
 }
 
 lr35902_copy_to_ioport_from_regA() {
 	local ioport=$1
 	echo -en "\xe0\x${ioport}"	# ld [0xff00+${ioport}],a
-	echo -e "ld [\$ff00+\$$addr],a\t;12" >>$ASM_LIST_FILE
+	echo -e "ld [\$ff00+\$$ioport],a\t;12" >>$ASM_LIST_FILE
 }
 
 lr35902_compare_regA_and() {
@@ -1039,6 +1039,13 @@ lr35902_test_bitN_of_reg() {
 		echo "lr35902_test_bitN_of_reg $n $reg" 1>&2
 		return 1
 	esac
+}
+
+lr35902_abs_jump() {
+	local addr=$1
+	echo -en '\xc3'
+	echo_2bytes $addr	# jp ${addr}
+	echo -e "jp \$$addr\t;16" >>$ASM_LIST_FILE
 }
 
 lr35902_rel_jump() {
