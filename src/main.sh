@@ -6,8 +6,8 @@ SRC_MAIN_SH=true
 . include/gb.sh
 . src/tiles.sh
 
-GBOS_WIN_DEF_X_T=02
-GBOS_WIN_DEF_Y_T=02
+GBOS_WIN_DEF_X_T=00
+GBOS_WIN_DEF_Y_T=00
 
 # ウィンドウの見かけ上の幅/高さ
 # (描画用の1タイル分の幅/高さは除く)
@@ -68,22 +68,33 @@ var_win_yt=c004	# ウィンドウのY座標(タイル番目)
 # out: regHL - 9800h〜のアドレスを格納
 a_tcoord_to_addr=$GBOS_GFUNC_START
 f_tcoord_to_addr() {
+	local sz
+
+	lr35902_push_reg regAF
 	lr35902_push_reg regBC
 	lr35902_push_reg regDE
 
 	lr35902_set_reg regHL $GBOS_BG_TILEMAP_START
-	lr35902_set_reg regBC $(four_digits $GB_SC_WIDTH_T)
+	lr35902_clear_reg regA
+	lr35902_compare_regA_and regD
 	(
-		lr35902_add_to_regHL regBC
-		lr35902_dec regD
-	) >src/f_tcoord_to_addr.1.o
-	cat src/f_tcoord_to_addr.1.o
-	local sz=$(stat -c '%s' src/f_tcoord_to_addr.1.o)
-	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+		lr35902_set_reg regBC $(four_digits $GB_SC_WIDTH_T)
+		(
+			lr35902_add_to_regHL regBC
+			lr35902_dec regD
+		) >src/f_tcoord_to_addr.1.o
+		cat src/f_tcoord_to_addr.1.o
+		sz=$(stat -c '%s' src/f_tcoord_to_addr.1.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+	) >src/f_tcoord_to_addr.2.o
+	sz=$(stat -c '%s' src/f_tcoord_to_addr.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
+	cat src/f_tcoord_to_addr.2.o
 	lr35902_add_to_regHL regDE
 
 	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
 	lr35902_return
 }
 
