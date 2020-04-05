@@ -3,6 +3,8 @@ if [ "${INCLUDE_COMMON_SH+is_defined}" ]; then
 fi
 INCLUDE_COMMON_SH=true
 
+. include/lr35902.sh
+
 echo_2bytes() {
 	local val=$1
 	local top_half=$(echo $val | cut -c-2)
@@ -79,4 +81,9 @@ calc16_2() {
 to16() {
 	local val=$1
 	echo "obase=16;$val" | bc
+}
+
+infinite_halt() {
+	lr35902_halt
+	lr35902_rel_jump $(two_comp 04)
 }
