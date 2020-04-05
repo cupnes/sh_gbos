@@ -11,7 +11,7 @@ GBOS_WIN_DEF_Y_T=00
 
 # ウィンドウの見かけ上の幅/高さ
 # (描画用の1タイル分の幅/高さは除く)
-GBOS_WIN_WIDTH_T=1a
+GBOS_WIN_WIDTH_T=$(calc16 "${GB_DISP_WIDTH_T}-2")
 GBOS_WIN_HEIGHT_T=17
 
 GBOS_WX_DEF=00
