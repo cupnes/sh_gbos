@@ -393,6 +393,19 @@ dump_all_tiles() {
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((rel_sz + 2)))
 }
 
+hide_all_objs() {
+	lr35902_clear_reg regA
+	lr35902_set_reg regC $GB_NUM_ALL_OBJS
+	(
+		lr35902_dec regC
+		lr35902_call $a_set_objpos
+		lr35902_compare_regA_and regC
+	) >src/hide_all_objs.1.o
+	cat src/hide_all_objs.1.o
+	local sz=$(stat -c '%s' src/hide_all_objs.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz+2)))
+}
+
 set_win_coord() {
 	local xt=$1
 	local yt=$2
@@ -490,9 +503,7 @@ init() {
 	clear_bg
 
 	# OAMを初期化(全て非表示にする)
-	## TODO 全てのOBJの位置を非表示領域に設定する
-	## TODO obj_move を用意して、全objを非表示領域へ移動させる
-	##      Y=0にすれば良い
+	hide_all_objs
 
 	# ウィンドウ座標(タイル番目)の変数へデフォルト値設定
 	set_win_coord $GBOS_WIN_DEF_X_T $GBOS_WIN_DEF_Y_T
