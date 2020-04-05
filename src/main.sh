@@ -12,7 +12,7 @@ GBOS_WIN_DEF_Y_T=00
 # ウィンドウの見かけ上の幅/高さ
 # (描画用の1タイル分の幅/高さは除く)
 GBOS_WIN_WIDTH_T=$(calc16 "${GB_DISP_WIDTH_T}-2")
-GBOS_WIN_HEIGHT_T=17
+GBOS_WIN_HEIGHT_T=$(calc16 "${GB_DISP_HEIGHT_T}-2")
 
 GBOS_WX_DEF=00
 GBOS_WY_DEF=00
@@ -443,7 +443,7 @@ draw_blank_window() {
 	lr35902_set_reg regE 01
 	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 
-	lr35902_set_reg regD 17
+	lr35902_set_reg regD $GBOS_WIN_HEIGHT_T
 	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 
 	lr35902_set_reg regA 02	# -(上付き)
