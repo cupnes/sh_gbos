@@ -201,14 +201,47 @@ f_lay_tiles_at_wtcoord_to_low() {
 	lr35902_return
 }
 
-# V-Blankハンドラ
+# オブジェクト番号をOAMアドレスへ変換
+# in : regC  - オブジェクト番号(00h〜27h)
+# out: regHL - OAMアドレス(FE00h〜FE9Ch)
 f_lay_tiles_at_wtcoord_to_low >src/f_lay_tiles_at_wtcoord_to_low.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_wtcoord_to_low.o))
 fadr=$(calc16 "${a_lay_tiles_at_wtcoord_to_low}+${fsz}")
-a_vblank_hdlr=$(four_digits $fadr)
-f_vblank_hdlr() {
-	:
+a_objnum_to_addr=$(four_digits $fadr)
+f_objnum_to_addr() {
+	lr35902_push_reg regBC
 
+	lr35902_clear_reg regB
+	lr35902_shift_left_arithmetic regC
+	lr35902_shift_left_arithmetic regC
+	lr35902_set_reg regHL $GB_OAM_BASE
+	lr35902_add_to_regHL regBC
+
+	lr35902_pop_reg regBC
+	lr35902_return
+}
+
+# オブジェクトの座標を設定
+# in : regC - オブジェクト番号
+#      regA - 座標Y
+#      regB - 座標X
+f_objnum_to_addr >src/f_objnum_to_addr.o
+fsz=$(to16 $(stat -c '%s' src/f_objnum_to_addr.o))
+fadr=$(calc16 "${a_objnum_to_addr}+${fsz}")
+a_set_objpos=$(four_digits $fadr)
+f_set_objpos() {
+	lr35902_push_reg regHL
+
+	lr35902_call $a_objnum_to_addr
+	lr35902_copyinc_to_ptrHL_from_regA
+	lr35902_copy_to_ptrHL_from regB
+
+	lr35902_pop_reg regHL
+	lr35902_return
+}
+
+# V-Blankハンドラ
+# f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
 	# mainのHaltループ内でその他の処理と直列に実施する
 	# ∵ 割り込み時にフラグレジスタをスタックへプッシュしない上に
@@ -220,7 +253,7 @@ f_vblank_hdlr() {
 	#    また、現状の分量であれば全てV-Blank期間に収まる
 
 	# lr35902_ei_and_ret
-}
+# }
 
 # 0500h〜の領域に配置される
 global_functions() {
@@ -230,7 +263,8 @@ global_functions() {
 	f_lay_tiles_at_wtcoord_to_right
 	f_lay_tiles_at_tcoord_to_low
 	f_lay_tiles_at_wtcoord_to_low
-	f_vblank_hdlr
+	f_objnum_to_addr
+	f_set_objpos
 }
 
 gbos_vec() {
@@ -399,14 +433,6 @@ draw_blank_window() {
 	lr35902_set_reg regC 01
 	lr35902_set_reg regE 02
 	lr35902_call $a_lay_tiles_at_wtcoord_to_low
-
-	# 無限ループ待ち
-	# (
-	# 	lr35902_halt
-	# ) >src/draw_blank_window.x.o
-	# cat src/draw_blank_window.x.o
-	# sz=$(stat -c '%s' src/draw_blank_window.x.o)
-	# lr35902_rel_jump $(two_comp_d $((sz + 2)))
 }
 
 # TODO グローバル関数化
