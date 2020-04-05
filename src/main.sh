@@ -49,9 +49,15 @@ GBOS_OAM_BASE=fe00
 GBOS_OAM_SZ=04	# 4 bytes
 GBOS_OAM_NUM_CSL=00
 
+GBOS_DIR_KEY_MASK=0f	# $var_btn_stat の十字キー入力のみ抽出するマスク
+GBOS_DOWN_KEY_MASK=08
+GBOS_UP_KEY_MASK=04
+GBOS_LEFT_KEY_MASK=02
+GBOS_RIGHT_KEY_MASK=01
+
 # 変数
-var_crr_cur_1=c000	# キータイルを次に配置する場所(下位)
-var_crr_cur_2=c001	# キータイルを次に配置する場所(上位)
+var_mouse_x=c000	# マウスカーソルX座標
+var_mouse_y=c001	# マウスカーソルY座標
 var_btn_stat=c002	# 現在のキー状態を示す変数
 var_win_xt=c003	# ウィンドウのX座標(タイル番目)
 var_win_yt=c004	# ウィンドウのY座標(タイル番目)
@@ -295,7 +301,7 @@ gbos_vec() {
 
 gbos_const() {
 	char_tiles
-	dd if=/dev/zero bs=1 count=$GBOS_TILERSV_AREA_BYTES
+	dd if=/dev/zero bs=1 count=$GBOS_TILERSV_AREA_BYTES 2>/dev/null
 	global_functions
 }
 
@@ -522,11 +528,11 @@ init() {
 	lr35902_copy_to_ioport_from_regA $GB_IO_IE
 
 	# 変数初期化
-	# - キータイルを次に配置する背景マップのアドレスを初期化
-	lr35902_set_reg regA 98
-	lr35902_copy_to_addr_from_regA $var_crr_cur_2
-	lr35902_clear_reg regA
-	lr35902_copy_to_addr_from_regA $var_crr_cur_1
+	# - マウスカーソルX,Y座標を画面左上で初期化
+	lr35902_set_reg regA $GBOS_OBJ_WIDTH
+	lr35902_copy_to_addr_from_regA $var_mouse_x
+	lr35902_set_reg regA $GBOS_OBJ_HEIGHT
+	lr35902_copy_to_addr_from_regA $var_mouse_y
 	# - 入力状態を示す変数をゼロクリア
 	lr35902_copy_to_addr_from_regA $var_btn_stat
 
@@ -538,34 +544,106 @@ init() {
 	lr35902_enable_interrupts
 }
 
+# マウスカーソル座標更新
+# in : regA - 現在の十字キーの状態(下位4ビット)
+update_mouse_cursor() {
+	local sz
+
+	# キー入力状態をregDへ退避
+	lr35902_copy_to_from regD regA
+
+	# マウスカーソル座標を変数から取得
+	## regB ← X座標
+	lr35902_copy_to_regA_from_addr $var_mouse_x
+	lr35902_copy_to_from regB regA
+	## regC ← Y座標
+	lr35902_copy_to_regA_from_addr $var_mouse_y
+	lr35902_copy_to_from regC regA
+
+	# ↓の押下状態確認
+	lr35902_copy_to_from regA regD
+	lr35902_and_to_regA $GBOS_DOWN_KEY_MASK
+	(
+		lr35902_inc regC
+	) >src/update_mouse_cursor.1.o
+	sz=$(stat -c '%s' src/update_mouse_cursor.1.o)
+	lr35902_rel_jump_with_cond Z $(two_digits $sz)
+	cat src/update_mouse_cursor.1.o
+
+	# ↑の押下状態確認
+	lr35902_copy_to_from regA regD
+	lr35902_and_to_regA $GBOS_UP_KEY_MASK
+	(
+		lr35902_dec regC
+	) >src/update_mouse_cursor.2.o
+	sz=$(stat -c '%s' src/update_mouse_cursor.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits $sz)
+	cat src/update_mouse_cursor.2.o
+
+	# ←の押下状態確認
+	lr35902_copy_to_from regA regD
+	lr35902_and_to_regA $GBOS_LEFT_KEY_MASK
+	(
+		lr35902_dec regB
+	) >src/update_mouse_cursor.3.o
+	sz=$(stat -c '%s' src/update_mouse_cursor.3.o)
+	lr35902_rel_jump_with_cond Z $(two_digits $sz)
+	cat src/update_mouse_cursor.3.o
+
+	# →の押下状態確認
+	lr35902_copy_to_from regA regD
+	lr35902_and_to_regA $GBOS_RIGHT_KEY_MASK
+	(
+		lr35902_inc regB
+	) >src/update_mouse_cursor.4.o
+	sz=$(stat -c '%s' src/update_mouse_cursor.4.o)
+	lr35902_rel_jump_with_cond Z $(two_digits $sz)
+	cat src/update_mouse_cursor.4.o
+
+	# OAM更新
+	lr35902_copy_to_from regA regC
+	lr35902_set_reg regC $GBOS_OAM_NUM_CSL
+	lr35902_call $a_set_objpos
+
+	# 変数へ反映
+	lr35902_copy_to_addr_from_regA $var_mouse_y
+	lr35902_copy_to_from regA regB
+	lr35902_copy_to_addr_from_regA $var_mouse_x
+}
+
+# 2020-03-05 19時現在
+# 処理時間: 1/4096 秒
+# (/ 1000000 4096.0)244.140625 us
+#
+# 1496サイクル(計上していないものもある)
+# 4.19MHz -> (/ 1000 4.19)238.6634844868735 ns/cyc
+# (* 238 1496)356048 ns -> 356.048 us
+# これは本来は通らない条件も全て含んでいる
+# より正確なのは↑の244 usで、概ね同じ数値が出ているので
+# ↑の244usは妥当そうだと言える
 event_driven() {
-	lr35902_halt					# 2
+	local sz
 
-	# [VRAMタイルマップ更新]
+	lr35902_halt
 
-	# 入力状態の変数値に応じてタイルを配置し配置場所更新
-	## 同時押しがあればキーの数だけ実施する
 
-	# 現在の入力状態と次のタイル配置アドレスをメモリから取得
-	lr35902_copy_to_regA_from_addr $var_btn_stat	# 3
-	lr35902_copy_to_from regC regA			# 1
-	lr35902_copy_to_regA_from_addr $var_crr_cur_1	# 3
-	lr35902_copy_to_from regL regA			# 1
-	lr35902_copy_to_regA_from_addr $var_crr_cur_2	# 3
-	lr35902_copy_to_from regH regA			# 1
 
-	# - b7 スタートボタン の処理
-	lr35902_test_bitN_of_reg 7 regC
-	lr35902_rel_jump_with_cond Z 05			# 2
-	lr35902_set_reg regA 01				# 2
-	echo -en '\xcb\xb9'	# res 7,c		# 2
-	lr35902_copyinc_to_ptrHL_from_regA		# 1
+	# [マウスカーソル更新]
 
-	# 次のタイル配置アドレスをメモリへ格納
-	lr35902_copy_to_from regA regL			# 1
-	lr35902_copy_to_addr_from_regA $var_crr_cur_1	# 3
-	lr35902_copy_to_from regA regH			# 1
-	lr35902_copy_to_addr_from_regA $var_crr_cur_2	# 3
+	# 現在の入力状態を変数から取得
+	lr35902_copy_to_regA_from_addr $var_btn_stat
+
+	# 十字キー入力の有無確認
+	lr35902_and_to_regA $GBOS_DIR_KEY_MASK
+	(
+		# 十字キー入力があればマウスカーソル座標更新
+		update_mouse_cursor
+	) >src/event_driven.1.o
+	sz=$(stat -c '%s' src/event_driven.1.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
+	cat src/event_driven.1.o
+
+
 
 	# [キー入力処理]
 	# チャタリング(あるのか？)等のノイズ除去は未実装
@@ -688,7 +766,9 @@ event_driven() {
 	lr35902_copy_to_from regA regC			# 1
 	lr35902_copy_to_addr_from_regA $var_btn_stat	# 3
 
-	# 割り込み待ち(halt)へ戻る
+
+
+	# [割り込み待ち(halt)へ戻る]
 	# lr35902_rel_jump $(two_comp 76)			# 2
 	# (+ 2 4 (* 2 (+ 8 5 40)) 4 2)118
 	gbos_const >src/gbos_const.o
