@@ -439,6 +439,12 @@ draw_blank_window() {
 	lr35902_set_reg regD 02
 	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 
+	lr35902_set_reg regA $GBOS_TILE_NUM_LIGHT_GRAY
+	lr35902_set_reg regC $(calc16 "${GBOS_WIN_WIDTH_T}-3")
+	lr35902_set_reg regD 01
+	lr35902_set_reg regE 02
+	lr35902_call $a_lay_tiles_at_wtcoord_to_right
+
 	lr35902_set_reg regA 04	# |(右付き)
 	lr35902_set_reg regC $GBOS_WIN_HEIGHT_T
 	lr35902_set_reg regD 01
@@ -449,8 +455,19 @@ draw_blank_window() {
 	lr35902_set_reg regE $(calc16 "${GBOS_WIN_WIDTH_T}+1")
 	lr35902_call $a_lay_tiles_at_wtcoord_to_low
 
+	lr35902_set_reg regA $GBOS_TILE_NUM_FUNC_BTN
 	lr35902_set_reg regC 01
-	lr35902_set_reg regE 02
+	lr35902_set_reg regE 01
+	lr35902_call $a_lay_tiles_at_wtcoord_to_low
+
+	lr35902_set_reg regA $GBOS_TILE_NUM_MINI_BTN
+	lr35902_set_reg regC 01
+	lr35902_set_reg regE $(calc16 "${GBOS_WIN_WIDTH_T}-1")
+	lr35902_call $a_lay_tiles_at_wtcoord_to_low
+
+	lr35902_set_reg regA $GBOS_TILE_NUM_MAXI_BTN
+	lr35902_set_reg regC 01
+	lr35902_set_reg regE ${GBOS_WIN_WIDTH_T}
 	lr35902_call $a_lay_tiles_at_wtcoord_to_low
 }
 

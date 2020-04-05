@@ -6,17 +6,21 @@ SRC_TILES_SH=true
 . include/common.sh
 
 GBOS_TILEDATA_AREA_BYTES=03B0
-GBOS_NUM_ALL_TILES=34
+GBOS_NUM_ALL_TILES=38
 GBOS_NUM_ALL_TILE_BYTES=$(four_digits $(calc16 "${GBOS_NUM_ALL_TILES}*10"))
 
 tiles_bc_form="ibase=16;${GBOS_TILEDATA_AREA_BYTES}-${GBOS_NUM_ALL_TILE_BYTES}"
 GBOS_TILERSV_AREA_BYTES=$(echo $tiles_bc_form | bc)
 ## ddでゼロ埋めするのに使うので10進数で
 
-GBOS_TILE_NUM_CSL=32
+GBOS_TILE_NUM_LIGHT_GRAY=32
+GBOS_TILE_NUM_FUNC_BTN=33
+GBOS_TILE_NUM_MINI_BTN=34
+GBOS_TILE_NUM_MAXI_BTN=35
+GBOS_TILE_NUM_CSL=36
 
 char_tiles() {
-	### タイルデータ(計52タイル,832(0x340)バイト) ###
+	### タイルデータ(計56タイル,896(0x380)バイト) ###
 	# [文字コード]
 	# - 記号(13文字,208(d0)バイト)
 	# 00: ' '
@@ -169,15 +173,28 @@ char_tiles() {
 	echo -en '\x00\x00\x7f\x7f\x02\x02\x04\x04'
 	echo -en '\x08\x08\x10\x10\x20\x20\x7f\x7f'
 
-	# 31: all 1
+	# 31: ■
 	echo -en '\xff\xff\xff\xff\xff\xff\xff\xff'
 	echo -en '\xff\xff\xff\xff\xff\xff\xff\xff'
+	# 32: ■(ライトグレー)
+	echo -en '\xff\x00\xff\x00\xff\x00\xff\x00'
+	echo -en '\xff\x00\xff\x00\xff\x00\xff\x00'
+
+	# 33: 機能ボタン(ウィンドウタイトルバー左部)
+	echo -en '\x01\x01\x01\x01\x7d\x7d\x45\x45'
+	echo -en '\x45\x45\x7d\x7d\x01\x01\x01\x01'
+	# 34: 最小化ボタン
+	echo -en '\x80\x80\xbe\xbe\xbe\xbe\xbe\xbe'
+	echo -en '\x9c\x9c\x9c\x9c\x88\x88\x80\x80'
+	# 35: 最大化ボタン
+	echo -en '\x80\x80\x88\x88\x9c\x9c\x9c\x9c'
+	echo -en '\xbe\xbe\xbe\xbe\xbe\xbe\x80\x80'
 
 	# マウスカーソル(8x16)
-	# 32: 上半分
+	# 36: 上半分
 	echo -en '\xc0\xc0\xe0\xa0\xf0\x90\xf8\x88'
 	echo -en '\xfc\x84\xfe\x82\xff\x81\xff\x81'
-	# 33: 下半分
+	# 37: 下半分
 	echo -en '\xfe\x86\xfc\x84\xfe\xb2\xde\xd2'
 	echo -en '\x0f\x09\x0f\x09\x07\x05\x07\x07'
 }
