@@ -482,6 +482,11 @@ draw_blank_window() {
 	lr35902_call $a_lay_tiles_at_wtcoord_to_low
 }
 
+# 初期アイコン描画
+draw_init_icons() {
+	# 未定義
+}
+
 # TODO グローバル関数化
 obj_init() {
 	local oam_num=$1
@@ -544,6 +549,9 @@ init() {
 
 	# タイトル・中身空のウィンドウを描画
 	draw_blank_window
+
+	# 初期アイコンを配置
+	draw_init_icons
 
 	# マウスカーソルを描画
 	obj_init $GBOS_OAM_NUM_CSL $GBOS_OBJ_HEIGHT $GBOS_OBJ_WIDTH \

@@ -19,7 +19,7 @@ txt22bpp() {
 			msb="${msb}1"
 			lsb="${lsb}1"
 			;;
-		B)
+		B|'+')
 			msb="${msb}1"
 			lsb="${lsb}0"
 			;;
