@@ -23,6 +23,8 @@ GBOS_TILE_NUM_CSL=36
 GBOS_TYPE_ICON_TILE_BASE=38
 GBOS_NUM_ICON_TILES=4
 
+GBOS_ICON_NUM_TXT=02
+
 char_tiles() {
 	### タイルデータ(計68タイル,1088(0x440)バイト) ###
 	# [文字コード]
