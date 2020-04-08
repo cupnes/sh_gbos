@@ -737,8 +737,13 @@ event_driven() {
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
 	cat src/event_driven.1.o
 
-	# 現在の入力状態を変数から取得
-	# lr35902_copy_to_regA_from_addr $var_btn_stat
+	# 前回の入力状態を変数から取得
+	lr35902_copy_to_regA_from_addr $var_prv_btn
+	lr35902_copy_to_from regE regA
+
+	# ボタンリリースのみ抽出(1->0の変化があったビットのみ抽出)
+	# 1. 現在と前回でxor
+	# 2. 1.と前回でand
 
 	# # ボタンリリースの有無確認
 	# lr35902_and_to_regA $GBOS_BTN_KEY_MASK
@@ -749,6 +754,10 @@ event_driven() {
 	# sz=$(stat -c '%s' src/event_driven.1.o)
 	# lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
 	# cat src/event_driven.1.o
+
+	# 前回の入力状態更新
+	lr35902_copy_to_from regA regD
+	lr35902_copy_to_addr_from_regA $var_prv_btn
 
 
 
