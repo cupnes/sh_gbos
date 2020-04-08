@@ -266,6 +266,9 @@ fsz=$(to16 $(stat -c '%s' src/f_set_objpos.o))
 fadr=$(calc16 "${a_set_objpos}+${fsz}")
 a_lay_icon=$(four_digits $fadr)
 f_lay_icon() {
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+
 	# アイコン番号を、アイコンのベースタイル番号へ変換
 	# (1アイコン辺りのタイル数が4なので、アイコン番号を4倍する)
 	lr35902_shift_left_arithmetic regA
@@ -277,6 +280,8 @@ f_lay_icon() {
 	lr35902_set_reg regC 01
 	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
 	lr35902_return
 }
 
