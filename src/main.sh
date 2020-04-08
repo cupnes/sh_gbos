@@ -641,12 +641,9 @@ init() {
 }
 
 # マウスカーソル座標更新
-# in : regA - 現在の十字キーの状態(下位4ビット)
+# in : regD - 現在の十字キーの状態(下位4ビット)
 update_mouse_cursor() {
 	local sz
-
-	# キー入力状態をregDへ退避
-	lr35902_copy_to_from regD regA
 
 	# マウスカーソル座標を変数から取得
 	## regB ← X座標
@@ -728,6 +725,7 @@ event_driven() {
 
 	# 現在の入力状態を変数から取得
 	lr35902_copy_to_regA_from_addr $var_btn_stat
+	lr35902_copy_to_from regD regA
 
 	# 十字キー入力の有無確認
 	lr35902_and_to_regA $GBOS_DIR_KEY_MASK
@@ -739,7 +737,10 @@ event_driven() {
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
 	cat src/event_driven.1.o
 
-	# ボタンリリースの有無確認
+	# 現在の入力状態を変数から取得
+	# lr35902_copy_to_regA_from_addr $var_btn_stat
+
+	# # ボタンリリースの有無確認
 	# lr35902_and_to_regA $GBOS_BTN_KEY_MASK
 	# (
 	# 	# ボタン入力があればマウスカーソル座標更新
