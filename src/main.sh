@@ -268,6 +268,7 @@ a_lay_icon=$(four_digits $fadr)
 f_lay_icon() {
 	lr35902_push_reg regAF
 	lr35902_push_reg regBC
+	lr35902_push_reg regDE
 
 	# アイコン番号を、アイコンのベースタイル番号へ変換
 	# (1アイコン辺りのタイル数が4なので、アイコン番号を4倍する)
@@ -278,8 +279,26 @@ f_lay_icon() {
 	lr35902_add_to_regA $GBOS_TYPE_ICON_TILE_BASE
 
 	lr35902_set_reg regC 01
-	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 
+	# 左上
+	lr35902_call $a_lay_tiles_at_wtcoord_to_right
+	lr35902_inc regA
+
+	# 右上
+	lr35902_inc regE
+	lr35902_call $a_lay_tiles_at_tcoord_to_right
+	lr35902_inc regA
+
+	# 右下
+	lr35902_inc regD
+	lr35902_call $a_lay_tiles_at_tcoord_to_right
+	lr35902_inc regA
+
+	# 左下
+	lr35902_dec regE
+	lr35902_call $a_lay_tiles_at_tcoord_to_right
+
+	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
 	lr35902_return
