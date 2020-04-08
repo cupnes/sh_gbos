@@ -1,0 +1,54 @@
+#!/bin/bash
+
+set -uex
+
+. include/common.sh
+
+PATH="tools:$PATH"
+
+if [ $# -ne 1 ]; then
+	echo "Usage: $0 SRC_ROOT_DIR" 1>&2
+	exit 1
+fi
+
+SRC_ROOT_DIR=$1
+
+# ディレクトリ階層は未対応
+
+# ディレクトリヘッダ生成
+num_files=$(ls $SRC_ROOT_DIR | wc -l)
+echo -en "\x$(two_digits $num_files)"
+echo -en '\xff\xff'
+
+# ファイルヘッダ群生成
+ofs=$(four_digits $(calc16 "3+(7*$num_files)"))
+for f in $(ls $SRC_ROOT_DIR); do
+	name=$(echo $f | rev | cut -d'.' -f2- | rev | cut -c1-4)
+	echo -n $name | conv_char_code
+	type=$(echo $f | rev | cut -d'.' -f1 | rev | tr '[:upper:]' '[:lower:]')
+	case $type in
+	exe)
+		echo -en '\x01'
+		;;
+	txt)
+		echo -en '\x02'
+		;;
+	img)
+		echo -en '\x03'
+		;;
+	*)
+		echo -en '\x00'
+	esac
+	echo_2bytes $ofs
+	sz=$(stat -c '%s' $SRC_ROOT_DIR/$f)
+	sz16=$(echo "obase=16;$sz" | bc)
+	ofs=$(four_digits $(calc16 "$ofs+$sz16"))
+done
+
+# データ領域生成
+for f in $(ls $SRC_ROOT_DIR); do
+	sz=$(stat -c '%s' $SRC_ROOT_DIR/$f)
+	sz16=$(four_digits $(echo "obase=16;$sz" | bc))
+	echo_2bytes $sz16
+	cat $SRC_ROOT_DIR/$f
+done
