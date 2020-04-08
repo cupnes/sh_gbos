@@ -6,7 +6,7 @@ set -uex
 . include/gb.sh
 . src/main.sh
 
-ROM_FILE_NAME=gbos.gb
+ROM_FILE_NAME=amado.gb
 
 print_rom() {
 	# 0x0000 - 0x00ff: リスタートと割り込みのベクタテーブル (256バイト)
