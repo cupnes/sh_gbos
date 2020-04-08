@@ -17,7 +17,6 @@ GBOS_WIN_HEIGHT_T=$(calc16 "${GB_DISP_HEIGHT_T}-2")
 GBOS_WX_DEF=00
 GBOS_WY_DEF=00
 GBOS_ROM_TILE_DATA_START=$GB_ROM_START_ADDR
-GBOS_GFUNC_START=0500
 GBOS_TILE_DATA_START=8000
 GBOS_BG_TILEMAP_START=9800
 GBOS_WINDOW_TILEMAP_START=9c00
@@ -482,10 +481,10 @@ draw_blank_window() {
 	lr35902_call $a_lay_tiles_at_wtcoord_to_low
 }
 
-# 初期アイコン描画
-draw_init_icons() {
-	# 未定義
-}
+# # 初期アイコン描画
+# draw_init_icons() {
+# 	# 未定義
+# }
 
 # TODO グローバル関数化
 obj_init() {
@@ -551,7 +550,7 @@ init() {
 	draw_blank_window
 
 	# 初期アイコンを配置
-	draw_init_icons
+	# draw_init_icons
 
 	# マウスカーソルを描画
 	obj_init $GBOS_OAM_NUM_CSL $GBOS_OBJ_HEIGHT $GBOS_OBJ_WIDTH \

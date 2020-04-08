@@ -22,13 +22,20 @@ print_rom() {
 	local entry_addr_4digits=$(echo $bc_form | bc | cut -c2-5)
 	gb_cart_header_no_title $entry_addr_4digits
 
-	# 0x0150 - 0x7fff: カートリッジROM (32432バイト)
+	# 0x0150 - 0x3fff: カートリッジROM(Bank 00) (16048バイト)
 	gbos_main >gbos_main.o
 	cat gbos_const.o gbos_main.o
-	## 32KBのサイズにするために残りをゼロ埋め
+	## 16KBのサイズにするために残りをゼロ埋め
 	local num_const_bytes=$(stat -c '%s' gbos_const.o)
 	local num_main_bytes=$(stat -c '%s' gbos_main.o)
-	local padding=$((GB_CART_ROM_SIZE - num_const_bytes - num_main_bytes))
+	local padding=$((GB_ROM_BANK_SIZE_NOHEAD - num_const_bytes \
+						 - num_main_bytes))
+	dd if=/dev/zero bs=1 count=$padding 2>/dev/null
+
+	# 0x400 - 0x7fff: カートリッジROM(Bank 01) (16384バイト)
+	cat rootfs.img
+	local num_rfs_bytes=$(stat -c '%s' rootfs.img)
+	local padding=$((GB_ROM_BANK_SIZE - num_rfs_bytes))
 	dd if=/dev/zero bs=1 count=$padding 2>/dev/null
 }
 
