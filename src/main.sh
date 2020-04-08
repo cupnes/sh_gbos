@@ -20,6 +20,7 @@ GBOS_ROM_TILE_DATA_START=$GB_ROM_START_ADDR
 GBOS_TILE_DATA_START=8000
 GBOS_BG_TILEMAP_START=9800
 GBOS_WINDOW_TILEMAP_START=9c00
+GBOS_FS_BASE=4000
 
 # [LCD制御レジスタのベース設定値]
 # - Bit 7: LCD Display Enable (0=Off, 1=On)
@@ -256,6 +257,29 @@ f_set_objpos() {
 	lr35902_return
 }
 
+# アイコンをウィンドウ座標に配置
+# in : regA - アイコン番号
+#      regD - ウィンドウタイル座標Y
+#      regE - ウィンドウタイル座標X
+f_set_objpos >src/f_set_objpos.o
+fsz=$(to16 $(stat -c '%s' src/f_set_objpos.o))
+fadr=$(calc16 "${a_set_objpos}+${fsz}")
+a_lay_icon=$(four_digits $fadr)
+f_lay_icon() {
+	# アイコン番号を、アイコンのベースタイル番号へ変換
+	# (1アイコン辺りのタイル数が4なので、アイコン番号を4倍する)
+	lr35902_shift_left_arithmetic regA
+	lr35902_shift_left_arithmetic regA
+
+	# 配置するアイコンの1つ目のタイル番号を算出
+	lr35902_add_to_regA $GBOS_TYPE_ICON_TILE_BASE
+
+	lr35902_set_reg regC 01
+	lr35902_call $a_lay_tiles_at_wtcoord_to_right
+
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -281,6 +305,7 @@ global_functions() {
 	f_lay_tiles_at_wtcoord_to_low
 	f_objnum_to_addr
 	f_set_objpos
+	f_lay_icon
 }
 
 gbos_vec() {
@@ -481,10 +506,13 @@ draw_blank_window() {
 	lr35902_call $a_lay_tiles_at_wtcoord_to_low
 }
 
-# # 初期アイコン描画
-# draw_init_icons() {
-# 	# 未定義
-# }
+# 初期アイコン描画
+draw_init_icons() {
+	lr35902_set_reg regA 01
+	lr35902_set_reg regD 03
+	lr35902_set_reg regE 02
+	lr35902_call $a_lay_icon
+}
 
 # TODO グローバル関数化
 obj_init() {
@@ -550,7 +578,7 @@ init() {
 	draw_blank_window
 
 	# 初期アイコンを配置
-	# draw_init_icons
+	draw_init_icons
 
 	# マウスカーソルを描画
 	obj_init $GBOS_OAM_NUM_CSL $GBOS_OBJ_HEIGHT $GBOS_OBJ_WIDTH \
