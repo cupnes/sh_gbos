@@ -508,7 +508,7 @@ draw_blank_window() {
 
 # 初期アイコン描画
 draw_init_icons() {
-	lr35902_set_reg regA 01
+	lr35902_set_reg regA 02
 	lr35902_set_reg regD 03
 	lr35902_set_reg regE 02
 	lr35902_call $a_lay_icon
