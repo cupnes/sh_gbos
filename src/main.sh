@@ -55,12 +55,19 @@ GBOS_UP_KEY_MASK=04
 GBOS_LEFT_KEY_MASK=02
 GBOS_RIGHT_KEY_MASK=01
 
+GBOS_BTN_KEY_MASK=f0	# $var_btn_stat のボタン入力のみ抽出するマスク
+GBOS_START_KEY_MASK=80
+GBOS_SELECT_KEY_MASK=40
+GBOS_B_KEY_MASK=20
+GBOS_A_KEY_MASK=10
+
 # 変数
 var_mouse_x=c000	# マウスカーソルX座標
 var_mouse_y=c001	# マウスカーソルY座標
 var_btn_stat=c002	# 現在のキー状態を示す変数
 var_win_xt=c003	# ウィンドウのX座標(タイル番目)
 var_win_yt=c004	# ウィンドウのY座標(タイル番目)
+var_prv_btn=c005	# 前回のキー状態を示す変数
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -621,7 +628,9 @@ init() {
 	lr35902_set_reg regA $GBOS_OBJ_HEIGHT
 	lr35902_copy_to_addr_from_regA $var_mouse_y
 	# - 入力状態を示す変数をゼロクリア
+	lr35902_clear_reg regA
 	lr35902_copy_to_addr_from_regA $var_btn_stat
+	lr35902_copy_to_addr_from_regA $var_prv_btn
 
 	# LCD再開
 	lr35902_set_reg regA $(calc16 "${GBOS_LCDC_BASE}+${GB_LCDC_BIT_DE}")
@@ -729,6 +738,16 @@ event_driven() {
 	sz=$(stat -c '%s' src/event_driven.1.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
 	cat src/event_driven.1.o
+
+	# ボタンリリースの有無確認
+	# lr35902_and_to_regA $GBOS_BTN_KEY_MASK
+	# (
+	# 	# ボタン入力があればマウスカーソル座標更新
+	# 	update_mouse_cursor
+	# ) >src/event_driven.1.o
+	# sz=$(stat -c '%s' src/event_driven.1.o)
+	# lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
+	# cat src/event_driven.1.o
 
 
 
