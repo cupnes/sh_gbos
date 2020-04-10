@@ -982,6 +982,26 @@ lr35902_and_to_regA() {
 	esac
 }
 
+lr35902_xor_to_regA() {
+	local reg_or_val=$1
+
+	local regnum=$(to_regnum_pat1 $reg_or_val)
+	if [ "$regnum" != 'error' ]; then
+		echo -en "\xa$regnum"
+		local regname=$(to_regname $reg_or_val)
+		local cyc
+		if [ "$reg_or_val" = 'ptrHL' ]; then
+			cyc=8
+		else
+			cyc=4
+		fi
+		echo -e "xor $regname\t;$cyc" >>$ASM_LIST_FILE
+	else
+		echo -en "\xee\x$reg_or_val"
+		echo -e "xor \$$reg_or_val\t;8" >>$ASM_LIST_FILE
+	fi
+}
+
 # MEMO: rl/rlcやrr/rrcを実装する際は
 #       rl側をrotate_left_through_carryという名前で実装する
 #       ∵ 振る舞いからしてrl側がCarryを通してシフトしている
