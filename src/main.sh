@@ -22,6 +22,19 @@ GBOS_BG_TILEMAP_START=9800
 GBOS_WINDOW_TILEMAP_START=9c00
 GBOS_FS_BASE=4000
 
+# マウス座標
+## TODO: ウィンドウを動かすようになったら
+##       GBOS_WIN_DEF_{X,Y}_Tを使っている部分は直す
+## ウィンドウのアイコン領域のベースアドレス
+GBOS_ICON_BASE_X=$(
+	calc16_2 "(${GBOS_WIN_DEF_X_T}*${GB_TILE_WIDTH})+(${GB_TILE_WIDTH}*2)"
+		)
+GBOS_ICON_BASE_Y=$(
+	calc16_2 "(${GBOS_WIN_DEF_Y_T}*${GB_TILE_HEIGHT})+(${GB_TILE_HEIGHT}*3)"
+		)
+CLICK_WIDTH=$(calc16_2 "${GB_TILE_WIDTH}*2")
+CLICK_HEIGHT=$(calc16_2 "${GB_TILE_HEIGHT}*2")
+
 # [LCD制御レジスタのベース設定値]
 # - Bit 7: LCD Display Enable (0=Off, 1=On)
 #   -> LCDはOn/Offは変わるためベースでは0
@@ -641,7 +654,7 @@ init() {
 }
 
 # マウスカーソル座標更新
-# in : regD - 現在の十字キーの状態(下位4ビット)
+# in : regD - 現在のキーの状態
 update_mouse_cursor() {
 	local sz
 
@@ -704,6 +717,23 @@ update_mouse_cursor() {
 	lr35902_copy_to_addr_from_regA $var_mouse_x
 }
 
+クリックイベント処理
+click_event() {
+	
+}
+
+# ボタンリリースに応じた処理
+# in : regA - リリースされたボタン(上位4ビット)
+btn_release_handler() {
+	lr35902_and_to_regA $GBOS_B_KEY_MASK
+	(
+		click_event
+	) >src/btn_release_handler.1.o
+	local sz=$(stat -c '%s' src/btn_release_handler.1.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
+	cat src/btn_release_handler.1.o
+}
+
 # 2020-03-05 19時現在
 # 処理時間: 1/4096 秒
 # (/ 1000000 4096.0)244.140625 us
@@ -741,19 +771,21 @@ event_driven() {
 	lr35902_copy_to_regA_from_addr $var_prv_btn
 	lr35902_copy_to_from regE regA
 
-	# ボタンリリースのみ抽出(1->0の変化があったビットのみ抽出)
+	# リリースのみ抽出(1->0の変化があったビットのみregAへ格納)
 	# 1. 現在と前回でxor
+	lr35902_xor_to_regA regD
 	# 2. 1.と前回でand
+	lr35902_and_to_regA regE
 
-	# # ボタンリリースの有無確認
-	# lr35902_and_to_regA $GBOS_BTN_KEY_MASK
-	# (
-	# 	# ボタン入力があればマウスカーソル座標更新
-	# 	update_mouse_cursor
-	# ) >src/event_driven.1.o
-	# sz=$(stat -c '%s' src/event_driven.1.o)
-	# lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
-	# cat src/event_driven.1.o
+	# ボタンのリリースがあった場合それに応じた処理を実施
+	lr35902_and_to_regA $GBOS_BTN_KEY_MASK
+	(
+		# ボタンリリースがあれば応じた処理を実施
+		btn_release_handler
+	) >src/event_driven.2.o
+	sz=$(stat -c '%s' src/event_driven.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
+	cat src/event_driven.2.o
 
 	# 前回の入力状態更新
 	lr35902_copy_to_from regA regD
