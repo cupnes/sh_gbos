@@ -81,6 +81,7 @@ var_btn_stat=c002	# 現在のキー状態を示す変数
 var_win_xt=c003	# ウィンドウのX座標(タイル番目)
 var_win_yt=c004	# ウィンドウのY座標(タイル番目)
 var_prv_btn=c005	# 前回のキー状態を示す変数
+var_dbg_click=c006	# クリックイベントを示す
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -717,9 +718,42 @@ update_mouse_cursor() {
 	lr35902_copy_to_addr_from_regA $var_mouse_x
 }
 
-クリックイベント処理
+# クリックイベント処理
 click_event() {
-	
+	local sz
+	local sx=$(calc16_2 "${GBOS_ICON_BASE_X}+${GBOS_OBJ_WIDTH}")
+	local sy=$(calc16_2 "${GBOS_ICON_BASE_Y}+${GBOS_OBJ_HEIGHT}")
+	local ex=$(calc16_2 "${GBOS_ICON_BASE_X}+${CLICK_WIDTH}+${GBOS_OBJ_WIDTH}")
+	local ey=$(calc16_2 "${GBOS_ICON_BASE_Y}+${CLICK_HEIGHT}+${GBOS_OBJ_HEIGHT}")
+
+	lr35902_copy_to_regA_from_addr $var_mouse_x
+	lr35902_compare_regA_and $ex
+	(
+		lr35902_compare_regA_and $sx
+		(
+			lr35902_copy_to_regA_from_addr $var_mouse_y
+			lr35902_compare_regA_and $ey
+			(
+				lr35902_compare_regA_and $sy
+				(
+					lr35902_set_reg regA 01
+					lr35902_copy_to_addr_from_regA $var_dbg_click
+				) >src/click_event.4.o
+				sz=$(stat -c '%s' src/click_event.4.o)
+				lr35902_rel_jump_with_cond C $(two_digits_d $sz)
+				cat src/click_event.4.o
+			) >src/click_event.3.o
+			sz=$(stat -c '%s' src/click_event.3.o)
+			lr35902_rel_jump_with_cond NC $(two_digits_d $sz)
+			cat src/click_event.3.o
+		) >src/click_event.2.o
+		sz=$(stat -c '%s' src/click_event.2.o)
+		lr35902_rel_jump_with_cond C $(two_digits_d $sz)
+		cat src/click_event.2.o
+	) >src/click_event.1.o
+	sz=$(stat -c '%s' src/click_event.1.o)
+	lr35902_rel_jump_with_cond NC $(two_digits_d $sz)
+	cat src/click_event.1.o
 }
 
 # ボタンリリースに応じた処理
