@@ -11,8 +11,10 @@ GBOS_WIN_DEF_Y_T=00
 
 # ウィンドウの見かけ上の幅/高さ
 # (描画用の1タイル分の幅/高さは除く)
-GBOS_WIN_WIDTH_T=$(calc16 "${GB_DISP_WIDTH_T}-2")
-GBOS_WIN_HEIGHT_T=$(calc16 "${GB_DISP_HEIGHT_T}-2")
+GBOS_WIN_WIDTH_T=$(calc16_2 "${GB_DISP_WIDTH_T}-2")
+GBOS_WIN_HEIGHT_T=$(calc16_2 "${GB_DISP_HEIGHT_T}-2")
+GBOS_WIN_DRAWABLE_WIDTH_T=$(calc16_2 "${GBOS_WIN_WIDTH_T}-2")
+GBOS_WIN_DRAWABLE_HEIGHT_T=$(calc16_2 "${GBOS_WIN_HEIGHT_T}-2")
 
 GBOS_WX_DEF=00
 GBOS_WY_DEF=00
@@ -81,7 +83,6 @@ var_btn_stat=c002	# 現在のキー状態を示す変数
 var_win_xt=c003	# ウィンドウのX座標(タイル番目)
 var_win_yt=c004	# ウィンドウのY座標(タイル番目)
 var_prv_btn=c005	# 前回のキー状態を示す変数
-var_dbg_click=c006	# クリックイベントを示す
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -325,6 +326,28 @@ f_lay_icon() {
 	lr35902_return
 }
 
+# ウィンドウ内をクリア
+f_lay_icon >src/f_lay_icon.o
+fsz=$(to16 $(stat -c '%s' src/f_lay_icon.o))
+fadr=$(calc16 "${a_lay_icon}+${fsz}")
+a_clr_win=$(four_digits $fadr)
+f_clr_win() {
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+
+	lr35902_set_reg regA $GBOS_TILE_NUM_SPC
+	lr35902_set_reg regC $GBOS_WIN_DRAWABLE_WIDTH_T
+	lr35902_set_reg regD 03
+	lr35902_set_reg regE 02
+	lr35902_call $a_lay_tiles_at_wtcoord_to_right
+
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -351,6 +374,7 @@ global_functions() {
 	f_objnum_to_addr
 	f_set_objpos
 	f_lay_icon
+	f_clr_win
 }
 
 gbos_vec() {
@@ -736,8 +760,7 @@ click_event() {
 			(
 				lr35902_compare_regA_and $sy
 				(
-					lr35902_set_reg regA 01
-					lr35902_copy_to_addr_from_regA $var_dbg_click
+					lr35902_call $a_clr_win
 				) >src/click_event.4.o
 				sz=$(stat -c '%s' src/click_event.4.o)
 				lr35902_rel_jump_with_cond C $(two_digits_d $sz)
