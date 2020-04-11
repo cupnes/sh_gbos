@@ -845,7 +845,7 @@ click_event() {
 			(
 				lr35902_compare_regA_and $sy
 				(
-					lr35902_call $a_view_txt
+					lr35902_call $a_clr_win
 				) >src/click_event.4.o
 				sz=$(stat -c '%s' src/click_event.4.o)
 				lr35902_rel_jump_with_cond C $(two_digits_d $sz)
