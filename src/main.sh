@@ -142,14 +142,50 @@ f_wtcoord_to_tcoord() {
 	lr35902_return
 }
 
-# タイル座標の位置から右へ指定されたタイルを並べる
-# in : regA  - 並べるタイル番号
-#      regC  - 並べる個数
+# タイル座標の位置へ指定されたタイルを配置する
+# in : regA  - 配置するタイル番号
 #      regD  - タイル座標Y
 #      regE  - タイル座標X
 f_wtcoord_to_tcoord >src/f_wtcoord_to_tcoord.o
 fsz=$(to16 $(stat -c '%s' src/f_wtcoord_to_tcoord.o))
 fadr=$(calc16 "${a_wtcoord_to_tcoord}+${fsz}")
+a_lay_tile_at_tcoord=$(four_digits $fadr)
+f_lay_tile_at_tcoord() {
+	lr35902_call $a_tcoord_to_addr
+	lr35902_copy_to_ptrHL_from regA
+
+	lr35902_return
+}
+
+# ウィンドウタイル座標の位置へ指定されたタイルを配置する
+# in : regA  - 配置するタイル番号
+#      regD  - ウィンドウタイル座標Y
+#      regE  - ウィンドウタイル座標X
+f_lay_tile_at_tcoord >src/f_lay_tile_at_tcoord.o
+fsz=$(to16 $(stat -c '%s' src/f_lay_tile_at_tcoord.o))
+fadr=$(calc16 "${a_lay_tile_at_tcoord}+${fsz}")
+a_lay_tile_at_wtcoord=$(four_digits $fadr)
+f_lay_tile_at_wtcoord() {
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	lr35902_call $a_wtcoord_to_tcoord
+	lr35902_call $a_tcoord_to_addr
+	lr35902_copy_to_ptrHL_from regA
+
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_return
+}
+
+# タイル座標の位置から右へ指定されたタイルを並べる
+# in : regA  - 並べるタイル番号
+#      regC  - 並べる個数
+#      regD  - タイル座標Y
+#      regE  - タイル座標X
+f_lay_tile_at_wtcoord >src/f_lay_tile_at_wtcoord.o
+fsz=$(to16 $(stat -c '%s' src/f_lay_tile_at_wtcoord.o))
+fadr=$(calc16 "${a_lay_tile_at_wtcoord}+${fsz}")
 a_lay_tiles_at_tcoord_to_right=$(four_digits $fadr)
 f_lay_tiles_at_tcoord_to_right() {
 	lr35902_push_reg regBC
@@ -182,7 +218,6 @@ fadr=$(calc16 "${a_lay_tiles_at_tcoord_to_right}+${fsz}")
 a_lay_tiles_at_wtcoord_to_right=$(four_digits $fadr)
 f_lay_tiles_at_wtcoord_to_right() {
 	lr35902_push_reg regDE
-	# TODO HLもpushすべきでは?
 
 	lr35902_call $a_wtcoord_to_tcoord
 	lr35902_call $a_lay_tiles_at_tcoord_to_right
@@ -290,7 +325,6 @@ fadr=$(calc16 "${a_set_objpos}+${fsz}")
 a_lay_icon=$(four_digits $fadr)
 f_lay_icon() {
 	lr35902_push_reg regAF
-	lr35902_push_reg regBC
 	lr35902_push_reg regDE
 
 	# アイコン番号を、アイコンのベースタイル番号へ変換
@@ -301,28 +335,25 @@ f_lay_icon() {
 	# 配置するアイコンの1つ目のタイル番号を算出
 	lr35902_add_to_regA $GBOS_TYPE_ICON_TILE_BASE
 
-	lr35902_set_reg regC 01
-
 	# 左上
-	lr35902_call $a_lay_tiles_at_wtcoord_to_right
+	lr35902_call $a_lay_tile_at_wtcoord
 	lr35902_inc regA
 
 	# 右上
 	lr35902_inc regE
-	lr35902_call $a_lay_tiles_at_tcoord_to_right
+	lr35902_call $a_lay_tile_at_wtcoord
 	lr35902_inc regA
 
 	# 右下
 	lr35902_inc regD
-	lr35902_call $a_lay_tiles_at_tcoord_to_right
+	lr35902_call $a_lay_tile_at_wtcoord
 	lr35902_inc regA
 
 	# 左下
 	lr35902_dec regE
-	lr35902_call $a_lay_tiles_at_tcoord_to_right
+	lr35902_call $a_lay_tile_at_wtcoord
 
 	lr35902_pop_reg regDE
-	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
 	lr35902_return
 }
@@ -355,42 +386,6 @@ f_clr_win() {
 	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
-	lr35902_return
-}
-
-# タイル座標の位置へ指定されたタイルを配置する
-# in : regA  - 配置するタイル番号
-#      regD  - タイル座標Y
-#      regE  - タイル座標X
-f_clr_win >src/f_clr_win.o
-fsz=$(to16 $(stat -c '%s' src/f_clr_win.o))
-fadr=$(calc16 "${a_clr_win}+${fsz}")
-a_lay_tile_at_tcoord=$(four_digits $fadr)
-f_lay_tile_at_tcoord() {
-	lr35902_call $a_tcoord_to_addr
-	lr35902_copy_to_ptrHL_from regA
-
-	lr35902_return
-}
-
-# ウィンドウタイル座標の位置へ指定されたタイルを配置する
-# in : regA  - 配置するタイル番号
-#      regD  - ウィンドウタイル座標Y
-#      regE  - ウィンドウタイル座標X
-f_lay_tile_at_tcoord >src/f_lay_tile_at_tcoord.o
-fsz=$(to16 $(stat -c '%s' src/f_lay_tile_at_tcoord.o))
-fadr=$(calc16 "${a_lay_tile_at_tcoord}+${fsz}")
-a_lay_tile_at_wtcoord=$(four_digits $fadr)
-f_lay_tile_at_wtcoord() {
-	lr35902_push_reg regDE
-	lr35902_push_reg regHL
-
-	lr35902_call $a_wtcoord_to_tcoord
-	lr35902_call $a_tcoord_to_addr
-	lr35902_copy_to_ptrHL_from regA
-
-	lr35902_pop_reg regHL
-	lr35902_pop_reg regDE
 	lr35902_return
 }
 
@@ -429,6 +424,8 @@ f_lay_tile_at_wtcoord() {
 global_functions() {
 	f_tcoord_to_addr
 	f_wtcoord_to_tcoord
+	f_lay_tile_at_tcoord
+	f_lay_tile_at_wtcoord
 	f_lay_tiles_at_tcoord_to_right
 	f_lay_tiles_at_wtcoord_to_right
 	f_lay_tiles_at_tcoord_to_low
@@ -437,8 +434,6 @@ global_functions() {
 	f_set_objpos
 	f_lay_icon
 	f_clr_win
-	f_lay_tile_at_tcoord
-	f_lay_tile_at_wtcoord
 }
 
 gbos_vec() {
