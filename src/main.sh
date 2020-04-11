@@ -14,7 +14,7 @@ GBOS_WIN_DEF_Y_T=00
 GBOS_WIN_WIDTH_T=$(calc16_2 "${GB_DISP_WIDTH_T}-2")
 GBOS_WIN_HEIGHT_T=$(calc16_2 "${GB_DISP_HEIGHT_T}-2")
 GBOS_WIN_DRAWABLE_WIDTH_T=$(calc16_2 "${GBOS_WIN_WIDTH_T}-2")
-GBOS_WIN_DRAWABLE_HEIGHT_T=$(calc16_2 "${GBOS_WIN_HEIGHT_T}-2")
+GBOS_WIN_DRAWABLE_HEIGHT_T=$(calc16_2 "${GBOS_WIN_HEIGHT_T}-3")
 
 GBOS_WX_DEF=00
 GBOS_WY_DEF=00
@@ -340,7 +340,16 @@ f_clr_win() {
 	lr35902_set_reg regC $GBOS_WIN_DRAWABLE_WIDTH_T
 	lr35902_set_reg regD 03
 	lr35902_set_reg regE 02
-	lr35902_call $a_lay_tiles_at_wtcoord_to_right
+	lr35902_set_reg regB $GBOS_WIN_DRAWABLE_HEIGHT_T
+
+	(
+		lr35902_call $a_lay_tiles_at_wtcoord_to_right
+		lr35902_inc regD
+		lr35902_dec regB
+	) >src/f_clr_win.1.o
+	cat src/f_clr_win.1.o
+	local sz=$(stat -c '%s' src/f_clr_win.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz+2)))
 
 	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
