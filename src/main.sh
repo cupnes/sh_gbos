@@ -364,6 +364,8 @@ fsz=$(to16 $(stat -c '%s' src/f_lay_icon.o))
 fadr=$(calc16 "${a_lay_icon}+${fsz}")
 a_clr_win=$(four_digits $fadr)
 f_clr_win() {
+	# 計時(*f_clr_win.1): ここから(*f_clr_win.2)までで 14/4096 秒
+	# (* (/ 14 4096.0) 1000) 3.41796875 ms
 	lr35902_push_reg regAF
 	lr35902_push_reg regBC
 	lr35902_push_reg regDE
@@ -386,6 +388,7 @@ f_clr_win() {
 	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
+	# 計時(*f_clr_win.2)
 	lr35902_return
 }
 
