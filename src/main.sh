@@ -966,7 +966,9 @@ event_driven() {
 	cat src/event_driven.2.o
 
 	# 前回の入力状態更新
-	# 計時(*2)
+	# 計時(*2): ここから(*3)まで 2/16384 秒
+	# (* (/ 2 16384.0) 1000)0.1220703125 ms
+	# (* (/ 2 16384.0) 1000000)122.0703125 us
 	lr35902_copy_to_from regA regD
 	lr35902_copy_to_addr_from_regA $var_prv_btn
 
@@ -1105,6 +1107,7 @@ event_driven() {
 	local const_init=$(echo $bc_form | bc)
 	bc_form="obase=16;ibase=16;${GB_ROM_START_ADDR}+${const_init}"
 	local halt_addr=$(echo $bc_form | bc)
+	# 計時(*3)
 	lr35902_abs_jump $(four_digits $halt_addr)
 }
 
