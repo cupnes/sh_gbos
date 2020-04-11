@@ -878,6 +878,7 @@ btn_release_handler() {
 
 # 2020-03-05 19時現在
 # 処理時間: 1/4096 秒
+# (* (/ 1 4096.0) 1000.0)0.244140625 ms
 # (/ 1000000 4096.0)244.140625 us
 #
 # 1496サイクル(計上していないものもある)
@@ -896,6 +897,8 @@ event_driven() {
 	# [マウスカーソル更新]
 
 	# 現在の入力状態を変数から取得
+	# 計時(*0): ここから(*1)までで 1/4096 秒
+	# (* (/ 1 4096.0) 1000)0.244140625 ms
 	lr35902_copy_to_regA_from_addr $var_btn_stat
 	lr35902_copy_to_from regD regA
 
@@ -910,6 +913,9 @@ event_driven() {
 	cat src/event_driven.1.o
 
 	# 前回の入力状態を変数から取得
+	# 計時(*1): ここから(*2)までで 14/4096 秒
+	# (/ 14 4096.0)0.00341796875 秒
+	# (* (/ 14 4096.0) 1000.0)3.41796875 ms
 	lr35902_copy_to_regA_from_addr $var_prv_btn
 	lr35902_copy_to_from regE regA
 
@@ -930,6 +936,7 @@ event_driven() {
 	cat src/event_driven.2.o
 
 	# 前回の入力状態更新
+	# 計時(*2)
 	lr35902_copy_to_from regA regD
 	lr35902_copy_to_addr_from_regA $var_prv_btn
 
