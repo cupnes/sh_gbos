@@ -6,6 +6,13 @@ set -uex
 . include/gb.sh
 . src/main.sh
 
+if [ $# -ne 1 ]; then
+	echo "Usage: $0 ROOTFS_IMAGE_FILE" 1>&2
+	exit 1
+fi
+
+ROOTFS_IMAGE_FILE=$1
+
 ROM_FILE_NAME=amado.gb
 
 print_rom() {
@@ -33,7 +40,7 @@ print_rom() {
 	dd if=/dev/zero bs=1 count=$padding 2>/dev/null
 
 	# 0x400 - 0x7fff: カートリッジROM(Bank 01) (16384バイト)
-	cat rootfs.img
+	cat $ROOTFS_IMAGE_FILE
 	local num_rfs_bytes=$(stat -c '%s' rootfs.img)
 	local padding=$((GB_ROM_BANK_SIZE - num_rfs_bytes))
 	dd if=/dev/zero bs=1 count=$padding 2>/dev/null
