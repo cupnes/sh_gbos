@@ -182,6 +182,7 @@ fadr=$(calc16 "${a_lay_tiles_at_tcoord_to_right}+${fsz}")
 a_lay_tiles_at_wtcoord_to_right=$(four_digits $fadr)
 f_lay_tiles_at_wtcoord_to_right() {
 	lr35902_push_reg regDE
+	# TODO HLもpushすべきでは?
 
 	lr35902_call $a_wtcoord_to_tcoord
 	lr35902_call $a_lay_tiles_at_tcoord_to_right
@@ -357,6 +358,58 @@ f_clr_win() {
 	lr35902_return
 }
 
+# タイル座標の位置へ指定されたタイルを配置する
+# in : regA  - 配置するタイル番号
+#      regD  - タイル座標Y
+#      regE  - タイル座標X
+f_clr_win >src/f_clr_win.o
+fsz=$(to16 $(stat -c '%s' src/f_clr_win.o))
+fadr=$(calc16 "${a_clr_win}+${fsz}")
+a_lay_tile_at_tcoord=$(four_digits $fadr)
+f_lay_tile_at_tcoord() {
+	lr35902_call $a_tcoord_to_addr
+	lr35902_copy_to_ptrHL_from regA
+
+	lr35902_return
+}
+
+# ウィンドウタイル座標の位置へ指定されたタイルを配置する
+# in : regA  - 配置するタイル番号
+#      regD  - ウィンドウタイル座標Y
+#      regE  - ウィンドウタイル座標X
+f_lay_tile_at_tcoord >src/f_lay_tile_at_tcoord.o
+fsz=$(to16 $(stat -c '%s' src/f_lay_tile_at_tcoord.o))
+fadr=$(calc16 "${a_lay_tile_at_tcoord}+${fsz}")
+a_lay_tile_at_wtcoord=$(four_digits $fadr)
+f_lay_tile_at_wtcoord() {
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	lr35902_call $a_wtcoord_to_tcoord
+	lr35902_call $a_tcoord_to_addr
+	lr35902_copy_to_ptrHL_from regA
+
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_return
+}
+
+# テキストファイルを表示
+# TODO 現状、ファイルは一つしか無いのでファイル番号などを引数で渡しはしない
+# f_clr_win >src/f_clr_win.o
+# fsz=$(to16 $(stat -c '%s' src/f_clr_win.o))
+# fadr=$(calc16 "${a_clr_win}+${fsz}")
+# a_view_txt=$(four_digits $fadr)
+# f_view_txt() {
+# 	lr35902_call $a_clr_win
+
+# 	# 現状、ファイルは一つしか無い想定なので
+# 	# 1つ目のファイルサイズが書かれているアドレスは
+# 	# 0x000aで固定
+
+# 	lr35902_return
+# }
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -384,6 +437,8 @@ global_functions() {
 	f_set_objpos
 	f_lay_icon
 	f_clr_win
+	f_lay_tile_at_tcoord
+	f_lay_tile_at_wtcoord
 }
 
 gbos_vec() {
