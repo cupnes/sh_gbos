@@ -391,19 +391,44 @@ f_clr_win() {
 
 # テキストファイルを表示
 # TODO 現状、ファイルは一つしか無いのでファイル番号などを引数で渡しはしない
-# f_clr_win >src/f_clr_win.o
-# fsz=$(to16 $(stat -c '%s' src/f_clr_win.o))
-# fadr=$(calc16 "${a_clr_win}+${fsz}")
-# a_view_txt=$(four_digits $fadr)
-# f_view_txt() {
-# 	lr35902_call $a_clr_win
+f_clr_win >src/f_clr_win.o
+fsz=$(to16 $(stat -c '%s' src/f_clr_win.o))
+fadr=$(calc16 "${a_clr_win}+${fsz}")
+a_view_txt=$(four_digits $fadr)
+f_view_txt() {
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
 
-# 	# 現状、ファイルは一つしか無い想定なので
-# 	# 1つ目のファイルサイズが書かれているアドレスは
-# 	# 0x000aで固定
+	lr35902_call $a_clr_win
 
-# 	lr35902_return
-# }
+	# 現状、ファイルは一つしか無い想定なので
+	# 1つ目のファイルサイズが書かれている場所へのオフセットは
+	# 0x000aで固定
+	local file_sz_ofs=000a
+	local file_sz_addr=$(calc16 "${GBOS_FS_BASE}+${file_sz_ofs}")
+	lr35902_copy_to_regA_from_addr $file_sz_addr
+	lr35902_copy_to_from regC regA
+	# TODO まずはファイルサイズは256バイト未満ということにする
+
+	# 同様に1つ目のファイルデータへのオフセットは
+	# 0x000cで固定
+	local file_data_ofs=000c
+	local file_data_addr=$(calc16 "${GBOS_FS_BASE}+${file_data_ofs}")
+	lr35902_set_reg regHL $file_data_addr
+
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_set_reg regD 03
+	lr35902_set_reg regE 02
+	lr35902_call $a_lay_tile_at_wtcoord
+
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
 
 # V-Blankハンドラ
 # f_vblank_hdlr() {
@@ -434,6 +459,7 @@ global_functions() {
 	f_set_objpos
 	f_lay_icon
 	f_clr_win
+	f_view_txt
 }
 
 gbos_vec() {
@@ -819,7 +845,7 @@ click_event() {
 			(
 				lr35902_compare_regA_and $sy
 				(
-					lr35902_call $a_clr_win
+					lr35902_call $a_view_txt
 				) >src/click_event.4.o
 				sz=$(stat -c '%s' src/click_event.4.o)
 				lr35902_rel_jump_with_cond C $(two_digits_d $sz)
