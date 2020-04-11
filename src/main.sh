@@ -364,6 +364,32 @@ fsz=$(to16 $(stat -c '%s' src/f_lay_icon.o))
 fadr=$(calc16 "${a_lay_icon}+${fsz}")
 a_clr_win=$(four_digits $fadr)
 f_clr_win() {
+	# 計時(*clr_win.2): ここから(*clr_win.3)までで 1/4096 秒
+	# (* (/ 1 4096.0) 1000)0.244140625 ms
+	lr35902_push_reg regAF
+	lr35902_push_reg regDE
+
+	lr35902_set_reg regA $GBOS_TILE_NUM_SPC
+
+	lr35902_set_reg regD 03
+	lr35902_set_reg regE 02
+	lr35902_call $a_lay_tile_at_tcoord
+
+	lr35902_inc regE
+	lr35902_call $a_lay_tile_at_tcoord
+
+	lr35902_inc regD
+	lr35902_call $a_lay_tile_at_tcoord
+
+	lr35902_dec regE
+	lr35902_call $a_lay_tile_at_tcoord
+
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regAF
+	# 計時(*clr_win.3)
+	lr35902_return
+}
+f_clr_win_old() {
 	# 計時(*f_clr_win.1): ここから(*f_clr_win.2)までで 14/4096 秒
 	# (* (/ 14 4096.0) 1000) 3.41796875 ms
 	lr35902_push_reg regAF
