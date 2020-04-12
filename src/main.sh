@@ -76,6 +76,9 @@ GBOS_SELECT_KEY_MASK=40
 GBOS_B_KEY_MASK=20
 GBOS_A_KEY_MASK=10
 
+# 描画アクション(DA)ステータス用定数
+GBOS_DA_BITNUM_VIEW_TXT=1
+
 # 変数
 var_mouse_x=c000	# マウスカーソルX座標
 var_mouse_y=c001	# マウスカーソルY座標
@@ -83,6 +86,19 @@ var_btn_stat=c002	# 現在のキー状態を示す変数
 var_win_xt=c003	# ウィンドウのX座標(タイル番目)
 var_win_yt=c004	# ウィンドウのY座標(タイル番目)
 var_prv_btn=c005	# 前回のキー状態を示す変数
+var_draw_act_stat=c006	# 描画アクション(DA)ステータス
+var_da_var1=c007	# DA用変数1
+			# - view_txt: 残り文字数(下位8ビット)
+var_da_var2=c008	# DA用変数2
+			# - view_txt: 残り文字数(上位8ビット)
+var_da_var3=c009	# DA用変数3
+			# - view_txt: 次に配置する文字のアドレス下位8ビット
+var_da_var4=c00a	# DA用変数4
+			# - view_txt: 次に配置する文字のアドレス上位8ビット
+var_da_var5=c00b	# DA用変数5
+			# - view_txt: 次に配置するウィンドウタイル座標Y
+var_da_var6=c00c	# DA用変数6
+			# - view_txt: 次に配置するウィンドウタイル座標X
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -426,35 +442,44 @@ fadr=$(calc16 "${a_clr_win}+${fsz}")
 a_view_txt=$(four_digits $fadr)
 f_view_txt() {
 	lr35902_push_reg regAF
-	lr35902_push_reg regBC
-	lr35902_push_reg regDE
-	lr35902_push_reg regHL
 
 	lr35902_call $a_clr_win
 
+	# DA用変数設定
+
+	# 残り文字数
 	# 現状、ファイルは一つしか無い想定なので
 	# 1つ目のファイルサイズが書かれている場所へのオフセットは
 	# 0x000aで固定
 	local file_sz_ofs=000a
 	local file_sz_addr=$(calc16 "${GBOS_FS_BASE}+${file_sz_ofs}")
 	lr35902_copy_to_regA_from_addr $file_sz_addr
-	lr35902_copy_to_from regC regA
+	lr35902_copy_to_addr_from_regA $var_da_var1
 	# TODO まずはファイルサイズは256バイト未満ということにする
+	lr35902_clear_reg regA
+	lr35902_copy_to_addr_from_regA $var_da_var2
 
+	# 次に配置する文字のアドレス
 	# 同様に1つ目のファイルデータへのオフセットは
 	# 0x000cで固定
 	local file_data_ofs=000c
 	local file_data_addr=$(calc16 "${GBOS_FS_BASE}+${file_data_ofs}")
-	lr35902_set_reg regHL $file_data_addr
+	lr35902_set_reg regA $(echo $file_data_addr | cut -c3-4)
+	lr35902_copy_to_addr_from_regA $var_da_var3
+	lr35902_set_reg regA $(echo $file_data_addr | cut -c1-2)
+	lr35902_copy_to_addr_from_regA $var_da_var4
 
-	lr35902_copyinc_to_regA_from_ptrHL
-	lr35902_set_reg regD 03
-	lr35902_set_reg regE 02
-	lr35902_call $a_lay_tile_at_wtcoord
+	# 次に配置するウィンドウタイル座標
+	lr35902_set_reg regA 03	# Y座標
+	lr35902_copy_to_addr_from_regA $var_da_var5
+	lr35902_set_reg regA 02	# X座標
+	lr35902_copy_to_addr_from_regA $var_da_var6
 
-	lr35902_pop_reg regHL
-	lr35902_pop_reg regDE
-	lr35902_pop_reg regBC
+	# DASにview_txtのフラグ設定
+	lr35902_copy_to_regA_from_addr $var_draw_act_stat
+	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_VIEW_TXT regA
+	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
 	lr35902_pop_reg regAF
 	lr35902_return
 }
@@ -783,6 +808,8 @@ init() {
 	lr35902_clear_reg regA
 	lr35902_copy_to_addr_from_regA $var_btn_stat
 	lr35902_copy_to_addr_from_regA $var_prv_btn
+	# - DASをゼロクリア
+	lr35902_copy_to_addr_from_regA $var_draw_act_stat
 
 	# LCD再開
 	lr35902_set_reg regA $(calc16 "${GBOS_LCDC_BASE}+${GB_LCDC_BIT_DE}")
