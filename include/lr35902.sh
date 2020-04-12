@@ -1095,6 +1095,41 @@ lr35902_test_bitN_of_reg() {
 	esac
 }
 
+lr35902_set_bitN_of_reg() {
+	local n=$1
+	local reg=$2
+	case $n in
+	0)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 c set
+		;;
+	1)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 c set
+		;;
+	2)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 d set
+		;;
+	3)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 d set
+		;;
+	4)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 e set
+		;;
+	5)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 e set
+		;;
+	6)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 f set
+		;;
+	7)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 f set
+		;;
+	*)
+		echo -n 'Error: no such instruction: ' 1>&2
+		echo "lr35902_set_bitN_of_reg $n $reg" 1>&2
+		return 1
+	esac
+}
+
 lr35902_abs_jump() {
 	local addr=$1
 	echo -en '\xc3'
