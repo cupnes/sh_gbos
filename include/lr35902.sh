@@ -1028,16 +1028,24 @@ lr35902_shift_left_arithmetic() {
 	echo -e "sla $regname\t;$cyc" >>$ASM_LIST_FILE
 }
 
-lr35902_test_bitN_of_reg_impl() {
+lr35902_func_bitN_of_reg_impl() {
 	local n=$1
 	local reg=$2
 	local to_regnum=$3
 	local pref=$4
+	local func=$5
+
+	local as_code
+	if [ "$func" = 'test' ]; then
+		as_code='bit'
+	else
+		as_code="$func"
+	fi
 
 	local regnum=$($to_regnum $reg)
 	if [ "$regnum" = 'error' ]; then
 		echo -n 'Error: no such instruction: ' 1>&2
-		echo "lr35902_test_bit${n}_of_reg $reg" 1>&2
+		echo "lr35902_${func}_bit${n}_of_reg $reg" 1>&2
 		return 1
 	fi
 	echo -en "\xcb\x${pref}${regnum}"
@@ -1049,7 +1057,7 @@ lr35902_test_bitN_of_reg_impl() {
 	else
 		cyc=8
 	fi
-	echo -e "bit ${n},$regname\t;$cyc" >>$ASM_LIST_FILE
+	echo -e "${as_code} ${n},$regname\t;$cyc" >>$ASM_LIST_FILE
 }
 
 lr35902_test_bitN_of_reg() {
@@ -1057,28 +1065,28 @@ lr35902_test_bitN_of_reg() {
 	local reg=$2
 	case $n in
 	0)
-		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat0 4
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 4 test
 		;;
 	1)
-		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat1 4
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 4 test
 		;;
 	2)
-		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat0 5
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 5 test
 		;;
 	3)
-		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat1 5
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 5 test
 		;;
 	4)
-		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat0 6
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 6 test
 		;;
 	5)
-		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat1 6
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 6 test
 		;;
 	6)
-		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat0 7
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 7 test
 		;;
 	7)
-		lr35902_test_bitN_of_reg_impl $n $reg to_regnum_pat1 7
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 7 test
 		;;
 	*)
 		echo -n 'Error: no such instruction: ' 1>&2
