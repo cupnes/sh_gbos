@@ -15,6 +15,8 @@ GBOS_WIN_WIDTH_T=$(calc16_2 "${GB_DISP_WIDTH_T}-2")
 GBOS_WIN_HEIGHT_T=$(calc16_2 "${GB_DISP_HEIGHT_T}-2")
 GBOS_WIN_DRAWABLE_WIDTH_T=$(calc16_2 "${GBOS_WIN_WIDTH_T}-2")
 GBOS_WIN_DRAWABLE_HEIGHT_T=$(calc16_2 "${GBOS_WIN_HEIGHT_T}-3")
+GBOS_WIN_DRAWABLE_BASE_XT=$(calc16_2 "${GBOS_WIN_DEF_X_T}+2")
+GBOS_WIN_DRAWABLE_MAX_XT=$(calc16_2 "${GBOS_WIN_DRAWABLE_BASE_XT}+${GBOS_WIN_DRAWABLE_WIDTH_T}-1")
 
 GBOS_WX_DEF=00
 GBOS_WY_DEF=00
@@ -484,6 +486,144 @@ f_view_txt() {
 	lr35902_return
 }
 
+# view_txt用周期ハンドラ
+# TODO 現状、文字数は255文字まで(1バイト以内)
+f_view_txt >src/f_view_txt.o
+fsz=$(to16 $(stat -c '%s' src/f_view_txt.o))
+fadr=$(calc16 "${a_view_txt}+${fsz}")
+a_view_txt_cyc=$(four_digits $fadr)
+f_view_txt_cyc() {
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	# 次に配置する文字をregBへ取得
+	lr35902_copy_to_regA_from_addr $var_da_var3
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_da_var4
+	lr35902_copy_to_from regH regA
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_copy_to_from regB regA
+
+	# 次に配置するウィンドウタイル座標を (X, Y) = (regE, regD) へ取得
+	lr35902_copy_to_regA_from_addr $var_da_var5
+	lr35902_copy_to_from regD regA
+	lr35902_copy_to_regA_from_addr $var_da_var6
+	lr35902_copy_to_from regE regA
+
+	# regBが改行文字か否か
+	lr35902_copy_to_from regA regB
+	lr35902_compare_regA_and $GBOS_CTRL_CHR_NL
+	(
+		# 改行文字である場合
+
+		# 次に配置するX座標を描画領域の開始座標にする
+		lr35902_set_reg regA $GBOS_WIN_DRAWABLE_BASE_XT
+		lr35902_copy_to_addr_from_regA $var_da_var6
+		# 次に配置するY座標をインクリメントする
+		lr35902_inc regD
+		lr35902_copy_to_from regA regD
+		lr35902_copy_to_addr_from_regA $var_da_var5
+		## TODO 1画面を超える場合の対処は未実装
+	) >src/f_view_txt_cyc.1.o
+	(
+		# 改行文字でない場合
+
+		# 配置する文字をregAへ設定
+		lr35902_copy_to_from regA regB
+
+		# タイル配置の関数を呼び出す
+		lr35902_call $a_lay_tile_at_wtcoord
+
+		# 次に配置する座標更新
+		## 現在のX座標は描画領域右端であるか
+		lr35902_copy_to_from regA regE
+		lr35902_compare_regA_and $GBOS_WIN_DRAWABLE_MAX_XT
+		(
+			# 右端である場合
+
+			# 次に配置するX座標を描画領域の開始座標にする
+			lr35902_set_reg regA $GBOS_WIN_DRAWABLE_BASE_XT
+			lr35902_copy_to_addr_from_regA $var_da_var6
+			# 次に配置するY座標をインクリメントする
+			lr35902_inc regD
+			lr35902_copy_to_from regA regD
+			lr35902_copy_to_addr_from_regA $var_da_var5
+			## TODO 1画面を超える場合の対処は未実装
+		) >src/f_view_txt_cyc.3.o
+		(
+			# 右端でない場合
+
+			# X座標をインクリメントして変数へ書き戻す
+			lr35902_inc regA
+			lr35902_copy_to_addr_from_regA $var_da_var6
+
+			# 右端である場合の処理を飛ばす
+			local sz_3=$(stat -c '%s' src/f_view_txt_cyc.3.o)
+			lr35902_rel_jump $(two_digits_d $sz_3)
+		) >src/f_view_txt_cyc.4.o
+		local sz_4=$(stat -c '%s' src/f_view_txt_cyc.4.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
+		# 右端でない場合
+		cat src/f_view_txt_cyc.4.o
+		# 右端である場合
+		cat src/f_view_txt_cyc.3.o
+
+		# 改行文字である場合の処理を飛ばす
+		local sz_1=$(stat -c '%s' src/f_view_txt_cyc.1.o)
+		lr35902_rel_jump $(two_digits_d $sz_1)
+	) >src/f_view_txt_cyc.2.o
+	local sz_2=$(stat -c '%s' src/f_view_txt_cyc.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	# 改行文字でない場合
+	cat src/f_view_txt_cyc.2.o
+	# 改行文字である場合
+	cat src/f_view_txt_cyc.1.o
+
+	# 残り文字数更新
+	## TODO 上位8ビットの対処
+	##      (そのため現状は255文字までしか対応していない)
+	lr35902_copy_to_regA_from_addr $var_da_var1
+	lr35902_dec regA
+	(
+		# 残り文字数が0になった場合
+
+		# DASのview_txtのビットを下ろす
+		lr35902_copy_to_regA_from_addr $var_draw_act_stat
+		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_VIEW_TXT regA
+		lr35902_copy_to_addr_from_regA $var_draw_act_stat
+	) >src/f_view_txt_cyc.5.o
+	(
+		# 残り文字数が0にならなかった場合
+
+		# 残り文字数を変数へ書き戻す
+		lr35902_copy_to_addr_from_regA $var_da_var1
+
+		# 次に配置する文字のアドレス更新
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_da_var3
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_da_var4
+
+		# 残り文字数が0になった場合の処理を飛ばす
+		local sz_5=$(stat -c '%s' src/f_view_txt_cyc.5.o)
+		lr35902_rel_jump $(two_digits_d $sz_5)
+	) >src/f_view_txt_cyc.6.o
+	local sz_6=$(stat -c '%s' src/f_view_txt_cyc.6.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
+	# 残り文字数が0にならなかった場合
+	cat src/f_view_txt_cyc.6.o
+	# 残り文字数が0になった場合
+	cat src/f_view_txt_cyc.5.o
+
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -514,6 +654,7 @@ global_functions() {
 	f_lay_icon
 	f_clr_win
 	f_view_txt
+	f_view_txt_cyc
 }
 
 gbos_vec() {
@@ -969,33 +1110,55 @@ event_driven() {
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
 	cat src/event_driven.1.o
 
-	# 前回の入力状態を変数から取得
-	# 計時(*1): ここから(*2)までで 14/4096 秒
-	# (/ 14 4096.0)0.00341796875 秒
-	# (* (/ 14 4096.0) 1000.0)3.41796875 ms
-	lr35902_copy_to_regA_from_addr $var_prv_btn
-	lr35902_copy_to_from regE regA
+	# DASに何らかのビットがセットされているか確認
+	lr35902_copy_to_regA_from_addr $var_draw_act_stat
+	## 現状はview_txtのみ
+	lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_VIEW_TXT regA
 
-	# リリースのみ抽出(1->0の変化があったビットのみregAへ格納)
-	# 1. 現在と前回でxor
-	lr35902_xor_to_regA regD
-	# 2. 1.と前回でand
-	lr35902_and_to_regA regE
-
-	# ボタンのリリースがあった場合それに応じた処理を実施
-	lr35902_and_to_regA $GBOS_BTN_KEY_MASK
 	(
-		# ボタンリリースがあれば応じた処理を実施
-		btn_release_handler
-	) >src/event_driven.2.o
-	sz=$(stat -c '%s' src/event_driven.2.o)
-	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
-	cat src/event_driven.2.o
+		# DASにビットがセットされていた場合の処理
+		# (現状、view_txt の周期処理実施)
+		lr35902_call $a_view_txt_cyc
+	) >src/event_driven.4.o
+
+	(
+		# DASにビットが何もセットされていなかった場合の処理
+		# (ボタンリリースに応じた処理を実施)
+
+		# 前回の入力状態を変数から取得
+		lr35902_copy_to_regA_from_addr $var_prv_btn
+		lr35902_copy_to_from regE regA
+
+		# リリースのみ抽出(1->0の変化があったビットのみregAへ格納)
+		# 1. 現在と前回でxor
+		lr35902_xor_to_regA regD
+		# 2. 1.と前回でand
+		lr35902_and_to_regA regE
+
+		# ボタンのリリースがあった場合それに応じた処理を実施
+		lr35902_and_to_regA $GBOS_BTN_KEY_MASK
+		(
+			# ボタンリリースがあれば応じた処理を実施
+			btn_release_handler
+		) >src/event_driven.2.o
+		sz=$(stat -c '%s' src/event_driven.2.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
+		cat src/event_driven.2.o
+
+		# DAS用の処理は飛ばす
+		local sz2=$(stat -c '%s' src/event_driven.4.o)
+		lr35902_rel_jump $(two_digits_d $sz2)
+	) >src/event_driven.3.o
+	sz=$(stat -c '%s' src/event_driven.3.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz)
+	# DASにビットが何もセットされていなかった場合の処理
+	# (ボタンリリースに応じた処理を実施)
+	cat src/event_driven.3.o
+	# DASにビットがセットされていた場合の処理
+	# (現状、view_txt の周期処理実施)
+	cat src/event_driven.4.o
 
 	# 前回の入力状態更新
-	# 計時(*2): ここから(*3)まで 2/16384 秒
-	# (* (/ 2 16384.0) 1000)0.1220703125 ms
-	# (* (/ 2 16384.0) 1000000)122.0703125 us
 	lr35902_copy_to_from regA regD
 	lr35902_copy_to_addr_from_regA $var_prv_btn
 
