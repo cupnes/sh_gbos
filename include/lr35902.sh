@@ -1095,6 +1095,41 @@ lr35902_test_bitN_of_reg() {
 	esac
 }
 
+lr35902_res_bitN_of_reg() {
+	local n=$1
+	local reg=$2
+	case $n in
+	0)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 8 res
+		;;
+	1)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 8 res
+		;;
+	2)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 9 res
+		;;
+	3)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 9 res
+		;;
+	4)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 a res
+		;;
+	5)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 a res
+		;;
+	6)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat0 b res
+		;;
+	7)
+		lr35902_func_bitN_of_reg_impl $n $reg to_regnum_pat1 b res
+		;;
+	*)
+		echo -n 'Error: no such instruction: ' 1>&2
+		echo "lr35902_res_bitN_of_reg $n $reg" 1>&2
+		return 1
+	esac
+}
+
 lr35902_set_bitN_of_reg() {
 	local n=$1
 	local reg=$2
