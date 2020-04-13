@@ -79,7 +79,8 @@ GBOS_B_KEY_MASK=20
 GBOS_A_KEY_MASK=10
 
 # 描画アクション(DA)ステータス用定数
-GBOS_DA_BITNUM_VIEW_TXT=1
+GBOS_DA_BITNUM_CLR_WIN=0
+GBOS_DA_BITNUM_VIEW_TXT=2
 
 # 変数
 var_mouse_x=c000	# マウスカーソルX座標
