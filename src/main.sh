@@ -103,7 +103,6 @@ var_da_var5=c00b	# DA用変数5
 var_da_var6=c00c	# DA用変数6
 			# - view_txt: 次に配置するウィンドウタイル座標X
 var_clr_win_nyt=c00d	# - clr_win: 次にクリアするウィンドウタイル座標Y
-var_clr_win_nxt=c00e	# - clr_win: 次にクリアするウィンドウタイル座標X
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -390,8 +389,6 @@ f_clr_win() {
 	# DA用変数設定
 	lr35902_set_reg regA 03
 	lr35902_copy_to_addr_from_regA $var_clr_win_nyt
-	lr35902_set_reg regA 02
-	lr35902_copy_to_addr_from_regA $var_clr_win_nxt
 
 	# DASにclr_winのビットをセット
 	lr35902_copy_to_regA_from_addr $var_draw_act_stat
