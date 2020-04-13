@@ -102,6 +102,8 @@ var_da_var5=c00b	# DA用変数5
 			# - view_txt: 次に配置するウィンドウタイル座標Y
 var_da_var6=c00c	# DA用変数6
 			# - view_txt: 次に配置するウィンドウタイル座標X
+var_clr_win_nyt=c00d	# - clr_win: 次にクリアするウィンドウタイル座標Y
+var_clr_win_nxt=c00e	# - clr_win: 次にクリアするウィンドウタイル座標X
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -383,6 +385,23 @@ fsz=$(to16 $(stat -c '%s' src/f_lay_icon.o))
 fadr=$(calc16 "${a_lay_icon}+${fsz}")
 a_clr_win=$(four_digits $fadr)
 f_clr_win() {
+	lr35902_push_reg regAF
+
+	# DA用変数設定
+	lr35902_set_reg regA 03
+	lr35902_copy_to_addr_from_regA $var_clr_win_nyt
+	lr35902_set_reg regA 02
+	lr35902_copy_to_addr_from_regA $var_clr_win_nxt
+
+	# DASにclr_winのビットをセット
+	lr35902_copy_to_regA_from_addr $var_draw_act_stat
+	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_CLR_WIN regA
+	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+f_clr_win_old2() {
 	# 計時(*clr_win.2): ここから(*clr_win.3)までで 1/4096 秒
 	# (* (/ 1 4096.0) 1000)0.244140625 ms
 	lr35902_push_reg regAF
@@ -625,6 +644,93 @@ f_view_txt_cyc() {
 	lr35902_return
 }
 
+# clr_win用周期ハンドラ
+f_view_txt_cyc >src/f_view_txt_cyc.o
+fsz=$(to16 $(stat -c '%s' src/f_view_txt_cyc.o))
+fadr=$(calc16 "${a_view_txt_cyc}+${fsz}")
+a_clr_win_cyc=$(four_digits $fadr)
+f_clr_win_cyc() {
+	lr35902_push_reg regAF
+	lr35902_push_reg regDE
+
+	# 次に配置するウィンドウタイル座標を (X, Y) = (regE, regD) へ取得
+	lr35902_copy_to_regA_from_addr $var_clr_win_nyt
+	lr35902_copy_to_from regD regA
+	lr35902_copy_to_regA_from_addr $var_clr_win_nxt
+	lr35902_copy_to_from regE regA
+
+	# 配置する文字をregAへ設定
+	lr35902_set_reg regA $GBOS_TILE_NUM_SPC
+
+	# タイル配置の関数を呼び出す
+	lr35902_call $a_lay_tile_at_wtcoord
+
+	# 終端判定
+	lr35902_copy_to_from regA regD
+	lr35902_compare_regA_and $(calc16_2 "2+${GBOS_WIN_DRAWABLE_HEIGHT_T}")
+	(
+		# Y座標が描画最終行と等しい
+		lr35902_copy_to_from regA regE
+		lr35902_compare_regA_and $(calc16_2 "1+${GBOS_WIN_DRAWABLE_WIDTH_T}")
+		(
+			# X座標が描画最終列と等しい
+
+			# DASのclr_winのビットを下ろす
+			lr35902_copy_to_regA_from_addr $var_draw_act_stat
+			lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_CLR_WIN regA
+			lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+			# pop & return
+			lr35902_pop_reg regDE
+			lr35902_pop_reg regAF
+			lr35902_return
+		) >src/f_clr_win_cyc.2.o
+		local sz_2=$(stat -c '%s' src/f_clr_win_cyc.2.o)
+		lr35902_rel_jump_with_cond C $(two_digits_d $sz_2)
+		cat src/f_clr_win_cyc.2.o
+	) >src/f_clr_win_cyc.1.o
+	local sz_1=$(stat -c '%s' src/f_clr_win_cyc.1.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_1)
+	cat src/f_clr_win_cyc.1.o
+
+	# 次に配置する座標更新
+	## 現在のX座標は描画領域右端であるか
+	lr35902_copy_to_from regA regE
+	lr35902_compare_regA_and $GBOS_WIN_DRAWABLE_MAX_XT
+	(
+		# 右端である場合
+
+		# 次に配置するX座標を描画領域の開始座標にする
+		lr35902_set_reg regA $GBOS_WIN_DRAWABLE_BASE_XT
+		lr35902_copy_to_addr_from_regA $var_clr_win_nxt
+		# 次に配置するY座標をインクリメントする
+		lr35902_inc regD
+		lr35902_copy_to_from regA regD
+		lr35902_copy_to_addr_from_regA $var_clr_win_nyt
+	) >src/f_clr_win_cyc.3.o
+	(
+		# 右端でない場合
+
+		# X座標をインクリメントして変数へ書き戻す
+		lr35902_inc regA
+		lr35902_copy_to_addr_from_regA $var_clr_win_nxt
+
+		# 右端である場合の処理を飛ばす
+		local sz_3=$(stat -c '%s' src/f_clr_win_cyc.3.o)
+		lr35902_rel_jump $(two_digits_d $sz_3)
+	) >src/f_clr_win_cyc.4.o
+	local sz_4=$(stat -c '%s' src/f_clr_win_cyc.4.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
+	# 右端でない場合
+	cat src/f_clr_win_cyc.4.o
+	# 右端である場合
+	cat src/f_clr_win_cyc.3.o
+
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -656,6 +762,7 @@ global_functions() {
 	f_clr_win
 	f_view_txt
 	f_view_txt_cyc
+	f_clr_win_cyc
 }
 
 gbos_vec() {
@@ -1075,6 +1182,40 @@ btn_release_handler() {
 	cat src/btn_release_handler.1.o
 }
 
+# DASのビットに応じた処理を呼び出す
+# in : regA - DAS
+das_handler() {
+	# clr_winのチェック
+	lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_CLR_WIN regA
+	(
+		# clr_winがセットされていなかった場合
+
+		# view_txtのチェック
+		lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_VIEW_TXT regA
+		(
+			# view_txtがセットされていた場合
+			lr35902_call $a_view_txt_cyc
+		) >src/das_handler.3.o
+		local sz_3=$(stat -c '%s' src/das_handler.3.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
+		cat src/das_handler.3.o
+	) >src/das_handler.1.o
+	(
+		# clr_winがセットされていた場合
+		lr35902_call $a_clr_win_cyc
+
+		# clr_winがセットされていなかった場合の処理を飛ばす
+		local sz_1=$(stat -c '%s' src/das_handler.1.o)
+		lr35902_rel_jump $(two_digits_d $sz_1)
+	) >src/das_handler.2.o
+	local sz_2=$(stat -c '%s' src/das_handler.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	# clr_winがセットされていた場合
+	cat src/das_handler.2.o
+	# clr_winがセットされていなかった場合
+	cat src/das_handler.1.o
+}
+
 # 2020-03-05 19時現在
 # 処理時間: 1/4096 秒
 # (* (/ 1 4096.0) 1000.0)0.244140625 ms
@@ -1111,17 +1252,13 @@ event_driven() {
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
 	cat src/event_driven.1.o
 
-	# DASに何らかのビットがセットされているか確認
+	# DASに何らかのビットがセットされているか
 	lr35902_copy_to_regA_from_addr $var_draw_act_stat
-	## 現状はview_txtのみ
-	lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_VIEW_TXT regA
-
+	lr35902_compare_regA_and 00
 	(
-		# DASにビットがセットされていた場合の処理
-		# (現状、view_txt の周期処理実施)
-		lr35902_call $a_view_txt_cyc
+		# DASに何らかのビットがセットされていた場合の処理
+		das_handler
 	) >src/event_driven.4.o
-
 	(
 		# DASにビットが何もセットされていなかった場合の処理
 		# (ボタンリリースに応じた処理を実施)
@@ -1156,7 +1293,6 @@ event_driven() {
 	# (ボタンリリースに応じた処理を実施)
 	cat src/event_driven.3.o
 	# DASにビットがセットされていた場合の処理
-	# (現状、view_txt の周期処理実施)
 	cat src/event_driven.4.o
 
 	# 前回の入力状態更新
