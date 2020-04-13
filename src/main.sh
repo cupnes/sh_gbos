@@ -653,78 +653,46 @@ f_clr_win_cyc() {
 	lr35902_push_reg regAF
 	lr35902_push_reg regDE
 
-	# 次に配置するウィンドウタイル座標を (X, Y) = (regE, regD) へ取得
+	# 次にクリアするウィンドウタイルY行を取得
 	lr35902_copy_to_regA_from_addr $var_clr_win_nyt
 	lr35902_copy_to_from regD regA
-	lr35902_copy_to_regA_from_addr $var_clr_win_nxt
-	lr35902_copy_to_from regE regA
 
-	# 配置する文字をregAへ設定
+	# クリア開始X座標を設定
+	lr35902_set_reg regE 02
+
+	# クリアに使う文字を設定
 	lr35902_set_reg regA $GBOS_TILE_NUM_SPC
 
+	# 並べる個数(描画幅)を設定
+	lr35902_set_reg regC $GBOS_WIN_DRAWABLE_WIDTH_T
+
 	# タイル配置の関数を呼び出す
-	lr35902_call $a_lay_tile_at_wtcoord
+	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 
 	# 終端判定
 	lr35902_copy_to_from regA regD
 	lr35902_compare_regA_and $(calc16_2 "2+${GBOS_WIN_DRAWABLE_HEIGHT_T}")
 	(
 		# Y座標が描画最終行と等しい
-		lr35902_copy_to_from regA regE
-		lr35902_compare_regA_and $(calc16_2 "1+${GBOS_WIN_DRAWABLE_WIDTH_T}")
-		(
-			# X座標が描画最終列と等しい
 
-			# DASのclr_winのビットを下ろす
-			lr35902_copy_to_regA_from_addr $var_draw_act_stat
-			lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_CLR_WIN regA
-			lr35902_copy_to_addr_from_regA $var_draw_act_stat
+		# DASのclr_winのビットを下ろす
+		lr35902_copy_to_regA_from_addr $var_draw_act_stat
+		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_CLR_WIN regA
+		lr35902_copy_to_addr_from_regA $var_draw_act_stat
 
-			# pop & return
-			lr35902_pop_reg regDE
-			lr35902_pop_reg regAF
-			lr35902_return
-		) >src/f_clr_win_cyc.2.o
-		local sz_2=$(stat -c '%s' src/f_clr_win_cyc.2.o)
-		lr35902_rel_jump_with_cond C $(two_digits_d $sz_2)
-		cat src/f_clr_win_cyc.2.o
+		# pop & return
+		lr35902_pop_reg regDE
+		lr35902_pop_reg regAF
+		lr35902_return
 	) >src/f_clr_win_cyc.1.o
 	local sz_1=$(stat -c '%s' src/f_clr_win_cyc.1.o)
 	lr35902_rel_jump_with_cond C $(two_digits_d $sz_1)
 	cat src/f_clr_win_cyc.1.o
 
-	# 次に配置する座標更新
-	## 現在のX座標は描画領域右端であるか
-	lr35902_copy_to_from regA regE
-	lr35902_compare_regA_and $GBOS_WIN_DRAWABLE_MAX_XT
-	(
-		# 右端である場合
-
-		# 次に配置するX座標を描画領域の開始座標にする
-		lr35902_set_reg regA $GBOS_WIN_DRAWABLE_BASE_XT
-		lr35902_copy_to_addr_from_regA $var_clr_win_nxt
-		# 次に配置するY座標をインクリメントする
-		lr35902_inc regD
-		lr35902_copy_to_from regA regD
-		lr35902_copy_to_addr_from_regA $var_clr_win_nyt
-	) >src/f_clr_win_cyc.3.o
-	(
-		# 右端でない場合
-
-		# X座標をインクリメントして変数へ書き戻す
-		lr35902_inc regA
-		lr35902_copy_to_addr_from_regA $var_clr_win_nxt
-
-		# 右端である場合の処理を飛ばす
-		local sz_3=$(stat -c '%s' src/f_clr_win_cyc.3.o)
-		lr35902_rel_jump $(two_digits_d $sz_3)
-	) >src/f_clr_win_cyc.4.o
-	local sz_4=$(stat -c '%s' src/f_clr_win_cyc.4.o)
-	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
-	# 右端でない場合
-	cat src/f_clr_win_cyc.4.o
-	# 右端である場合
-	cat src/f_clr_win_cyc.3.o
+	# 次にクリアする行更新
+	lr35902_inc regD
+	lr35902_copy_to_from regA regD
+	lr35902_copy_to_addr_from_regA $var_clr_win_nyt
 
 	lr35902_pop_reg regDE
 	lr35902_pop_reg regAF
