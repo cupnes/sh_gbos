@@ -8,7 +8,7 @@ SRC_TILES_SH=true
 GBOS_GFUNC_START=1000
 
 GBOS_TILEDATA_AREA_BYTES=$(calc16 "${GBOS_GFUNC_START}-150")
-GBOS_NUM_ALL_TILES=44
+GBOS_NUM_ALL_TILES=48
 GBOS_NUM_ALL_TILE_BYTES=$(four_digits $(calc16 "${GBOS_NUM_ALL_TILES}*10"))
 
 tiles_bc_form="ibase=16;${GBOS_TILEDATA_AREA_BYTES}-${GBOS_NUM_ALL_TILE_BYTES}"
@@ -27,6 +27,7 @@ GBOS_TYPE_ICON_TILE_BASE=38
 GBOS_NUM_ICON_TILES=04
 
 GBOS_ICON_NUM_TXT=02
+GBOS_ICON_NUM_IMG=03
 
 char_tiles() {
 	### タイルデータ(計68タイル,1088(0x440)バイト) ###
@@ -249,4 +250,18 @@ char_tiles() {
 	# 43: 左下
 	echo -en '\x40\x7f\x40\x7f\x40\x7f\x3f\x3f'
 	echo -en '\x04\x04\x07\x04\x03\x03\x00\x00'
+
+	# テキストファイルアイコン(44-)(アイコン番号3)
+	# 44: 左上
+	echo -en '\x00\x00\x00\x00\x7f\x7f\x40\x40'
+	echo -en '\x40\x40\x40\x44\x40\x4e\x40\x5f'
+	# 45: 右上
+	echo -en '\x00\x00\x00\x00\xfe\xfe\x02\x02'
+	echo -en '\x02\x82\x02\x02\x22\x02\x72\x02'
+	# 46: 右下
+	echo -en '\x7a\x82\x3e\xc2\x1e\xe2\x0e\xf2'
+	echo -en '\x06\xfa\xfe\xfe\x00\x00\x00\x00'
+	# 47: 左下
+	echo -en '\x40\x7f\x40\x7f\x40\x7f\x40\x7f'
+	echo -en '\x40\x7f\x7f\x7f\x00\x00\x00\x00'
 }
