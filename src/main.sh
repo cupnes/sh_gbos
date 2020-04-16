@@ -107,6 +107,8 @@ var_clr_win_nyt=c00d	# - clr_win: 次にクリアするウィンドウタイル�
 var_view_img_nt=c00e	# view_img: 次に描画するタイル番目
 var_view_img_ntadr_bh=c00f	# view_img: 次に使用するタイルアドレス(下位8ビット)
 var_view_img_ntadr_th=c010	# view_img: 次に使用するタイルアドレス(上位8ビット)
+var_view_img_dtadr_bh=c011	# view_img: 次に描画するタイルデータアドレス(下位8ビット)
+var_view_img_dtadr_th=c012	# view_img: 次に描画するタイルデータアドレス(下位8ビット)
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -767,12 +769,22 @@ f_view_img() {
 	lr35902_clear_reg regA
 	lr35902_copy_to_addr_from_regA $var_view_img_nt
 
-	# 次に使用するタイルアドレスを0x8300に設定
+	# 次に使用するタイルアドレスを設定
 	local ntadr=$(calc16 "${GBOS_TILE_DATA_START}+300")
 	lr35902_set_reg regA $(echo $ntadr | cut -c3-4)
 	lr35902_copy_to_addr_from_regA $var_view_img_ntadr_bh
 	lr35902_set_reg regA $(echo $ntadr | cut -c1-2)
 	lr35902_copy_to_addr_from_regA $var_view_img_ntadr_th
+
+	# 次に描画するタイルデータアドレスを設定
+	## TODO 現状、ファイルは一つの想定なので
+	##      ファイルデータへのオフセットは0x000a固定
+	local file_data_ofs=000a
+	local file_data_addr=$(calc16 "${GBOS_FS_BASE}+${file_data_ofs}")
+	lr35902_set_reg regA $(echo $file_data_addr | cut -c3-4)
+	lr35902_copy_to_addr_from_regA $var_view_img_dtadr_bh
+	lr35902_set_reg regA $(echo $file_data_addr | cut -c1-2)
+	lr35902_copy_to_addr_from_regA $var_view_img_dtadr_th
 
 	# DASのview_imgビットを立てる
 	lr35902_copy_to_regA_from_addr $var_draw_act_stat
@@ -847,10 +859,7 @@ f_view_img_cyc() {
 	cat src/f_view_img_cyc.1.o
 
 	# ファイルにかかれているタイルデータを30以降のタイル領域へロード
-	## TODO 現状、ファイルは一つの想定なので
-	##      ファイルデータへのオフセットは0x000a固定
-	local file_data_ofs=000a
-	local file_data_addr=$(calc16 "${GBOS_FS_BASE}+${file_data_ofs}")
+
 
 	# 30〜ffのタイルを(xt,yt)=(02,03)のdrawable領域へ配置
 	## 1サイクルで1タイル
