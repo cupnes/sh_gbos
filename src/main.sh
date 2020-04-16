@@ -810,6 +810,12 @@ fsz=$(to16 $(stat -c '%s' src/f_view_img.o))
 fadr=$(calc16 "${a_view_img}+${fsz}")
 a_view_img_cyc=$(four_digits $fadr)
 f_view_img_cyc() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
 	# 次に描画するタイル番目をBへロード
 	lr35902_copy_to_regA_from_addr $var_view_img_nt
 	lr35902_copy_to_from regB regA
@@ -889,6 +895,12 @@ f_view_img_cyc() {
 	local sz_3=$(stat -c '%s' src/f_view_img_cyc.3.o)
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_3+2)))
 
+	## 次に描画するタイルデータアドレス更新
+	lr35902_copy_to_from regA regE
+	lr35902_copy_to_addr_from_regA $var_view_img_dtadr_bh
+	lr35902_copy_to_from regA regD
+	lr35902_copy_to_addr_from_regA $var_view_img_dtadr_th
+
 	# 30〜ffのタイルを(xt,yt)=(02,03)のdrawable領域へ配置
 	## 1サイクルで1タイル
 
@@ -904,8 +916,82 @@ f_view_img_cyc() {
 	## タイルを描画
 	lr35902_call $a_lay_tile_at_wtcoord
 
-	# 終わったらDASのview_imgのビットを下ろす
-	# 計時(2)
+	# 終了判定
+	## 今描画したタイルは最後(207(0xcf)番目)のタイルか?
+	lr35902_compare_regA_and cf
+	(
+		# 最後(207(0xcf)番目)のタイルである場合
+
+		# 終わったらDASのview_imgのビットを下ろす
+		lr35902_copy_to_regA_from_addr $var_draw_act_stat
+		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_VIEW_IMG regA
+		lr35902_copy_to_addr_from_regA $var_draw_act_stat
+	) >src/f_view_img_cyc.4.o
+	(
+		# 最後(207(0xcf)番目)のタイルでない場合
+
+		# 次に描画するタイル番目を更新
+		lr35902_inc regA
+		lr35902_copy_to_addr_from_regA $var_view_img_nt
+
+		# 次に使用するタイルアドレスを更新
+		## HLがインクリメント済みの状態
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_view_img_ntadr_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_view_img_ntadr_th
+
+		# 次に描画するウィンドウタイル座標更新
+		## 今描画したX座標はウィンドウ右端か?
+		lr35902_copy_to_from regA regE
+		lr35902_compare_regA_and $(calc16_2 "${GBOS_WIN_DRAWABLE_WIDTH_T}+1")
+		(
+			# 右端である場合
+
+			# X座標を左端座標へ更新
+			lr35902_set_reg regA 02
+			lr35902_copy_to_addr_from_regA $var_view_img_nxt
+
+			# Y座標をインクリメント
+			lr35902_copy_to_from regA regD
+			lr35902_inc regA
+			lr35902_copy_to_addr_from_regA $var_view_img_nyt
+		) >src/f_view_img_cyc.6.o
+		(
+			# 右端でない場合
+
+			# X座標をインクリメント
+			lr35902_copy_to_from regA regE
+			lr35902_inc regA
+			lr35902_copy_to_addr_from_regA $var_view_img_nxt
+
+			# 右端である場合の処理を飛ばす
+			local sz_6=$(stat -c '%s' src/f_view_img_cyc.6.o)
+			lr35902_rel_jump $(two_digits_d $sz_6)
+		) >src/f_view_img_cyc.7.o
+		local sz_7=$(stat -c '%s' src/f_view_img_cyc.7.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_7)
+		## 右端でない場合
+		cat src/f_view_img_cyc.7.o
+		## 右端である場合
+		cat src/f_view_img_cyc.6.o
+
+		## 最後(207(0xcf)番目)のタイルである場合の処理を飛ばす
+		local sz_4=$(stat -c '%s' src/f_view_img_cyc.4.o)
+		lr35902_rel_jump $(two_digits_d $sz_4)
+	) >src/f_view_img_cyc.5.o
+	local sz_5=$(stat -c '%s' src/f_view_img_cyc.5.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_5)
+	## 最後(207(0xcf)番目)のタイルでない場合
+	cat src/f_view_img_cyc.5.o
+	## 最後(207(0xcf)番目)のタイルである場合
+	cat src/f_view_img_cyc.4.o
+
+	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
 	lr35902_return
 }
 
