@@ -790,9 +790,15 @@ fsz=$(to16 $(stat -c '%s' src/f_view_img.o))
 fadr=$(calc16 "${a_view_img}+${fsz}")
 a_view_img_cyc=$(four_digits $fadr)
 f_view_img_cyc() {
-	# 次に描画するタイル番目をregBへロード
+	# 次に描画するタイル番目をBへロード
 	lr35902_copy_to_regA_from_addr $var_view_img_nt
 	lr35902_copy_to_from regB regA
+
+	# 次に使用するタイルアドレスをHLへロード
+	lr35902_copy_to_regA_from_addr $var_view_img_ntadr_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_view_img_ntadr_th
+	lr35902_copy_to_from regH regA
 
 	# 退避する必要の有無確認
 	# (0x30 + タイル番目 + 1 <= タイル数 なら退避必要
@@ -806,9 +812,6 @@ f_view_img_cyc() {
 		# 退避処理
 
 		# 退避するタイルのアドレスをDEへ設定
-		lr35902_copy_to_from regA regB
-		lr35902_add_to_regA 30
-		lr35902_call $a_tn_to_addr
 		lr35902_copy_to_from regD regH
 		lr35902_copy_to_from regE regL
 
