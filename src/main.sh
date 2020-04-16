@@ -81,6 +81,7 @@ GBOS_A_KEY_MASK=10
 # 描画アクション(DA)ステータス用定数
 GBOS_DA_BITNUM_CLR_WIN=0
 GBOS_DA_BITNUM_VIEW_TXT=2
+GBOS_DA_BITNUM_VIEW_IMG=3
 
 # 変数
 var_mouse_x=c000	# マウスカーソルX座標
@@ -745,6 +746,7 @@ f_tn_to_addr() {
 }
 
 # 画像ファイルを表示
+# TODO 現状、ファイルは一つしか無いのでファイル番号などを引数で渡しはしない
 f_tn_to_addr >src/f_tn_to_addr.o
 fsz=$(to16 $(stat -c '%s' src/f_tn_to_addr.o))
 fadr=$(calc16 "${a_tn_to_addr}+${fsz}")
@@ -753,13 +755,20 @@ f_view_img() {
 	# 画像解像度は16x13タイル(128x104ピクセル)固定
 	# なので、ファイルサイズは0x0d00固定
 
-	# TODO
-	# 専用の変数を設定
+	# push
+	lr35902_push_reg regAF
+
+	# 次に描画するタイル番目をゼロクリア
+	lr35902_clear_reg regA
+	lr35902_copy_to_addr_from_regA $var_view_img_nt
+
 	# DASのview_imgビットを立てる
+	lr35902_copy_to_regA_from_addr $var_draw_act_stat
+	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_VIEW_IMG regA
+	lr35902_copy_to_addr_from_regA $var_draw_act_stat
 
-	lr35902_set_reg regA 30
-	lr35902_call $a_tn_to_addr
-
+	# pop & return
+	lr35902_pop_reg regAF
 	lr35902_return
 }
 
