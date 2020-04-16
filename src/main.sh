@@ -109,6 +109,8 @@ var_view_img_ntadr_bh=c00f	# view_img: 次に使用するタイルアドレス(�
 var_view_img_ntadr_th=c010	# view_img: 次に使用するタイルアドレス(上位8ビット)
 var_view_img_dtadr_bh=c011	# view_img: 次に描画するタイルデータアドレス(下位8ビット)
 var_view_img_dtadr_th=c012	# view_img: 次に描画するタイルデータアドレス(下位8ビット)
+var_view_img_nyt=c013	# view_img: 次に描画するウィンドウタイル座標Y
+var_view_img_nxt=c014	# view_img: 次に描画するウィンドウタイル座標X
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -786,6 +788,12 @@ f_view_img() {
 	lr35902_set_reg regA $(echo $file_data_addr | cut -c1-2)
 	lr35902_copy_to_addr_from_regA $var_view_img_dtadr_th
 
+	# 次に描画するウィンドウタイル座標を設定
+	lr35902_set_reg regA 03
+	lr35902_copy_to_addr_from_regA $var_view_img_nyt
+	lr35902_set_reg regA 02
+	lr35902_copy_to_addr_from_regA $var_view_img_nxt
+
 	# DASのview_imgビットを立てる
 	lr35902_copy_to_regA_from_addr $var_draw_act_stat
 	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_VIEW_IMG regA
@@ -832,20 +840,22 @@ f_view_img_cyc() {
 
 		# HLへ退避先のメモリアドレスを設定
 		## DE+5000hを設定する(D300h-)
+		lr35902_copy_to_from regA regB
 		lr35902_set_reg regBC 5000
 		lr35902_add_to_regHL regBC
+		lr35902_copy_to_from regB regA
 
-		# Bへ16を設定(ループ用カウンタ。16バイト)
+		# Cへ16を設定(ループ用カウンタ。16バイト)
 		# 計時(1)ここから(2)まで 2/16384 秒
 		# (* (/ 2 16384.0) 1000)0.1220703125 ms
-		lr35902_set_reg regB 10
+		lr35902_set_reg regC 10
 
-		# Bの数だけ1バイトずつ[DE]->[HL]へコピー
+		# Cの数だけ1バイトずつ[DE]->[HL]へコピー
 		(
 			lr35902_copy_to_from regA ptrDE
 			lr35902_copyinc_to_ptrHL_from_regA
 			lr35902_inc regDE
-			lr35902_dec regB
+			lr35902_dec regC
 		) >src/f_view_img_cyc.2.o
 		cat src/f_view_img_cyc.2.o
 		local sz_2=$(stat -c '%s' src/f_view_img_cyc.2.o)
@@ -865,15 +875,15 @@ f_view_img_cyc() {
 	lr35902_copy_to_regA_from_addr $var_view_img_dtadr_th
 	lr35902_copy_to_from regD regA
 
-	# Bへ16を設定(ループ用カウンタ。16バイト)
-	lr35902_set_reg regB 10
+	## Cへ16を設定(ループ用カウンタ。16バイト)
+	lr35902_set_reg regC 10
 
-	# Bの数だけ1バイトずつ[DE]->[HL]へコピー
+	## Cの数だけ1バイトずつ[DE]->[HL]へコピー
 	(
 		lr35902_copy_to_from regA ptrDE
 		lr35902_copyinc_to_ptrHL_from_regA
 		lr35902_inc regDE
-		lr35902_dec regB
+		lr35902_dec regC
 	) >src/f_view_img_cyc.3.o
 	cat src/f_view_img_cyc.3.o
 	local sz_3=$(stat -c '%s' src/f_view_img_cyc.3.o)
@@ -881,6 +891,18 @@ f_view_img_cyc() {
 
 	# 30〜ffのタイルを(xt,yt)=(02,03)のdrawable領域へ配置
 	## 1サイクルで1タイル
+
+	## 次に描画するウィンドウタイル座標を(X,Y)=(E,D)へ取得
+	lr35902_copy_to_regA_from_addr $var_view_img_nyt
+	lr35902_copy_to_from regD regA
+	lr35902_copy_to_regA_from_addr $var_view_img_nxt
+	lr35902_copy_to_from regE regA
+
+	## 次に描画するタイル番目をAへ設定
+	lr35902_copy_to_from regA regB
+
+	## タイルを描画
+	lr35902_call $a_lay_tile_at_wtcoord
 
 	# 終わったらDASのview_imgのビットを下ろす
 	# 計時(2)
