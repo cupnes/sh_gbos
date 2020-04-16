@@ -93,6 +93,12 @@ GBOS_DA_BITNUM_CLR_WIN=0
 GBOS_DA_BITNUM_VIEW_TXT=2
 GBOS_DA_BITNUM_VIEW_IMG=3
 
+# ウィンドウステータス用定数
+GBOS_WST_BITNUM_DIR=0	# ディレクトリ表示中
+GBOS_WST_BITNUM_EXE=1	# 実行ファイル実行中
+GBOS_WST_BITNUM_TXT=2	# テキストファイル表示中
+GBOS_WST_BITNUM_IMG=3	# 画像ファイル表示中
+
 # 変数
 var_mouse_x=c000	# マウスカーソルX座標
 var_mouse_y=c001	# マウスカーソルY座標
@@ -121,7 +127,7 @@ var_view_img_dtadr_bh=c011	# view_img: 次に描画するタイルデータア�
 var_view_img_dtadr_th=c012	# view_img: 次に描画するタイルデータアドレス(下位8ビット)
 var_view_img_nyt=c013	# view_img: 次に描画するウィンドウタイル座標Y
 var_view_img_nxt=c014	# view_img: 次に描画するウィンドウタイル座標X
-var_dbg_rclick=c015	# dbg: 右クリックイベント用
+var_win_stat=c015	# ウィンドウステータス
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -1461,8 +1467,7 @@ click_event() {
 right_click_event() {
 	lr35902_push_reg regAF
 
-	lr35902_set_reg regA 55
-	lr35902_copy_to_addr_from_regA $var_dbg_rclick
+	# TODO $var_win_stat に応じて画面を初期化
 
 	lr35902_pop_reg regAF
 }
