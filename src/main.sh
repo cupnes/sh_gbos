@@ -1231,8 +1231,12 @@ draw_blank_window() {
 
 # 初期アイコン描画
 draw_init_icons() {
-	# TODO ファイルの種類を見てアイコンを選択
-	lr35902_set_reg regA $GBOS_ICON_NUM_IMG
+	# TODO
+	# 現状、ファイルは1つしかない想定
+	# なので、ファイルタイプが書かれている場所へのオフセットは0x0007固定
+	local file_type_ofs=0007
+	local file_type_addr=$(calc16 "${GBOS_FS_BASE}+${file_type_ofs}")
+	lr35902_copy_to_regA_from_addr $file_type_addr
 	lr35902_set_reg regD 03
 	lr35902_set_reg regE 02
 	lr35902_call $a_lay_icon
