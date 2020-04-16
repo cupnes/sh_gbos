@@ -778,8 +778,6 @@ fsz=$(to16 $(stat -c '%s' src/f_view_img.o))
 fadr=$(calc16 "${a_view_img}+${fsz}")
 a_view_img_cyc=$(four_digits $fadr)
 f_view_img_cyc() {
-	# TODO
-
 	# 次に描画するタイル番目をregBへロード
 	lr35902_copy_to_regA_from_addr $var_view_img_nt
 	lr35902_copy_to_from regB regA
@@ -795,8 +793,9 @@ f_view_img_cyc() {
 	(
 		# 退避処理
 
-		# DEへ退避するタイルのアドレスを設定
+		# 退避するタイルのアドレスをDEへ設定
 		lr35902_copy_to_from regA regB
+		lr35902_add_to_regA 30
 		lr35902_call $a_tn_to_addr
 		lr35902_copy_to_from regD regH
 		lr35902_copy_to_from regE regL
@@ -1293,7 +1292,19 @@ das_handler() {
 		) >src/das_handler.3.o
 		local sz_3=$(stat -c '%s' src/das_handler.3.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
+		# view_txtがセットされていた場合
 		cat src/das_handler.3.o
+
+		# view_imgのチェック
+		lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_VIEW_IMG regA
+		(
+			# view_imgがセットされていた場合
+			lr35902_call $a_view_img_cyc
+		) >src/das_handler.4.o
+		local sz_4=$(stat -c '%s' src/das_handler.4.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
+		# view_imgがセットされていた場合
+		cat src/das_handler.4.o
 	) >src/das_handler.1.o
 	(
 		# clr_winがセットされていた場合
