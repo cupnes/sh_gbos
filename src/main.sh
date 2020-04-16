@@ -524,6 +524,11 @@ f_view_txt() {
 	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_VIEW_TXT regA
 	lr35902_copy_to_addr_from_regA $var_draw_act_stat
 
+	# ウィンドウステータスに「テキストファイル表示中」を設定
+	lr35902_copy_to_regA_from_addr $var_win_stat
+	lr35902_set_bitN_of_reg $GBOS_WST_BITNUM_TXT regA
+	lr35902_copy_to_addr_from_regA $var_win_stat
+
 	lr35902_pop_reg regAF
 	lr35902_return
 }
@@ -815,6 +820,11 @@ f_view_img() {
 	lr35902_copy_to_regA_from_addr $var_draw_act_stat
 	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_VIEW_IMG regA
 	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+	# ウィンドウステータスに「画像ファイル表示中」を設定
+	lr35902_copy_to_regA_from_addr $var_win_stat
+	lr35902_set_bitN_of_reg $GBOS_WST_BITNUM_IMG regA
+	lr35902_copy_to_addr_from_regA $var_win_stat
 
 	# pop & return
 	lr35902_pop_reg regAF
@@ -1347,6 +1357,8 @@ init() {
 	lr35902_copy_to_addr_from_regA $var_prv_btn
 	# - DASをゼロクリア
 	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+	# - ウィンドウステータスをゼロクリア
+	lr35902_copy_to_addr_from_regA $var_win_stat
 
 	# LCD再開
 	lr35902_set_reg regA $(calc16 "${GBOS_LCDC_BASE}+${GB_LCDC_BIT_DE}")
