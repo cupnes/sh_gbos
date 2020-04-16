@@ -778,8 +778,8 @@ f_view_img() {
 
 	# 次に描画するタイルデータアドレスを設定
 	## TODO 現状、ファイルは一つの想定なので
-	##      ファイルデータへのオフセットは0x000a固定
-	local file_data_ofs=000a
+	##      ファイルデータへのオフセットは0x000c固定
+	local file_data_ofs=000c
 	local file_data_addr=$(calc16 "${GBOS_FS_BASE}+${file_data_ofs}")
 	lr35902_set_reg regA $(echo $file_data_addr | cut -c3-4)
 	lr35902_copy_to_addr_from_regA $var_view_img_dtadr_bh
@@ -859,7 +859,25 @@ f_view_img_cyc() {
 	cat src/f_view_img_cyc.1.o
 
 	# ファイルにかかれているタイルデータを30以降のタイル領域へロード
+	## 次に描画するタイルデータアドレスをDEへ設定
+	lr35902_copy_to_regA_from_addr $var_view_img_dtadr_bh
+	lr35902_copy_to_from regE regA
+	lr35902_copy_to_regA_from_addr $var_view_img_dtadr_th
+	lr35902_copy_to_from regD regA
 
+	# Bへ16を設定(ループ用カウンタ。16バイト)
+	lr35902_set_reg regB 10
+
+	# Bの数だけ1バイトずつ[DE]->[HL]へコピー
+	(
+		lr35902_copy_to_from regA ptrDE
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_inc regDE
+		lr35902_dec regB
+	) >src/f_view_img_cyc.3.o
+	cat src/f_view_img_cyc.3.o
+	local sz_3=$(stat -c '%s' src/f_view_img_cyc.3.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_3+2)))
 
 	# 30〜ffのタイルを(xt,yt)=(02,03)のdrawable領域へ配置
 	## 1サイクルで1タイル
