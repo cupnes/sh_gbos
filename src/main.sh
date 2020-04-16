@@ -78,6 +78,16 @@ GBOS_SELECT_KEY_MASK=40
 GBOS_B_KEY_MASK=20
 GBOS_A_KEY_MASK=10
 
+GBOS_START_KEY_BITNUM=7
+GBOS_SELECT_KEY_BITNUM=6
+GBOS_B_KEY_BITNUM=5
+GBOS_A_KEY_BITNUM=4
+
+GBOS_DOWN_KEY_BITNUM=3
+GBOS_UP_KEY_BITNUM=2
+GBOS_LEFT_KEY_BITNUM=1
+GBOS_RIGHT_KEY_BITNUM=0
+
 # 描画アクション(DA)ステータス用定数
 GBOS_DA_BITNUM_CLR_WIN=0
 GBOS_DA_BITNUM_VIEW_TXT=2
@@ -111,6 +121,7 @@ var_view_img_dtadr_bh=c011	# view_img: 次に描画するタイルデータア�
 var_view_img_dtadr_th=c012	# view_img: 次に描画するタイルデータアドレス(下位8ビット)
 var_view_img_nyt=c013	# view_img: 次に描画するウィンドウタイル座標Y
 var_view_img_nxt=c014	# view_img: 次に描画するウィンドウタイル座標X
+var_dbg_rclick=c015	# dbg: 右クリックイベント用
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -1405,6 +1416,8 @@ update_mouse_cursor() {
 
 # クリックイベント処理
 click_event() {
+	lr35902_push_reg regAF
+
 	local sz
 	local sx=$(calc16_2 "${GBOS_ICON_BASE_X}+${GBOS_OBJ_WIDTH}")
 	local sy=$(calc16_2 "${GBOS_ICON_BASE_Y}+${GBOS_OBJ_HEIGHT}")
@@ -1440,18 +1453,42 @@ click_event() {
 	sz=$(stat -c '%s' src/click_event.1.o)
 	lr35902_rel_jump_with_cond NC $(two_digits_d $sz)
 	cat src/click_event.1.o
+
+	lr35902_pop_reg regAF
+}
+
+# 右クリックイベント処理
+right_click_event() {
+	lr35902_push_reg regAF
+
+	lr35902_set_reg regA 55
+	lr35902_copy_to_addr_from_regA $var_dbg_rclick
+
+	lr35902_pop_reg regAF
 }
 
 # ボタンリリースに応じた処理
 # in : regA - リリースされたボタン(上位4ビット)
 btn_release_handler() {
-	lr35902_and_to_regA $GBOS_B_KEY_MASK
+	local sz
+
+	# Bボタンの確認
+	lr35902_test_bitN_of_reg $GBOS_B_KEY_BITNUM regA
 	(
 		click_event
 	) >src/btn_release_handler.1.o
-	local sz=$(stat -c '%s' src/btn_release_handler.1.o)
+	sz=$(stat -c '%s' src/btn_release_handler.1.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
 	cat src/btn_release_handler.1.o
+
+	# Aボタンの確認
+	lr35902_test_bitN_of_reg $GBOS_A_KEY_BITNUM regA
+	(
+		right_click_event
+	) >src/btn_release_handler.2.o
+	sz=$(stat -c '%s' src/btn_release_handler.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
+	cat src/btn_release_handler.2.o
 }
 
 # DASのビットに応じた処理を呼び出す
