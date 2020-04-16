@@ -802,6 +802,8 @@ f_view_img_cyc() {
 
 		# HLへ退避先のメモリアドレスを設定
 		## DE+5000hを設定する(D300h-)
+		lr35902_set_reg regBC 5000
+		lr35902_add_to_regHL regBC
 
 		# Bへ16を設定(ループ用カウンタ。16バイト)
 
