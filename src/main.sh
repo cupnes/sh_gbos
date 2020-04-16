@@ -811,6 +811,9 @@ f_view_img_cyc() {
 	(
 		# 退避処理
 
+		# HLをpush
+		lr35902_push_reg regHL
+
 		# 退避するタイルのアドレスをDEへ設定
 		lr35902_copy_to_from regD regH
 		lr35902_copy_to_from regE regL
@@ -835,6 +838,9 @@ f_view_img_cyc() {
 		cat src/f_view_img_cyc.2.o
 		local sz_2=$(stat -c '%s' src/f_view_img_cyc.2.o)
 		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_2+2)))
+
+		# HLをpop
+		lr35902_pop_reg regHL
 	) >src/f_view_img_cyc.1.o
 	local sz_1=$(stat -c '%s' src/f_view_img_cyc.1.o)
 	lr35902_rel_jump_with_cond C $(two_digits_d $sz_1)
