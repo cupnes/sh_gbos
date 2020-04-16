@@ -711,6 +711,8 @@ f_tn_to_addr() {
 	local sz
 
 	# HLへ0x8000を設定
+	# 計時(1)ここから(2)までで 5/16384 秒
+	# (* (/ 5 16384.0) 1000)0.30517578125 ms
 	lr35902_set_reg regHL $GBOS_TILE_DATA_START
 
 	# A == 0x00 の場合、そのままreturn
@@ -744,6 +746,7 @@ f_tn_to_addr() {
 	lr35902_pop_reg regAF
 
 	# return
+	# 計時(2)
 	lr35902_return
 }
 
