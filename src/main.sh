@@ -103,6 +103,7 @@ var_da_var5=c00b	# DA用変数5
 var_da_var6=c00c	# DA用変数6
 			# - view_txt: 次に配置するウィンドウタイル座標X
 var_clr_win_nyt=c00d	# - clr_win: 次にクリアするウィンドウタイル座標Y
+var_view_img_nt=c00e	# view_img: 次に描画するタイル番目
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -696,6 +697,122 @@ f_clr_win_cyc() {
 	lr35902_return
 }
 
+# タイル番号をアドレスへ変換
+# in : regA  - タイル番号
+# out: regHL - 8000h〜のアドレスを格納
+f_clr_win_cyc >src/f_clr_win_cyc.o
+fsz=$(to16 $(stat -c '%s' src/f_clr_win_cyc.o))
+fadr=$(calc16 "${a_clr_win_cyc}+${fsz}")
+a_tn_to_addr=$(four_digits $fadr)
+f_tn_to_addr() {
+	local sz
+
+	# HLへ0x8000を設定
+	lr35902_set_reg regHL $GBOS_TILE_DATA_START
+
+	# A == 0x00 の場合、そのままreturn
+	lr35902_compare_regA_and 00
+	(
+		lr35902_return
+	) >src/f_tn_to_addr.1.o
+	sz=$(stat -c '%s' src/f_tn_to_addr.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz)
+	cat src/f_tn_to_addr.1.o
+
+	# 関数内で変更する戻り値以外のレジスタをpush
+	lr35902_push_reg regAF
+	lr35902_push_reg regDE
+
+	# DEへ1タイル当たりのバイト数(16)を設定
+	lr35902_clear_reg regD
+	lr35902_set_reg regE $GBOS_TILE_BYTES
+
+	# タイル番号の数だけHLへDEを加算
+	(
+		lr35902_add_to_regHL regDE
+		lr35902_dec regA
+	) >src/f_tn_to_addr.2.o
+	cat src/f_tn_to_addr.2.o
+	sz=$(stat -c '%s' src/f_tn_to_addr.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz+2)))
+
+	# 関数内で変更した戻り値以外のレジスタをpop
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regAF
+
+	# return
+	lr35902_return
+}
+
+# 画像ファイルを表示
+f_tn_to_addr >src/f_tn_to_addr.o
+fsz=$(to16 $(stat -c '%s' src/f_tn_to_addr.o))
+fadr=$(calc16 "${a_tn_to_addr}+${fsz}")
+a_view_img=$(four_digits $fadr)
+f_view_img() {
+	# 画像解像度は16x13タイル(128x104ピクセル)固定
+	# なので、ファイルサイズは0x0d00固定
+
+	# TODO
+	# 専用の変数を設定
+	# DASのview_imgビットを立てる
+
+	lr35902_set_reg regA 30
+	lr35902_call $a_tn_to_addr
+
+	lr35902_return
+}
+
+# 画像ファイルを表示する周期関数
+f_view_img >src/f_view_img.o
+fsz=$(to16 $(stat -c '%s' src/f_view_img.o))
+fadr=$(calc16 "${a_view_img}+${fsz}")
+a_view_img_cyc=$(four_digits $fadr)
+f_view_img_cyc() {
+	# TODO
+
+	# 次に描画するタイル番目をregBへロード
+	lr35902_copy_to_regA_from_addr $var_view_img_nt
+	lr35902_copy_to_from regB regA
+
+	# 退避する必要の有無確認
+	# (0x30 + タイル番目 + 1 <= タイル数 なら退避必要
+	#  0x30 + タイル番目 + 1 > タイル数 なら退避不要
+	#  タイル番目 + 0x31 > タイル数 なら退避不要
+	#  タイル番目(regB) > (タイル数 - 0x31)(regA) なら退避不要)
+	local save_base_tn=$(calc16_2 "${GBOS_NUM_ALL_TILES}-31")
+	lr35902_set_reg regA $save_base_tn
+	lr35902_compare_regA_and regB
+	(
+		# 退避処理
+
+		# DEへ退避するタイルのアドレスを設定
+		lr35902_copy_to_from regA regB
+		lr35902_call $a_tn_to_addr
+		lr35902_copy_to_from regD regH
+		lr35902_copy_to_from regE regL
+
+		# HLへ退避先のメモリアドレスを設定
+		## DE+5000hを設定する(D300h-)
+
+		# Bへ16を設定(ループ用カウンタ。16バイト)
+
+		# Bの数だけ1バイトずつ[DE]->[HL]へコピー
+	) >src/f_view_img_cyc.1.o
+	local sz_1=$(stat -c '%s' src/f_view_img_cyc.1.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_1)
+	cat src/f_view_img_cyc.1.o
+
+	# 30以降のタイルをD000以降のメモリ領域へ退避
+	# ファイルにかかれているタイルデータを30〜ffのタイルとしてロード
+	# 30〜ffのタイルを(xt,yt)=(02,03)のdrawable領域へ配置
+	## 1サイクルで1タイル
+
+	# 終わったらDASのview_imgのビットを下ろす
+
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -728,6 +845,9 @@ global_functions() {
 	f_view_txt
 	f_view_txt_cyc
 	f_clr_win_cyc
+	f_tn_to_addr
+	f_view_img
+	f_view_img_cyc
 }
 
 gbos_vec() {
@@ -1115,8 +1235,9 @@ click_event() {
 			(
 				lr35902_compare_regA_and $sy
 				(
-					# lr35902_call $a_clr_win
-					lr35902_call $a_view_txt
+					# TODO ファイルタイプに応じた処理を呼び出すようにする
+					# lr35902_call $a_view_txt
+					lr35902_call $a_view_img
 				) >src/click_event.4.o
 				sz=$(stat -c '%s' src/click_event.4.o)
 				lr35902_rel_jump_with_cond C $(two_digits_d $sz)
