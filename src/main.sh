@@ -806,8 +806,20 @@ f_view_img_cyc() {
 		lr35902_add_to_regHL regBC
 
 		# Bへ16を設定(ループ用カウンタ。16バイト)
+		# 計時(1)ここから(2)まで 2/16384 秒
+		# (* (/ 2 16384.0) 1000)0.1220703125 ms
+		lr35902_set_reg regB 10
 
 		# Bの数だけ1バイトずつ[DE]->[HL]へコピー
+		(
+			lr35902_copy_to_from regA ptrDE
+			lr35902_copyinc_to_ptrHL_from_regA
+			lr35902_inc regDE
+			lr35902_dec regB
+		) >src/f_view_img_cyc.2.o
+		cat src/f_view_img_cyc.2.o
+		local sz_2=$(stat -c '%s' src/f_view_img_cyc.2.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_2+2)))
 	) >src/f_view_img_cyc.1.o
 	local sz_1=$(stat -c '%s' src/f_view_img_cyc.1.o)
 	lr35902_rel_jump_with_cond C $(two_digits_d $sz_1)
@@ -819,7 +831,7 @@ f_view_img_cyc() {
 	## 1サイクルで1タイル
 
 	# 終わったらDASのview_imgのビットを下ろす
-
+	# 計時(2)
 	lr35902_return
 }
 
