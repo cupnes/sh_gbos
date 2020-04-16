@@ -767,8 +767,8 @@ f_view_img() {
 	# push
 	lr35902_push_reg regAF
 
-	# 次に描画するタイル番目をゼロクリア
-	lr35902_clear_reg regA
+	# 次に描画するタイル番目を0x30で初期化
+	lr35902_set_reg regA 30
 	lr35902_copy_to_addr_from_regA $var_view_img_nt
 
 	# 次に使用するタイルアドレスを設定
@@ -827,11 +827,10 @@ f_view_img_cyc() {
 	lr35902_copy_to_from regH regA
 
 	# 退避する必要の有無確認
-	# (0x30 + タイル番目 + 1 <= タイル数 なら退避必要
-	#  0x30 + タイル番目 + 1 > タイル数 なら退避不要
-	#  タイル番目 + 0x31 > タイル数 なら退避不要
-	#  タイル番目(regB) > (タイル数 - 0x31)(regA) なら退避不要)
-	local save_base_tn=$(calc16_2 "${GBOS_NUM_ALL_TILES}-31")
+	# (タイル番目 + 1 <= タイル数 なら退避必要
+	#  タイル番目 + 1 > タイル数 なら退避不要
+	#  タイル番目(regB) > (タイル数 - 1)(regA) なら退避不要)
+	local save_base_tn=$(calc16_2 "${GBOS_NUM_ALL_TILES}-1")
 	lr35902_set_reg regA $save_base_tn
 	lr35902_compare_regA_and regB
 	(
@@ -917,8 +916,8 @@ f_view_img_cyc() {
 	lr35902_call $a_lay_tile_at_wtcoord
 
 	# 終了判定
-	## 今描画したタイルは最後(207(0xcf)番目)のタイルか?
-	lr35902_compare_regA_and cf
+	## 今描画したタイルは最後(0xff)のタイルか?
+	lr35902_compare_regA_and ff
 	(
 		# 最後(207(0xcf)番目)のタイルである場合
 
