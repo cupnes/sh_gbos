@@ -120,7 +120,7 @@ var_da_var5=c00b	# DA用変数5
 var_da_var6=c00c	# DA用変数6
 			# - view_txt: 次に配置するウィンドウタイル座標X
 var_clr_win_nyt=c00d	# - clr_win: 次にクリアするウィンドウタイル座標Y
-var_view_img_nt=c00e	# view_img: 次に描画するタイル番目
+var_view_img_nt=c00e	# view_img: 次に描画するタイル番号
 var_view_img_ntadr_bh=c00f	# view_img: 次に使用するタイルアドレス(下位8ビット)
 var_view_img_ntadr_th=c010	# view_img: 次に使用するタイルアドレス(上位8ビット)
 var_view_img_dtadr_bh=c011	# view_img: 次に描画するタイルデータアドレス(下位8ビット)
@@ -789,7 +789,7 @@ f_view_img() {
 	# push
 	lr35902_push_reg regAF
 
-	# 次に描画するタイル番目を0x30で初期化
+	# 次に描画するタイル番号を0x30で初期化
 	lr35902_set_reg regA 30
 	lr35902_copy_to_addr_from_regA $var_view_img_nt
 
@@ -843,7 +843,7 @@ f_view_img_cyc() {
 	lr35902_push_reg regDE
 	lr35902_push_reg regHL
 
-	# 次に描画するタイル番目をBへロード
+	# 次に描画するタイル番号をBへロード
 	lr35902_copy_to_regA_from_addr $var_view_img_nt
 	lr35902_copy_to_from regB regA
 
@@ -854,9 +854,9 @@ f_view_img_cyc() {
 	lr35902_copy_to_from regH regA
 
 	# 退避する必要の有無確認
-	# (タイル番目 + 1 <= タイル数 なら退避必要
-	#  タイル番目 + 1 > タイル数 なら退避不要
-	#  タイル番目(regB) > (タイル数 - 1)(regA) なら退避不要)
+	# (タイル番号 + 1 <= タイル数 なら退避必要
+	#  タイル番号 + 1 > タイル数 なら退避不要
+	#  タイル番号(regB) > (タイル数 - 1)(regA) なら退避不要)
 	local save_base_tn=$(calc16_2 "${GBOS_NUM_ALL_TILES}-1")
 	lr35902_set_reg regA $save_base_tn
 	lr35902_compare_regA_and regB
@@ -936,7 +936,7 @@ f_view_img_cyc() {
 	lr35902_copy_to_regA_from_addr $var_view_img_nxt
 	lr35902_copy_to_from regE regA
 
-	## 次に描画するタイル番目をAへ設定
+	## 次に描画するタイル番号をAへ設定
 	lr35902_copy_to_from regA regB
 
 	## タイルを描画
@@ -946,7 +946,7 @@ f_view_img_cyc() {
 	## 今描画したタイルは最後(0xff)のタイルか?
 	lr35902_compare_regA_and ff
 	(
-		# 最後(207(0xcf)番目)のタイルである場合
+		# 最後のタイルである場合
 
 		# 終わったらDASのview_imgのビットを下ろす
 		lr35902_copy_to_regA_from_addr $var_draw_act_stat
@@ -954,9 +954,9 @@ f_view_img_cyc() {
 		lr35902_copy_to_addr_from_regA $var_draw_act_stat
 	) >src/f_view_img_cyc.4.o
 	(
-		# 最後(207(0xcf)番目)のタイルでない場合
+		# 最後のタイルでない場合
 
-		# 次に描画するタイル番目を更新
+		# 次に描画するタイル番号を更新
 		lr35902_inc regA
 		lr35902_copy_to_addr_from_regA $var_view_img_nt
 
@@ -1002,15 +1002,15 @@ f_view_img_cyc() {
 		## 右端である場合
 		cat src/f_view_img_cyc.6.o
 
-		## 最後(207(0xcf)番目)のタイルである場合の処理を飛ばす
+		## 最後のタイルである場合の処理を飛ばす
 		local sz_4=$(stat -c '%s' src/f_view_img_cyc.4.o)
 		lr35902_rel_jump $(two_digits_d $sz_4)
 	) >src/f_view_img_cyc.5.o
 	local sz_5=$(stat -c '%s' src/f_view_img_cyc.5.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_5)
-	## 最後(207(0xcf)番目)のタイルでない場合
+	## 最後のタイルでない場合
 	cat src/f_view_img_cyc.5.o
-	## 最後(207(0xcf)番目)のタイルである場合
+	## 最後のタイルである場合
 	cat src/f_view_img_cyc.4.o
 
 	# pop & return
