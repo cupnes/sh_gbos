@@ -92,6 +92,7 @@ GBOS_RIGHT_KEY_BITNUM=0
 GBOS_DA_BITNUM_CLR_WIN=0
 GBOS_DA_BITNUM_VIEW_TXT=2
 GBOS_DA_BITNUM_VIEW_IMG=3
+GBOS_DA_BITNUM_RSTR_TILES=4
 
 # ウィンドウステータス用定数
 GBOS_WST_BITNUM_DIR=0	# ディレクトリ表示中
@@ -1021,6 +1022,27 @@ f_view_img_cyc() {
 	lr35902_return
 }
 
+# タイルデータを復帰する周期ハンドラを登録する関数
+f_view_img_cyc >src/f_view_img_cyc.o
+fsz=$(to16 $(stat -c '%s' src/f_view_img_cyc.o))
+fadr=$(calc16 "${a_view_img_cyc}+${fsz}")
+a_rstr_tiles=$(four_digits $fadr)
+f_rstr_tiles() {
+	# push
+	lr35902_push_reg regAF
+
+	# TODO rstr_tiles_cycで使用する変数設定
+
+	# DASへタイルデータ復帰のビットをセット
+	lr35902_copy_to_regA_from_addr $var_draw_act_stat
+	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_RSTR_TILES regA
+	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+	# pop & return
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -1476,10 +1498,30 @@ click_event() {
 }
 
 # 右クリックイベント処理
+# in : regA - リリースされたボタン(上位4ビット)
 right_click_event() {
+	# 呼び出し元へ戻る際に復帰できるようにpush
 	lr35902_push_reg regAF
 
-	# TODO $var_win_stat に応じて画面を初期化
+	# ウィンドウステータスをAへ取得
+	lr35902_copy_to_regA_from_addr $var_win_stat
+
+	# 画像ファイル表示中か確認
+	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_IMG regA
+	(
+		# 画像ファイル表示中の場合
+		lr35902_call $a_rstr_tiles
+	) >src/right_click_event.1.o
+	local sz_1=$(stat -c '%s' src/right_click_event.1.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
+	## 画像ファイル表示中の場合
+	cat src/right_click_event.1.o
+
+	# clr_win設定
+	lr35902_call $a_clr_win
+
+	# view_dir設定(TODO)
+	# lr35902_call $a_view_dir
 
 	lr35902_pop_reg regAF
 }
@@ -1510,6 +1552,8 @@ btn_release_handler() {
 
 # DASのビットに応じた処理を呼び出す
 # in : regA - DAS
+## TODO rstr_tilesフラグがセットされていた場合は、
+##      それを処理してからclr_winを処理するようにする
 das_handler() {
 	# clr_winのチェック
 	lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_CLR_WIN regA
