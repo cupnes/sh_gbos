@@ -23,7 +23,7 @@ print_rom() {
 	gbos_const >gbos_const.o
 	local offset=$(stat -c '%s' gbos_const.o)
 	local offset_hex=$(echo "obase=16;${offset}" | bc)
-	local bc_form="obase=16;ibase=16;${GB_ROM_START_ADDR}+${offset_hex}"
+	local bc_form="obase=16;ibase=16;${GB_ROM_FREE_BASE}+${offset_hex}"
 	local entry_addr=$(echo $bc_form | bc)
 	bc_form="obase=16;ibase=16;${entry_addr}+10000"
 	local entry_addr_4digits=$(echo $bc_form | bc | cut -c2-5)

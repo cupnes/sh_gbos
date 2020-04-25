@@ -20,7 +20,7 @@ GBOS_WIN_DRAWABLE_MAX_XT=$(calc16_2 "${GBOS_WIN_DRAWABLE_BASE_XT}+${GBOS_WIN_DRA
 
 GBOS_WX_DEF=00
 GBOS_WY_DEF=00
-GBOS_ROM_TILE_DATA_START=$GB_ROM_START_ADDR
+GBOS_ROM_TILE_DATA_START=$GB_ROM_FREE_BASE
 GBOS_TILE_DATA_START=8000
 GBOS_BG_TILEMAP_START=9800
 GBOS_WINDOW_TILEMAP_START=9c00
@@ -1814,7 +1814,7 @@ event_driven() {
 	local init_bytes=$(stat -c '%s' src/init.o)
 	local bc_form="obase=16;${const_bytes}+${init_bytes}"
 	local const_init=$(echo $bc_form | bc)
-	bc_form="obase=16;ibase=16;${GB_ROM_START_ADDR}+${const_init}"
+	bc_form="obase=16;ibase=16;${GB_ROM_FREE_BASE}+${const_init}"
 	local halt_addr=$(echo $bc_form | bc)
 	# 計時(*3)
 	lr35902_abs_jump $(four_digits $halt_addr)
