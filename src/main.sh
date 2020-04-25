@@ -1043,6 +1043,56 @@ f_rstr_tiles() {
 	lr35902_return
 }
 
+# タイルデータを復帰する周期関数
+f_rstr_tiles >src/f_rstr_tiles.o
+fsz=$(to16 $(stat -c '%s' src/f_rstr_tiles.o))
+fadr=$(calc16 "${a_rstr_tiles}+${fsz}")
+a_rstr_tiles_cyc=$(four_digits $fadr)
+f_rstr_tiles_cyc() {
+	# push
+
+	# HLへ復帰するタイルのアドレスを設定
+	## var_view_img_ntadr変数を流用する
+	lr35902_copy_to_regA_from_addr $var_view_img_ntadr_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_view_img_ntadr_th
+	lr35902_copy_to_from regH regA
+
+	# 退避場所のメモリアドレスをDEへ設定
+	## HL+5000hを設定する(D300h-)
+	lr35902_push_reg regHL
+	lr35902_set_reg regBC 5000
+	lr35902_add_to_regHL regBC
+	lr35902_copy_to_from regDE regHL
+	lr35902_pop_reg regHL
+
+	# Cへ16を設定(ループ用カウンタ。16バイト)
+	lr35902_set_reg regC 10
+
+	# Cの数だけ1バイトずつ[DE]->[HL]へコピー
+	(
+		lr35902_copy_to_from regA ptrDE
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_inc regDE
+		lr35902_dec regC
+	) >src/f_rstr_tiles_cyc.1.o
+	cat src/f_rstr_tiles_cyc.1.o
+	local sz_1=$(stat -c '%s' src/f_rstr_tiles_cyc.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1+2)))
+
+	# HLを変数へ保存
+	lr35902_copy_to_from regA regL
+	lr35902_copy_to_addr_from_regA $var_view_img_ntadr_bh
+	lr35902_copy_to_from regA regH
+	lr35902_copy_to_addr_from_regA $var_view_img_ntadr_th
+
+	# この周期処理の終了判定
+	## TODO
+
+	# pop & return
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
