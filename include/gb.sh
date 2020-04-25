@@ -4,10 +4,16 @@ fi
 INCLUDE_GB_SH=true
 
 . include/lr35902.sh
+. include/common.sh
 
-GB_ROM_BANK_SIZE_NOHEAD=16048
-GB_ROM_BANK_SIZE=16384
-GB_ROM_START_ADDR=0150
+# 10進数での計算用
+GB_ROM_SIZE=32768
+GB_VECT_SIZE=256
+GB_HEAD_SIZE=80
+
+# 以降、基本的に数値は16進数で定義
+
+GB_ROM_FREE_BASE=0150
 GB_DISP_WIDTH_T=14
 GB_DISP_HEIGHT_T=12
 GB_NON_DISP_WIDTH_T=0c	# $GB_SC_WIDTH_T - $GB_DISP_WIDTH_T
@@ -53,7 +59,7 @@ gb_nintendo_logo() {
 
 # タイトル文字列無しのヘッダ
 gb_cart_header_no_title() {
-	local entry_addr=$1
+	local entry_addr=$(four_digits $1)
 
 	# エントリアドレスへジャンプ
 	echo -en '\x00\xc3'

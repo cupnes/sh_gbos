@@ -1003,6 +1003,11 @@ lr35902_xor_to_regA() {
 	fi
 }
 
+lr35902_complement_regA() {
+	echo -en '\x2f'	# cpl
+	echo -e 'cpl\t;4' >>$ASM_LIST_FILE
+}
+
 # MEMO: rl/rlcやrr/rrcを実装する際は
 #       rl側をrotate_left_through_carryという名前で実装する
 #       ∵ 振る舞いからしてrl側がCarryを通してシフトしている
