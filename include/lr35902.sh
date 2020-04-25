@@ -768,6 +768,7 @@ lr35902_compare_regA_and() {
 		;;
 	*)
 		echo -en "\xfe\x${reg_or_val}"	# cp ${reg_or_val}
+		echo -e "cp \$${reg_or_val}\t;8" >>$ASM_LIST_FILE
 		;;
 	esac
 }
