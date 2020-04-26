@@ -1051,7 +1051,7 @@ a_rstr_tiles_cyc=$(four_digits $fadr)
 f_rstr_tiles_cyc() {
 	# push
 
-	# HLへ復帰するタイルのアドレスを設定
+	# 復帰するタイルのアドレスをHLへ設定
 	## var_view_img_ntadr変数を流用する
 	lr35902_copy_to_regA_from_addr $var_view_img_ntadr_bh
 	lr35902_copy_to_from regL regA
@@ -1080,14 +1080,50 @@ f_rstr_tiles_cyc() {
 	local sz_1=$(stat -c '%s' src/f_rstr_tiles_cyc.1.o)
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1+2)))
 
-	# HLを変数へ保存
-	lr35902_copy_to_from regA regL
-	lr35902_copy_to_addr_from_regA $var_view_img_ntadr_bh
-	lr35902_copy_to_from regA regH
-	lr35902_copy_to_addr_from_regA $var_view_img_ntadr_th
-
 	# この周期処理の終了判定
-	## TODO
+	local ntadr=$(calc16 "${GBOS_TILE_DATA_START}+300")
+	local ntlast=$(calc16 "${ntadr}+${GBOS_NUM_ALL_TILE_BYTES}")
+	local ntlast_th=$(echo $ntlast | cut -c1-2)
+	local ntlast_bh=$(echo $ntlast | cut -c3-4)
+	lr35902_copy_to_from regA regH
+	lr35902_compare_regA_and $ntlast_th
+	(
+		# A != $ntlast_th の場合
+
+		# HLを変数へ保存
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_view_img_ntadr_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_view_img_ntadr_th
+	) >src/f_rstr_tiles_cyc.2.o
+	(
+		# A == $ntlast_th の場合
+
+		lr35902_copy_to_from regA regL
+		lr35902_compare_regA_and $ntlast_bh
+		(
+			# A == $ntlast_bh の場合
+
+			# DAのGBOS_DA_BITNUM_RSTR_TILESのビットを下ろす
+			lr35902_copy_to_regA_from_addr $var_draw_act_stat
+			lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RSTR_TILES
+			lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+			# 続くA != $ntlast_th の場合の処理を飛ばす
+			local sz_2=$(stat -c '%s' src/f_rstr_tiles_cyc.2.o)
+			lr35902_rel_jump $(two_digits_d $sz_2)
+		) >src/f_rstr_tiles_cyc.3.o
+		local sz_3=$(stat -c '%s' src/f_rstr_tiles_cyc.3.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+		## A == $ntlast_bh の場合
+		cat src/f_rstr_tiles_cyc.3.o
+	) >src/f_rstr_tiles_cyc.4.o
+	local sz_4=$(stat -c '%s' src/f_rstr_tiles_cyc.4.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_4)
+	## A == $ntlast_th の場合
+	cat src/f_rstr_tiles_cyc.4.o
+	## A != $ntlast_th の場合
+	cat src/f_rstr_tiles_cyc.2.o
 
 	# pop & return
 	lr35902_return
