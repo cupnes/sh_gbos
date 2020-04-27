@@ -1032,6 +1032,11 @@ f_rstr_tiles() {
 	lr35902_push_reg regAF
 
 	# TODO rstr_tiles_cycで使用する変数設定
+	local ntadr=$(calc16 "${GBOS_TILE_DATA_START}+300")
+	lr35902_set_reg regA $(echo $ntadr | cut -c3-4)
+	lr35902_copy_to_addr_from_regA $var_view_img_ntadr_bh
+	lr35902_set_reg regA $(echo $ntadr | cut -c1-2)
+	lr35902_copy_to_addr_from_regA $var_view_img_ntadr_th
 
 	# DASへタイルデータ復帰のビットをセット
 	lr35902_copy_to_regA_from_addr $var_draw_act_stat
@@ -1050,6 +1055,10 @@ fadr=$(calc16 "${a_rstr_tiles}+${fsz}")
 a_rstr_tiles_cyc=$(four_digits $fadr)
 f_rstr_tiles_cyc() {
 	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
 
 	# 復帰するタイルのアドレスをHLへ設定
 	## var_view_img_ntadr変数を流用する
@@ -1063,7 +1072,8 @@ f_rstr_tiles_cyc() {
 	lr35902_push_reg regHL
 	lr35902_set_reg regBC 5000
 	lr35902_add_to_regHL regBC
-	lr35902_copy_to_from regDE regHL
+	lr35902_copy_to_from regD regH
+	lr35902_copy_to_from regE regL
 	lr35902_pop_reg regHL
 
 	# Cへ16を設定(ループ用カウンタ。16バイト)
@@ -1081,8 +1091,7 @@ f_rstr_tiles_cyc() {
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1+2)))
 
 	# この周期処理の終了判定
-	local ntadr=$(calc16 "${GBOS_TILE_DATA_START}+300")
-	local ntlast=$(calc16 "${ntadr}+${GBOS_NUM_ALL_TILE_BYTES}")
+	local ntlast=$(calc16 "${GBOS_TILE_DATA_START}+${GBOS_NUM_ALL_TILE_BYTES}")
 	local ntlast_th=$(echo $ntlast | cut -c1-2)
 	local ntlast_bh=$(echo $ntlast | cut -c3-4)
 	lr35902_copy_to_from regA regH
@@ -1106,10 +1115,10 @@ f_rstr_tiles_cyc() {
 
 			# DAのGBOS_DA_BITNUM_RSTR_TILESのビットを下ろす
 			lr35902_copy_to_regA_from_addr $var_draw_act_stat
-			lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RSTR_TILES
+			lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RSTR_TILES regA
 			lr35902_copy_to_addr_from_regA $var_draw_act_stat
 
-			# 続くA != $ntlast_th の場合の処理を飛ばす
+			# 続く A != $ntlast_th の場合の処理を飛ばす
 			local sz_2=$(stat -c '%s' src/f_rstr_tiles_cyc.2.o)
 			lr35902_rel_jump $(two_digits_d $sz_2)
 		) >src/f_rstr_tiles_cyc.3.o
@@ -1126,6 +1135,10 @@ f_rstr_tiles_cyc() {
 	cat src/f_rstr_tiles_cyc.2.o
 
 	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
 	lr35902_return
 }
 
@@ -1164,6 +1177,8 @@ global_functions() {
 	f_tn_to_addr
 	f_view_img
 	f_view_img_cyc
+	f_rstr_tiles
+	f_rstr_tiles_cyc
 }
 
 gbos_vec() {
@@ -1638,9 +1653,18 @@ btn_release_handler() {
 
 # DASのビットに応じた処理を呼び出す
 # in : regA - DAS
-## TODO rstr_tilesフラグがセットされていた場合は、
-##      それを処理してからclr_winを処理するようにする
 das_handler() {
+	# rstr_tilesのチェック
+	lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_RSTR_TILES regA
+	(
+		# rstr_tilesがセットされていた場合
+		lr35902_call $a_rstr_tiles_cyc
+	) >src/das_handler.5.o
+	local sz_5=$(stat -c '%s' src/das_handler.5.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_5)
+	# rstr_tilesがセットされていた場合
+	cat src/das_handler.5.o
+
 	# clr_winのチェック
 	lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_CLR_WIN regA
 	(
