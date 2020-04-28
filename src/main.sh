@@ -1164,6 +1164,39 @@ f_view_dir() {
 	lr35902_return
 }
 
+# ディレクトリを表示する周期関数
+## TODO 今の所ルートディレクトリ固定
+## TODO 今の所ファイルは1つで固定
+f_view_dir >src/f_view_dir.o
+fsz=$(to16 $(stat -c '%s' src/f_view_dir.o))
+fadr=$(calc16 "${a_view_dir}+${fsz}")
+a_view_dir_cyc=$(four_digits $fadr)
+f_view_dir_cyc() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regDE
+
+	# TODO
+	# 現状、ファイルは1つしかない想定
+	# なので、ファイルタイプが書かれている場所へのオフセットは0x0007固定
+	local file_type_ofs=0007
+	local file_type_addr=$(calc16 "${GBOS_FS_BASE}+${file_type_ofs}")
+	lr35902_copy_to_regA_from_addr $file_type_addr
+	lr35902_set_reg regD 03
+	lr35902_set_reg regE 02
+	lr35902_call $a_lay_icon
+
+	# DAのGBOS_DA_BITNUM_VIEW_DIRのビットを下ろす
+	lr35902_copy_to_regA_from_addr $var_draw_act_stat
+	lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_VIEW_DIR regA
+	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+	# pop & return
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -1202,6 +1235,7 @@ global_functions() {
 	f_rstr_tiles
 	f_rstr_tiles_cyc
 	f_view_dir
+	f_view_dir_cyc
 }
 
 gbos_vec() {
@@ -1692,6 +1726,17 @@ das_handler() {
 	lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_CLR_WIN regA
 	(
 		# clr_winがセットされていなかった場合
+
+		# view_dirのチェック
+		lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_VIEW_DIR regA
+		(
+			# view_dirがセットされていた場合
+			lr35902_call $a_view_dir_cyc
+		) >src/das_handler.6.o
+		local sz_6=$(stat -c '%s' src/das_handler.6.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
+		# view_dirがセットされていた場合
+		cat src/das_handler.6.o
 
 		# view_txtのチェック
 		lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_VIEW_TXT regA
