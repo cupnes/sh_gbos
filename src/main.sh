@@ -90,6 +90,7 @@ GBOS_RIGHT_KEY_BITNUM=0
 
 # 描画アクション(DA)ステータス用定数
 GBOS_DA_BITNUM_CLR_WIN=0
+GBOS_DA_BITNUM_VIEW_DIR=1
 GBOS_DA_BITNUM_VIEW_TXT=2
 GBOS_DA_BITNUM_VIEW_IMG=3
 GBOS_DA_BITNUM_RSTR_TILES=4
@@ -1142,6 +1143,27 @@ f_rstr_tiles_cyc() {
 	lr35902_return
 }
 
+# ディレクトリを表示
+## TODO 今の所ルートディレクトリ固定
+## TODO 今の所ファイルは1つで固定
+f_rstr_tiles_cyc >src/f_rstr_tiles_cyc.o
+fsz=$(to16 $(stat -c '%s' src/f_rstr_tiles_cyc.o))
+fadr=$(calc16 "${a_rstr_tiles_cyc}+${fsz}")
+a_view_dir=$(four_digits $fadr)
+f_view_dir() {
+	# push
+	lr35902_push_reg regAF
+
+	# DASへディレクトリ表示のビットをセット
+	lr35902_copy_to_regA_from_addr $var_draw_act_stat
+	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_VIEW_DIR regA
+	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+	# pop & return
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -1179,6 +1201,7 @@ global_functions() {
 	f_view_img_cyc
 	f_rstr_tiles
 	f_rstr_tiles_cyc
+	f_view_dir
 }
 
 gbos_vec() {
@@ -1621,8 +1644,8 @@ right_click_event() {
 	# clr_win設定
 	lr35902_call $a_clr_win
 
-	# view_dir設定(TODO)
-	# lr35902_call $a_view_dir
+	# view_dir設定
+	lr35902_call $a_view_dir
 
 	lr35902_pop_reg regAF
 }
