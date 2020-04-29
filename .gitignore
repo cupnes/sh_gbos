@@ -3,3 +3,6 @@
 *.gb
 *.2bpp
 *.lst
+*.img
+
+rootfs*
