@@ -130,6 +130,7 @@ var_view_img_dtadr_th=c012	# view_img: 次に描画するタイルデータア�
 var_view_img_nyt=c013	# view_img: 次に描画するウィンドウタイル座標Y
 var_view_img_nxt=c014	# view_img: 次に描画するウィンドウタイル座標X
 var_win_stat=c015	# ウィンドウステータス
+var_view_dir_file_th=c016	# view_dir: 表示するのは何番目のファイルか(0始まり)
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -1154,6 +1155,10 @@ f_view_dir() {
 	# push
 	lr35902_push_reg regAF
 
+	# 0番目のファイルから表示する
+	lr35902_clear_reg regA
+	lr35902_copy_to_addr_from_regA $var_view_dir_file_th
+
 	# DASへディレクトリ表示のビットをセット
 	lr35902_copy_to_regA_from_addr $var_draw_act_stat
 	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_VIEW_DIR regA
@@ -1165,31 +1170,157 @@ f_view_dir() {
 }
 
 # ディレクトリを表示する周期関数
-## TODO 今の所ルートディレクトリ固定
+## TODO 今の所ルートディレクトリのみ
 ## TODO 今の所ファイルは1つで固定
 f_view_dir >src/f_view_dir.o
 fsz=$(to16 $(stat -c '%s' src/f_view_dir.o))
 fadr=$(calc16 "${a_view_dir}+${fsz}")
 a_view_dir_cyc=$(four_digits $fadr)
+# アイコンを配置するウィンドウY座標を
+# レジスタAに格納されたファイル番目で算出し
+# レジスタDへ設定
+set_icon_wy_to_regD_calc_from_regA() {
+	# ファイル番目のビット3-2を抽出
+	lr35902_and_to_regA 0c
+	(
+		# ファイル番目[3:2] == 01 or 10 or 11
+		lr35902_compare_regA_and 04
+		(
+			# ファイル番目[3:2] == 10 or 11
+			lr35902_compare_regA_and 08
+			(
+				# ファイル番目[3:2] == 11
+				lr35902_set_reg regD 0c
+			) >src/set_icon_wy_to_regD_calc_from_regA.6.o
+			(
+				# ファイル番目[3:2] == 10
+				lr35902_set_reg regD 09
+
+				# 「ファイル番目[3:2] == 11」の処理を飛ばす
+				local sz_6=$(stat -c '%s' src/set_icon_wy_to_regD_calc_from_regA.6.o)
+				lr35902_rel_jump $(two_digits_d $sz_6)
+			) >src/set_icon_wy_to_regD_calc_from_regA.5.o
+			local sz_5=$(stat -c '%s' src/set_icon_wy_to_regD_calc_from_regA.5.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
+			cat src/set_icon_wy_to_regD_calc_from_regA.5.o
+			cat src/set_icon_wy_to_regD_calc_from_regA.6.o
+		) >src/set_icon_wy_to_regD_calc_from_regA.4.o
+		(
+			# ファイル番目[3:2] == 01
+			lr35902_set_reg regD 06
+
+			# 「ファイル番目[3:2] == 10 or 11」の処理を飛ばす
+			local sz_4=$(stat -c '%s' src/set_icon_wy_to_regD_calc_from_regA.4.o)
+			lr35902_rel_jump $(two_digits_d $sz_4)
+		) >src/set_icon_wy_to_regD_calc_from_regA.3.o
+		local sz_3=$(stat -c '%s' src/set_icon_wy_to_regD_calc_from_regA.3.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+		cat src/set_icon_wy_to_regD_calc_from_regA.3.o
+		cat src/set_icon_wy_to_regD_calc_from_regA.4.o
+	) >src/set_icon_wy_to_regD_calc_from_regA.2.o
+	(
+		# ファイル番目[3:2] == 00
+		lr35902_set_reg regD 03
+
+		# 「ファイル番目[3:2] == 01 or 10 or 11」の処理を飛ばす
+		local sz_2=$(stat -c '%s' src/set_icon_wy_to_regD_calc_from_regA.2.o)
+		lr35902_rel_jump $(two_digits_d $sz_2)
+	) >src/set_icon_wy_to_regD_calc_from_regA.1.o
+	local sz_1=$(stat -c '%s' src/set_icon_wy_to_regD_calc_from_regA.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
+	cat src/set_icon_wy_to_regD_calc_from_regA.1.o
+	cat src/set_icon_wy_to_regD_calc_from_regA.2.o
+}
+# アイコンを配置するウィンドウX座標を
+# レジスタAに格納されたファイル番目で算出し
+# レジスタEへ設定
+set_icon_wx_to_regE_calc_from_regA() {
+	# ファイル番目のビット1-0を抽出
+	lr35902_and_to_regA 03
+	(
+		# ファイル番目[1:0] == 01 or 10 or 11
+		lr35902_compare_regA_and 04
+		(
+			# ファイル番目[1:0] == 10 or 11
+			lr35902_compare_regA_and 08
+			(
+				# ファイル番目[1:0] == 11
+				lr35902_set_reg regE 0f
+			) >src/set_icon_wx_to_regE_calc_from_regA.6.o
+			(
+				# ファイル番目[1:0] == 10
+				lr35902_set_reg regE 0b
+
+				# 「ファイル番目[1:0] == 11」の処理を飛ばす
+				local sz_6=$(stat -c '%s' src/set_icon_wx_to_regE_calc_from_regA.6.o)
+				lr35902_rel_jump $(two_digits_d $sz_6)
+			) >src/set_icon_wx_to_regE_calc_from_regA.5.o
+			local sz_5=$(stat -c '%s' src/set_icon_wx_to_regE_calc_from_regA.5.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
+			cat src/set_icon_wx_to_regE_calc_from_regA.5.o
+			cat src/set_icon_wx_to_regE_calc_from_regA.6.o
+		) >src/set_icon_wx_to_regE_calc_from_regA.4.o
+		(
+			# ファイル番目[1:0] == 01
+			lr35902_set_reg regE 07
+
+			# 「ファイル番目[1:0] == 10 or 11」の処理を飛ばす
+			local sz_4=$(stat -c '%s' src/set_icon_wx_to_regE_calc_from_regA.4.o)
+			lr35902_rel_jump $(two_digits_d $sz_4)
+		) >src/set_icon_wx_to_regE_calc_from_regA.3.o
+		local sz_3=$(stat -c '%s' src/set_icon_wx_to_regE_calc_from_regA.3.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+		cat src/set_icon_wx_to_regE_calc_from_regA.3.o
+		cat src/set_icon_wx_to_regE_calc_from_regA.4.o
+	) >src/set_icon_wx_to_regE_calc_from_regA.2.o
+	(
+		# ファイル番目[1:0] == 00
+		lr35902_set_reg regE 03
+
+		# 「ファイル番目[1:0] == 01 or 10 or 11」の処理を飛ばす
+		local sz_2=$(stat -c '%s' src/set_icon_wx_to_regE_calc_from_regA.2.o)
+		lr35902_rel_jump $(two_digits_d $sz_2)
+	) >src/set_icon_wx_to_regE_calc_from_regA.1.o
+	local sz_1=$(stat -c '%s' src/set_icon_wx_to_regE_calc_from_regA.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
+	cat src/set_icon_wx_to_regE_calc_from_regA.1.o
+	cat src/set_icon_wx_to_regE_calc_from_regA.2.o
+}
 f_view_dir_cyc() {
 	# push
 	lr35902_push_reg regAF
 	lr35902_push_reg regDE
 
-	# TODO
-	# 現状、ファイルは1つしかない想定
-	# なので、ファイルタイプが書かれている場所へのオフセットは0x0007固定
+	# 表示するファイル番目を変数からBへ取得
+	lr35902_copy_to_regA_from_addr $var_view_dir_file_th
+	lr35902_copy_to_from regB regA
+
+	# アイコンを置くウィンドウ座標(X,Y)を(E,D)へ設定
+	set_icon_wy_to_regD_calc_from_regA
+	lr35902_copy_to_from regA regB
+	set_icon_wx_to_regE_calc_from_regA
+
+	# アイコン番号をAへ設定
 	local file_type_ofs=0007
 	local file_type_addr=$(calc16 "${GBOS_FS_BASE}+${file_type_ofs}")
 	lr35902_copy_to_regA_from_addr $file_type_addr
-	lr35902_set_reg regD 03
-	lr35902_set_reg regE 02
+
+	# アイコンを描画
 	lr35902_call $a_lay_icon
+
+	# ディレクトリのファイル数取得
+	## TODO ルートディレクトリ固定なのでオフセットは0x0000固定
+	local num_files_ofs=0000
+	local num_files_addr=$(calc16 "${GBOS_FS_BASE}+${num_files_ofs}")
+
+	# 今表示したファイルが最後のファイルか？
 
 	# DAのGBOS_DA_BITNUM_VIEW_DIRのビットを下ろす
 	lr35902_copy_to_regA_from_addr $var_draw_act_stat
 	lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_VIEW_DIR regA
 	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+	# 表示するファイル番目の変数を更新
 
 	# pop & return
 	lr35902_pop_reg regDE
@@ -1500,6 +1631,8 @@ init() {
 	draw_blank_window
 
 	# 初期アイコンを配置
+	lr35902_clear_reg regA
+	lr35902_copy_to_addr_from_regA $var_view_dir_file_th
 	lr35902_call $a_view_dir_cyc
 
 	# マウスカーソルを描画
