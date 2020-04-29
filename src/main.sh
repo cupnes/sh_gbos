@@ -65,6 +65,7 @@ GBOS_OBJ_DEF_ATTR=00	# %0000 0000($00)
 GBOS_OAM_BASE=fe00
 GBOS_OAM_SZ=04	# 4 bytes
 GBOS_OAM_NUM_CSL=00
+GBOS_OAM_NUM_PCB=27
 
 GBOS_DIR_KEY_MASK=0f	# $var_btn_stat の十字キー入力のみ抽出するマスク
 GBOS_DOWN_KEY_MASK=08
@@ -1640,6 +1641,10 @@ init() {
 		 $GBOS_TILE_NUM_CSL $GBOS_OBJ_DEF_ATTR
 	# 別途 obj_move とかの関数も作る
 	# TODO グローバル関数化
+
+	# 処理棒を描画
+	obj_init $GBOS_OAM_NUM_PCB $GB_DISP_HEIGHT $GB_DISP_WIDTH \
+		 $GBOS_TILE_NUM_UP_ARROW $GBOS_OBJ_DEF_ATTR
 
 	# V-Blank(b0)の割り込みのみ有効化
 	lr35902_set_reg regA 01
