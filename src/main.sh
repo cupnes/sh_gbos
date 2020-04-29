@@ -1599,6 +1599,34 @@ update_mouse_cursor() {
 	lr35902_copy_to_addr_from_regA $var_mouse_x
 }
 
+# ファイルを閲覧
+## TODO 現状ディレクトリにファイルは一つのみの想定
+view_file() {
+	# 現状、ファイルは1つしかない想定
+	# なので、ファイルタイプが書かれている場所へのオフセットは0x0007固定
+	local file_type_ofs=0007
+	local file_type_addr=$(calc16 "${GBOS_FS_BASE}+${file_type_ofs}")
+	lr35902_copy_to_regA_from_addr $file_type_addr
+
+	lr35902_compare_regA_and $GBOS_ICON_NUM_TXT
+	(
+		# テキストファイルの場合
+		lr35902_call $a_view_txt
+	) >src/view_file.1.o
+	local sz_1=$(stat -c '%s' src/view_file.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
+	cat src/view_file.1.o
+
+	lr35902_compare_regA_and $GBOS_ICON_NUM_IMG
+	(
+		# 画像ファイルの場合
+		lr35902_call $a_view_img
+	) >src/view_file.2.o
+	local sz_2=$(stat -c '%s' src/view_file.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
+	cat src/view_file.2.o
+}
+
 # クリックイベント処理
 click_event() {
 	lr35902_push_reg regAF
@@ -1619,9 +1647,7 @@ click_event() {
 			(
 				lr35902_compare_regA_and $sy
 				(
-					# TODO ファイルタイプに応じた処理を呼び出すようにする
-					# lr35902_call $a_view_txt
-					lr35902_call $a_view_img
+					view_file
 				) >src/click_event.4.o
 				sz=$(stat -c '%s' src/click_event.4.o)
 				lr35902_rel_jump_with_cond C $(two_digits_d $sz)
