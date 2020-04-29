@@ -1624,9 +1624,32 @@ proc_bar_end() {
 	# [処理棒をLYに応じて設定]
 	lr35902_copy_to_regA_from_ioport $GB_IO_LY
 	lr35902_sub_to_regA $GB_DISP_HEIGHT
-	lr35902_copy_to_from regB regA
-	lr35902_set_reg regA $GB_DISP_HEIGHT
-	lr35902_sub_to_regA regB
+	lr35902_compare_regA_and 00
+	(
+		# A == 0 の場合
+		lr35902_set_reg regA $GB_DISP_HEIGHT
+	) >src/proc_bar_end.3.o
+	(
+		# A != 0 の場合
+		lr35902_copy_to_from regC regA
+		lr35902_set_reg regA $GB_DISP_HEIGHT
+		(
+			lr35902_sub_to_regA 0e
+			lr35902_dec regC
+		) >src/proc_bar_end.1.o
+		cat src/proc_bar_end.1.o
+		local sz_1=$(stat -c '%s' src/proc_bar_end.1.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+
+		# A == 0の場合の処理を飛ばす
+		local sz_3=$(stat -c '%s' src/proc_bar_end.3.o)
+		lr35902_rel_jump $(two_digits_d $sz_3)
+	) >src/proc_bar_end.2.o
+	local sz_2=$(stat -c '%s' src/proc_bar_end.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat src/proc_bar_end.2.o
+	cat src/proc_bar_end.3.o
+
 	obj_set_y $GBOS_OAM_NUM_PCB
 }
 
