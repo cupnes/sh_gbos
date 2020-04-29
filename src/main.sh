@@ -1436,19 +1436,6 @@ draw_blank_window() {
 	lr35902_call $a_lay_tiles_at_wtcoord_to_low
 }
 
-# 初期アイコン描画
-draw_init_icons() {
-	# TODO
-	# 現状、ファイルは1つしかない想定
-	# なので、ファイルタイプが書かれている場所へのオフセットは0x0007固定
-	local file_type_ofs=0007
-	local file_type_addr=$(calc16 "${GBOS_FS_BASE}+${file_type_ofs}")
-	lr35902_copy_to_regA_from_addr $file_type_addr
-	lr35902_set_reg regD 03
-	lr35902_set_reg regE 02
-	lr35902_call $a_lay_icon
-}
-
 # TODO グローバル関数化
 obj_init() {
 	local oam_num=$1
@@ -1513,7 +1500,7 @@ init() {
 	draw_blank_window
 
 	# 初期アイコンを配置
-	draw_init_icons
+	lr35902_call $a_view_dir_cyc
 
 	# マウスカーソルを描画
 	obj_init $GBOS_OAM_NUM_CSL $GBOS_OBJ_HEIGHT $GBOS_OBJ_WIDTH \
