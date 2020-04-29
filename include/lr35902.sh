@@ -941,6 +941,48 @@ lr35902_add_to_regHL() {
 	esac
 }
 
+lr35902_sub_to_regA() {
+	local reg_or_val=$1
+	case $reg_or_val in
+	regB)
+		echo -en '\x90'	# sub b
+		echo -e 'sub b\t;4' >>$ASM_LIST_FILE
+		;;
+	regC)
+		echo -en '\x91'	# sub c
+		echo -e 'sub c\t;4' >>$ASM_LIST_FILE
+		;;
+	regD)
+		echo -en '\x92'	# sub d
+		echo -e 'sub d\t;4' >>$ASM_LIST_FILE
+		;;
+	regE)
+		echo -en '\x93'	# sub e
+		echo -e 'sub e\t;4' >>$ASM_LIST_FILE
+		;;
+	regH)
+		echo -en '\x94'	# sub h
+		echo -e 'sub h\t;4' >>$ASM_LIST_FILE
+		;;
+	regL)
+		echo -en '\x95'	# sub l
+		echo -e 'sub l\t;4' >>$ASM_LIST_FILE
+		;;
+	ptrHL)
+		echo -en '\x96'	# sub [hl]
+		echo -e 'sub [hl]\t;8' >>$ASM_LIST_FILE
+		;;
+	regA)
+		echo -en '\x97'	# sub a
+		echo -e 'sub a\t;4' >>$ASM_LIST_FILE
+		;;
+	*)
+		echo -en "\xd6\x${reg_or_val}"	# sub ${reg_or_val}
+		echo -e "sub \$$reg_or_val\t;8" >>$ASM_LIST_FILE
+		;;
+	esac
+}
+
 lr35902_and_to_regA() {
 	local reg_or_val=$1
 	case $reg_or_val in
