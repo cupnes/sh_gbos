@@ -1592,6 +1592,14 @@ obj_init() {
 	lr35902_copyinc_to_ptrHL_from_regA
 }
 
+# レジスタAをシェル引数で指定されたオブジェクト番号のオブジェクトに設定
+obj_set_y() {
+	local oam_num=$1
+	local oam_addr=$(calc16 "${GBOS_OAM_BASE}+(${oam_num}*${GBOS_OAM_SZ})")
+	lr35902_set_reg regHL $oam_addr
+	lr35902_copy_to_ptrHL_from regA
+}
+
 init() {
 	# 割り込みは一旦無効にする
 	lr35902_disable_interrupts
@@ -1944,6 +1952,15 @@ event_driven() {
 	lr35902_halt
 
 
+	# [処理棒をMAX設定]
+	# 一番高い位置に処理棒OBJのY座標を設定する
+	# ループ処理末尾でその時のLYに応じて設定し直すが
+	# 末尾に至るまでの間にVブランクを終えた場合、
+	# 処理棒は一番高い位置で残ることになる
+	# (それにより、Vブランク期間内にループ処理を終えられなかった事がわかる)
+	lr35902_set_reg regA $GBOS_OBJ_HEIGHT
+	obj_set_y $GBOS_OAM_NUM_PCB
+
 
 	# [マウスカーソル更新]
 
@@ -2133,6 +2150,14 @@ event_driven() {
 	lr35902_copy_to_from regA regC			# 1
 	lr35902_copy_to_addr_from_regA $var_btn_stat	# 3
 
+
+	# [処理棒をLYに応じて設定]
+	lr35902_copy_to_regA_from_ioport $GB_IO_LY
+	lr35902_sub_to_regA $GB_DISP_HEIGHT
+	lr35902_copy_to_from regB regA
+	lr35902_set_reg regA $GB_DISP_HEIGHT
+	lr35902_sub_to_regA regB
+	obj_set_y $GBOS_OAM_NUM_PCB
 
 
 	# [割り込み待ち(halt)へ戻る]
