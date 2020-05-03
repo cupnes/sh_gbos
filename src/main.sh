@@ -782,7 +782,7 @@ f_tn_to_addr() {
 }
 
 # 画像ファイルを表示
-# TODO 現状、ファイルは一つしか無いのでファイル番号などを引数で渡しはしない
+# in : regA - 表示するファイル番目(0始まり)
 f_tn_to_addr >src/f_tn_to_addr.o
 fsz=$(to16 $(stat -c '%s' src/f_tn_to_addr.o))
 fadr=$(calc16 "${a_tn_to_addr}+${fsz}")
@@ -793,6 +793,12 @@ f_view_img() {
 
 	# push
 	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	# ファイル番目をBへコピー
+	lr35902_copy_to_from regB regA
 
 	# 次に描画するタイル番号を0x30で初期化
 	lr35902_set_reg regA 30
@@ -806,13 +812,42 @@ f_view_img() {
 	lr35902_copy_to_addr_from_regA $var_view_img_ntadr_th
 
 	# 次に描画するタイルデータアドレスを設定
-	## TODO 現状、ファイルは一つの想定なので
-	##      ファイルデータへのオフセットは0x000c固定
-	local file_data_ofs=000c
-	local file_data_addr=$(calc16 "${GBOS_FS_BASE}+${file_data_ofs}")
-	lr35902_set_reg regA $(echo $file_data_addr | cut -c3-4)
+	local file_ofs_1st_ofs=0008
+	local file_ofs_1st_addr=$(calc16 "${GBOS_FS_BASE}+${file_ofs_1st_ofs}")
+	lr35902_set_reg regHL $file_ofs_1st_addr
+	lr35902_copy_to_from regA regB
+	lr35902_compare_regA_and 00
+	(
+		# 描画するファイル番目が0以外の場合
+
+		lr35902_set_reg regDE $(four_digits $GBOS_FS_FILE_ATTR_SZ)
+
+		(
+			lr35902_add_to_regHL regDE
+			lr35902_dec regA
+		) >src/f_view_img.1.o
+		cat src/f_view_img.1.o
+		local sz_1=$(stat -c '%s' src/f_view_img.1.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+	) >src/f_view_img.2.o
+	local sz_2=$(stat -c '%s' src/f_view_img.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat src/f_view_img.2.o
+	## ファイルデータ領域へのオフセット取得
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_copy_to_from regE regA
+	lr35902_copy_to_from regA ptrHL
+	lr35902_copy_to_from regD regA
+	## ファイルサイズ(2バイト)を飛ばす
+	lr35902_inc regDE
+	lr35902_inc regDE
+	## FSベースアドレスと足してファイルデータ先頭アドレス取得
+	lr35902_set_reg regHL $GBOS_FS_BASE
+	lr35902_add_to_regHL regDE
+	## ファイルデータ領域のアドレスを変数へ設定
+	lr35902_copy_to_from regA regL
 	lr35902_copy_to_addr_from_regA $var_view_img_dtadr_bh
-	lr35902_set_reg regA $(echo $file_data_addr | cut -c1-2)
+	lr35902_copy_to_from regA regH
 	lr35902_copy_to_addr_from_regA $var_view_img_dtadr_th
 
 	# 次に描画するウィンドウタイル座標を設定
@@ -832,6 +867,9 @@ f_view_img() {
 	lr35902_copy_to_addr_from_regA $var_win_stat
 
 	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
 	lr35902_return
 }
@@ -1901,6 +1939,7 @@ view_file() {
 	lr35902_compare_regA_and $GBOS_ICON_NUM_IMG
 	(
 		# 画像ファイルの場合
+		lr35902_clear_reg regA	# TODO 0番目のファイルで固定
 		lr35902_call $a_view_img
 	) >src/view_file.2.o
 	local sz_2=$(stat -c '%s' src/view_file.2.o)
