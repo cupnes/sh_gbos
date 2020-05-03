@@ -2074,6 +2074,11 @@ das_handler() {
 	(
 		# rstr_tilesがセットされていた場合
 		lr35902_call $a_rstr_tiles_cyc
+
+		# この周期ではVIEW系の処理は実施しない
+		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_VIEW_DIR regA
+		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_VIEW_TXT regA
+		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_VIEW_IMG regA
 	) >src/das_handler.5.o
 	local sz_5=$(stat -c '%s' src/das_handler.5.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_5)
