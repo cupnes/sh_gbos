@@ -25,6 +25,7 @@ GBOS_TILE_DATA_START=8000
 GBOS_BG_TILEMAP_START=9800
 GBOS_WINDOW_TILEMAP_START=9c00
 GBOS_FS_BASE=4000
+GBOS_FS_FILE_ATTR_SZ=07
 
 # マウス座標
 ## TODO: ウィンドウを動かすようになったら
@@ -1240,10 +1241,10 @@ set_icon_wx_to_regE_calc_from_regA() {
 	lr35902_and_to_regA 03
 	(
 		# ファイル番目[1:0] == 01 or 10 or 11
-		lr35902_compare_regA_and 04
+		lr35902_compare_regA_and 01
 		(
 			# ファイル番目[1:0] == 10 or 11
-			lr35902_compare_regA_and 08
+			lr35902_compare_regA_and 02
 			(
 				# ファイル番目[1:0] == 11
 				lr35902_set_reg regE 0f
@@ -1290,7 +1291,9 @@ set_icon_wx_to_regE_calc_from_regA() {
 f_view_dir_cyc() {
 	# push
 	lr35902_push_reg regAF
+	lr35902_push_reg regBC
 	lr35902_push_reg regDE
+	lr35902_push_reg regHL
 
 	# 表示するファイル番目を変数からBへ取得
 	lr35902_copy_to_regA_from_addr $var_view_dir_file_th
@@ -1302,29 +1305,103 @@ f_view_dir_cyc() {
 	set_icon_wx_to_regE_calc_from_regA
 
 	# アイコン番号をAへ設定
+	## TODO ルートディレクトリ固定なので
+	##      1つ目のファイルのファイルタイプへのオフセットは0x0007固定
 	local file_type_ofs=0007
 	local file_type_addr=$(calc16 "${GBOS_FS_BASE}+${file_type_ofs}")
-	lr35902_copy_to_regA_from_addr $file_type_addr
+	## 0番目のファイルであるか否か
+	lr35902_copy_to_from regA regB
+	lr35902_compare_regA_and 00
+	(
+		# 0番目のファイルの場合
+		lr35902_copy_to_regA_from_addr $file_type_addr
+	) >src/f_view_dir_cyc.1.o
+	(
+		# 1番目以降のファイルの場合
+
+		# DEを使うのでpush
+		lr35902_push_reg regDE
+
+		# 1つ目のファイルタイプアドレスをHLへ格納
+		lr35902_set_reg regHL $file_type_addr
+
+		# 次のファイルタイプアドレスへのオフセットをDEへ格納
+		lr35902_set_reg regDE $(four_digits $GBOS_FS_FILE_ATTR_SZ)
+
+		# 表示するファイル番目をCへコピー
+		lr35902_copy_to_from regC regB
+
+		# 現在のファイル番目のファイルタイプのアドレス取得
+		(
+			lr35902_add_to_regHL regDE
+			lr35902_dec regC
+		) >src/f_view_dir_cyc.3.o
+		cat src/f_view_dir_cyc.3.o
+		local sz_3=$(stat -c '%s' src/f_view_dir_cyc.3.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_3 + 2)))
+
+		# ファイルタイプをAへ格納
+		lr35902_copy_to_from regA ptrHL
+
+		# DEを元に戻す(pop)
+		lr35902_pop_reg regDE
+
+		# 0番目の場合の処理を飛ばす
+		local sz_1=$(stat -c '%s' src/f_view_dir_cyc.1.o)
+		lr35902_rel_jump $(two_digits_d $sz_1)
+	) >src/f_view_dir_cyc.2.o
+	local sz_2=$(stat -c '%s' src/f_view_dir_cyc.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	## 1番目以降のファイルの場合
+	cat src/f_view_dir_cyc.2.o
+	## 0番目のファイルの場合
+	cat src/f_view_dir_cyc.1.o
 
 	# アイコンを描画
 	lr35902_call $a_lay_icon
+
+	# ファイル番目をインクリメント
+	lr35902_inc regB
 
 	# ディレクトリのファイル数取得
 	## TODO ルートディレクトリ固定なのでオフセットは0x0000固定
 	local num_files_ofs=0000
 	local num_files_addr=$(calc16 "${GBOS_FS_BASE}+${num_files_ofs}")
+	lr35902_copy_to_regA_from_addr $num_files_addr
 
-	# 今表示したファイルが最後のファイルか？
+	# 終了判定
+	## ファイル数(A) == 次に表示するファイル番目(B) だったら終了
+	lr35902_compare_regA_and regB
+	(
+		# ファイル数(A) == 次に表示するファイル番目(B) の場合
 
-	# DAのGBOS_DA_BITNUM_VIEW_DIRのビットを下ろす
-	lr35902_copy_to_regA_from_addr $var_draw_act_stat
-	lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_VIEW_DIR regA
-	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+		# DAのGBOS_DA_BITNUM_VIEW_DIRのビットを下ろす
+		lr35902_copy_to_regA_from_addr $var_draw_act_stat
+		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_VIEW_DIR regA
+		lr35902_copy_to_addr_from_regA $var_draw_act_stat
+	) >src/f_view_dir_cyc.4.o
+	(
+		# ファイル数(A) != 次に表示するファイル番目(B) の場合
 
-	# 表示するファイル番目の変数を更新
+		# 表示するファイル番目の変数を更新
+		lr35902_copy_to_from regA regB
+		lr35902_copy_to_addr_from_regA $var_view_dir_file_th
+
+		# ファイル数(A) == 次に表示するファイル番目(B) の場合の処理を飛ばす
+		local sz_4=$(stat -c '%s' src/f_view_dir_cyc.4.o)
+		lr35902_rel_jump $(two_digits_d $sz_4)
+	) >src/f_view_dir_cyc.5.o
+	local sz_5=$(stat -c '%s' src/f_view_dir_cyc.5.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_5)
+	## ファイル数(A) != 次に表示するファイル番目(B) の場合
+	cat src/f_view_dir_cyc.5.o
+	## ファイル数(A) == 次に表示するファイル番目(B) の場合
+	cat src/f_view_dir_cyc.4.o
 
 	# pop & return
+	lr35902_pop_reg regHL
 	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
 	lr35902_return
 }
@@ -1693,9 +1770,15 @@ init() {
 	draw_blank_window
 
 	# 初期アイコンを配置
-	lr35902_clear_reg regA
-	lr35902_copy_to_addr_from_regA $var_view_dir_file_th
-	lr35902_call $a_view_dir_cyc
+	lr35902_call $a_view_dir
+	(
+		lr35902_call $a_view_dir_cyc
+		lr35902_copy_to_regA_from_addr $var_draw_act_stat
+		lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_VIEW_DIR regA
+	) >src/init.1.o
+	cat src/init.1.o
+	local sz_1=$(stat -c '%s' src/init.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
 
 	# マウスカーソルを描画
 	obj_init $GBOS_OAM_NUM_CSL $GBOS_OBJ_HEIGHT $GBOS_OBJ_WIDTH \
