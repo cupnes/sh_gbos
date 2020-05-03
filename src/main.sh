@@ -37,8 +37,8 @@ GBOS_ICON_BASE_X=$(
 GBOS_ICON_BASE_Y=$(
 	calc16_2 "(${GBOS_WIN_DEF_Y_T}*${GB_TILE_HEIGHT})+(${GB_TILE_HEIGHT}*3)"
 		)
-CLICK_WIDTH=$(calc16_2 "${GB_TILE_WIDTH}*2")
-CLICK_HEIGHT=$(calc16_2 "${GB_TILE_HEIGHT}*2")
+CLICK_WIDTH=$(calc16_2 "${GB_TILE_WIDTH}*4")
+CLICK_HEIGHT=$(calc16_2 "${GB_TILE_HEIGHT}*3")
 
 # [LCD制御レジスタのベース設定値]
 # - Bit 7: LCD Display Enable (0=Off, 1=On)
