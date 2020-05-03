@@ -134,6 +134,8 @@ var_view_img_nxt=c014	# view_img: 次に描画するウィンドウタイル座�
 var_win_stat=c015	# ウィンドウステータス
 var_view_dir_file_th=c016	# view_dir: 表示するのは何番目のファイルか(0始まり)
 
+var_dbg_over_vblank=cf00	# vblank期間を超えたことを示すフラグ
+
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
 #      regE  - タイル座標X
@@ -1707,7 +1709,7 @@ obj_init() {
 	lr35902_copyinc_to_ptrHL_from_regA
 }
 
-# レジスタAをシェル引数で指定されたオブジェクト番号のオブジェクトに設定
+# レジスタAをシェル引数で指定されたオブジェクト番号のY座標に設定
 obj_set_y() {
 	local oam_num=$1
 	local oam_addr=$(calc16 "${GBOS_OAM_BASE}+(${oam_num}*${GBOS_OAM_SZ})")
@@ -1715,15 +1717,38 @@ obj_set_y() {
 	lr35902_copy_to_ptrHL_from regA
 }
 
+# シェル引数で指定されたオブジェクト番号のY座標をレジスタAに取得
+obj_get_y() {
+	local oam_num=$1
+	local oam_addr=$(calc16 "${GBOS_OAM_BASE}+(${oam_num}*${GBOS_OAM_SZ})")
+	lr35902_set_reg regHL $oam_addr
+	lr35902_copy_to_from regA ptrHL
+}
+
 # 処理棒の初期化
 proc_bar_init() {
 	# 処理棒を描画
 	obj_init $GBOS_OAM_NUM_PCB $GB_DISP_HEIGHT $GB_DISP_WIDTH \
 		 $GBOS_TILE_NUM_UP_ARROW $GBOS_OBJ_DEF_ATTR
+
+	# 関連する変数の初期化
+	lr35902_clear_reg regA
+	lr35902_copy_to_addr_from_regA $var_dbg_over_vblank
 }
 
 # 処理棒の開始時点設定
 proc_bar_begin() {
+	# 前回vblank期間を超えていたかチェック
+	obj_get_y $GBOS_OAM_NUM_PCB
+	lr35902_compare_regA_and $GBOS_OBJ_HEIGHT
+	(
+		lr35902_set_reg regA 01
+		lr35902_copy_to_addr_from_regA $var_dbg_over_vblank
+	) >src/proc_bar_begin.1.o
+	local sz_1=$(stat -c '%s' src/proc_bar_begin.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
+	cat src/proc_bar_begin.1.o
+
 	# 処理棒をMAX設定
 	# 一番高い位置に処理棒OBJのY座標を設定する
 	# ループ処理末尾でその時のLYに応じて設定し直すが
