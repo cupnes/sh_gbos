@@ -4,24 +4,12 @@
 set -ue
 
 if [ $# -ne 2 ]; then
-	echo "Usage: $0 SRC_IMG_FILE DST_TILES_DIR" 1>&2
+	echo "Usage: $0 SRC_IMG_FILE DST_IMG_FILE" 1>&2
 	exit 1
 fi
 
 SRC_IMG_FILE=$1
-DST_TILES_DIR=$2
-
-if [ -e $DST_TILES_DIR -a ! -d $DST_TILES_DIR ]; then
-	echo -n "Error: Destination path '$DST_TILES_DIR' already exists" 1>&2
-	echo " and is not a directory." 1>&2
-	exit 1
-fi
-
-if [ -n "$(ls $DST_TILES_DIR 2>/dev/null)" ]; then
-	echo -n "Error: Destination path '$DST_TILES_DIR' already exists" 1>&2
-	echo " and is not an empty directory." 1>&2
-	exit 1
-fi
+DST_IMG_FILE=$2
 
 txt22bpp() {
 	local txt=$1
@@ -59,7 +47,8 @@ txt22bpp() {
 	done
 }
 
-tempdir=$(mktemp -d)
+tempdir="${DST_IMG_FILE}_temp"
+mkdir ${tempdir}
 trap "rm -rf $tempdir" EXIT
 
 src_name=$(basename $SRC_IMG_FILE | rev | cut -d'.' -f2- | rev)
@@ -84,9 +73,9 @@ for pgm_file in $(ls $tempdir/${src_name}_crop); do
 		     >$tempdir/${src_name}_txt/${pgm_name}.txt
 done
 
-mkdir -p $DST_TILES_DIR
 for txt_file in $(ls $tempdir/${src_name}_txt); do
 	txt_name=$(echo $txt_file | rev | cut -d'.' -f2- | rev)
-	txt22bpp $tempdir/${src_name}_txt/$txt_file \
-			  ${DST_TILES_DIR}/${txt_name}.2bpp
+	txt22bpp $tempdir/${src_name}_txt/$txt_file $tempdir/${txt_name}.2bpp
 done
+
+cat $tempdir/*.2bpp >$DST_IMG_FILE
