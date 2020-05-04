@@ -2247,7 +2247,7 @@ view_file() {
 	lr35902_compare_regA_and $GBOS_ICON_NUM_IMG
 	(
 		# 画像ファイルの場合
-		lr35902_clear_reg regA	# TODO 0番目のファイルで固定
+		lr35902_copy_to_from regA regB
 		lr35902_call $a_view_img
 	) >src/view_file.2.o
 	local sz_2=$(stat -c '%s' src/view_file.2.o)
