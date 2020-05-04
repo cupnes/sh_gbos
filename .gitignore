@@ -4,6 +4,7 @@
 *.2bpp
 *.lst
 *.img
+boot_kern.bin
 map.txt
 
 rootfs*
