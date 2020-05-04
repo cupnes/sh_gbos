@@ -6,6 +6,8 @@ SRC_MAIN_SH=true
 . include/gb.sh
 . src/tiles.sh
 
+debug_mode=false
+
 GBOS_WIN_DEF_X_T=00
 GBOS_WIN_DEF_Y_T=00
 
@@ -1999,70 +2001,76 @@ obj_get_y() {
 
 # 処理棒の初期化
 proc_bar_init() {
-	# 処理棒を描画
-	obj_init $GBOS_OAM_NUM_PCB $GB_DISP_HEIGHT $GB_DISP_WIDTH \
-		 $GBOS_TILE_NUM_UP_ARROW $GBOS_OBJ_DEF_ATTR
+	if [ "${debug_mode}" = "true" ]; then
+		# 処理棒を描画
+		obj_init $GBOS_OAM_NUM_PCB $GB_DISP_HEIGHT $GB_DISP_WIDTH \
+			 $GBOS_TILE_NUM_UP_ARROW $GBOS_OBJ_DEF_ATTR
 
-	# 関連する変数の初期化
-	lr35902_clear_reg regA
-	lr35902_copy_to_addr_from_regA $var_dbg_over_vblank
+		# 関連する変数の初期化
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $var_dbg_over_vblank
+	fi
 }
 
 # 処理棒の開始時点設定
 proc_bar_begin() {
-	# 前回vblank期間を超えていたかチェック
-	obj_get_y $GBOS_OAM_NUM_PCB
-	lr35902_compare_regA_and $GBOS_OBJ_HEIGHT
-	(
-		lr35902_set_reg regA 01
-		lr35902_copy_to_addr_from_regA $var_dbg_over_vblank
-	) >src/proc_bar_begin.1.o
-	local sz_1=$(stat -c '%s' src/proc_bar_begin.1.o)
-	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
-	cat src/proc_bar_begin.1.o
+	if [ "${debug_mode}" = "true" ]; then
+		# 前回vblank期間を超えていたかチェック
+		obj_get_y $GBOS_OAM_NUM_PCB
+		lr35902_compare_regA_and $GBOS_OBJ_HEIGHT
+		(
+			lr35902_set_reg regA 01
+			lr35902_copy_to_addr_from_regA $var_dbg_over_vblank
+		) >src/proc_bar_begin.1.o
+		local sz_1=$(stat -c '%s' src/proc_bar_begin.1.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
+		cat src/proc_bar_begin.1.o
 
-	# 処理棒をMAX設定
-	# 一番高い位置に処理棒OBJのY座標を設定する
-	# ループ処理末尾でその時のLYに応じて設定し直すが
-	# 末尾に至るまでの間にVブランクを終えた場合、
-	# 処理棒は一番高い位置で残ることになる
-	# (それにより、Vブランク期間内にループ処理を終えられなかった事がわかる)
-	lr35902_set_reg regA $GBOS_OBJ_HEIGHT
-	obj_set_y $GBOS_OAM_NUM_PCB
+		# 処理棒をMAX設定
+		# 一番高い位置に処理棒OBJのY座標を設定する
+		# ループ処理末尾でその時のLYに応じて設定し直すが
+		# 末尾に至るまでの間にVブランクを終えた場合、
+		# 処理棒は一番高い位置で残ることになる
+		# (それにより、Vブランク期間内にループ処理を終えられなかった事がわかる)
+		lr35902_set_reg regA $GBOS_OBJ_HEIGHT
+		obj_set_y $GBOS_OAM_NUM_PCB
+	fi
 }
 
 # 処理棒の終了時点設定
 proc_bar_end() {
-	# [処理棒をLYに応じて設定]
-	lr35902_copy_to_regA_from_ioport $GB_IO_LY
-	lr35902_sub_to_regA $GB_DISP_HEIGHT
-	lr35902_compare_regA_and 00
-	(
-		# A == 0 の場合
-		lr35902_set_reg regA $GB_DISP_HEIGHT
-	) >src/proc_bar_end.3.o
-	(
-		# A != 0 の場合
-		lr35902_copy_to_from regC regA
-		lr35902_set_reg regA $GB_DISP_HEIGHT
+	if [ "${debug_mode}" = "true" ]; then
+		# [処理棒をLYに応じて設定]
+		lr35902_copy_to_regA_from_ioport $GB_IO_LY
+		lr35902_sub_to_regA $GB_DISP_HEIGHT
+		lr35902_compare_regA_and 00
 		(
-			lr35902_sub_to_regA 0e
-			lr35902_dec regC
-		) >src/proc_bar_end.1.o
-		cat src/proc_bar_end.1.o
-		local sz_1=$(stat -c '%s' src/proc_bar_end.1.o)
-		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+			# A == 0 の場合
+			lr35902_set_reg regA $GB_DISP_HEIGHT
+		) >src/proc_bar_end.3.o
+		(
+			# A != 0 の場合
+			lr35902_copy_to_from regC regA
+			lr35902_set_reg regA $GB_DISP_HEIGHT
+			(
+				lr35902_sub_to_regA 0e
+				lr35902_dec regC
+			) >src/proc_bar_end.1.o
+			cat src/proc_bar_end.1.o
+			local sz_1=$(stat -c '%s' src/proc_bar_end.1.o)
+			lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
 
-		# A == 0の場合の処理を飛ばす
-		local sz_3=$(stat -c '%s' src/proc_bar_end.3.o)
-		lr35902_rel_jump $(two_digits_d $sz_3)
-	) >src/proc_bar_end.2.o
-	local sz_2=$(stat -c '%s' src/proc_bar_end.2.o)
-	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
-	cat src/proc_bar_end.2.o
-	cat src/proc_bar_end.3.o
+			# A == 0の場合の処理を飛ばす
+			local sz_3=$(stat -c '%s' src/proc_bar_end.3.o)
+			lr35902_rel_jump $(two_digits_d $sz_3)
+		) >src/proc_bar_end.2.o
+		local sz_2=$(stat -c '%s' src/proc_bar_end.2.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+		cat src/proc_bar_end.2.o
+		cat src/proc_bar_end.3.o
 
-	obj_set_y $GBOS_OAM_NUM_PCB
+		obj_set_y $GBOS_OAM_NUM_PCB
+	fi
 }
 
 init() {
