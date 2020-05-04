@@ -40,19 +40,9 @@ print_boot_kern() {
 	dd if=/dev/zero bs=1 count=$padding 2>/dev/null
 }
 
-print_rootfs() {
-	# 0x400 - 0x7fff: カートリッジROM(Bank 01) (16384バイト)
-	cat $ROOTFS_IMAGE_FILE
-	local num_rfs_bytes=$(stat -c '%s' rootfs.img)
-	local padding=$((GB_ROM_BANK_SIZE - num_rfs_bytes))
-	dd if=/dev/zero bs=1 count=$padding 2>/dev/null
-}
-
 print_rom() {
 	print_boot_kern >boot_kern.bin
-	print_rootfs >rootfs.bin
-
-	cat boot_kern.bin rootfs.bin
+	cat boot_kern.bin $ROOTFS_IMAGE_FILE
 }
 
 print_rom >$ROM_FILE_NAME

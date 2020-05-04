@@ -6,7 +6,7 @@ SRC_MAIN_SH=true
 . include/gb.sh
 . src/tiles.sh
 
-debug_mode=false
+debug_mode=true
 
 GBOS_WIN_DEF_X_T=00
 GBOS_WIN_DEF_Y_T=00
