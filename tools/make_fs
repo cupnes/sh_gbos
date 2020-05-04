@@ -1,54 +1,141 @@
 #!/bin/bash
 
-set -uex
+# set -uex
+set -ue
 
-. include/common.sh
+GB_ROM_BANK_SIZE=16384
 
-PATH="tools:$PATH"
+# conv_char_code
+CONV_FROM='[ 0-9A-Za-z]'
+CONV_TO='[\000\024-\035\036-\067\036-\067]'
 
-if [ $# -ne 1 ]; then
-	echo "Usage: $0 SRC_ROOT_DIR" 1>&2
+usage() {
+	echo 'Usage:' 1>&2
+	echo -e "\t$0 SRC_ROOTFS_DIR DST_ROOTFS_IMG" 1>&2
+	echo -e "\t$0 -h" 1>&2
+}
+
+if [ $# -eq 1 ]; then
+	if [ "$1" = '-h' ]; then
+		usage
+		exit 0
+	fi
+fi
+if [ $# -ne 2 ]; then
+	usage
 	exit 1
 fi
 
-SRC_ROOT_DIR=$1
+SRC_ROOTFS_DIR=$1
+DST_ROOTFS_IMG=$2
+
+num_files=$(ls $SRC_ROOTFS_DIR | wc -l)
 
 # ディレクトリ階層は未対応
 
-# ディレクトリヘッダ生成
-num_files=$(ls $SRC_ROOT_DIR | wc -l)
-echo -en "\x$(two_digits $num_files)"
-echo -en '\xff\xff'
-
-# ファイルヘッダ群生成
-ofs=$(four_digits $(calc16 "3+(7*$num_files)"))
-for f in $(ls $SRC_ROOT_DIR); do
-	name=$(echo $f | rev | cut -d'.' -f2- | rev | cut -c1-4)
-	echo -n $name | conv_char_code
-	type=$(echo $f | rev | cut -d'.' -f1 | rev | tr '[:upper:]' '[:lower:]')
-	case $type in
-	exe)
-		echo -en '\x01'
+# 汎用関数群
+echo_2bytes() {
+	local val=$1
+	local top_half=$(echo $val | cut -c-2)
+	local bottom_half=$(echo $val | cut -c3-4)
+	echo -en "\x${bottom_half}\x${top_half}"
+}
+two_digits() {
+	local val=$1
+	local current_digits=$(echo -n $val | wc -m)
+	case $current_digits in
+	1)
+		echo "0$val"
 		;;
-	txt)
-		echo -en '\x02'
-		;;
-	img)
-		echo -en '\x03'
+	2)
+		echo $val
 		;;
 	*)
-		echo -en '\x00'
+		echo "Error: Invalid digits: %val" 1>&2
+		return 1
 	esac
-	echo_2bytes $ofs
-	sz=$(stat -c '%s' $SRC_ROOT_DIR/$f)
-	sz16=$(echo "obase=16;$sz" | bc)
-	ofs=$(four_digits $(calc16 "$ofs+2+$sz16"))
-done
+}
+four_digits() {
+	local val=$1
+	local current_digits=$(echo -n $val | wc -m)
+	case $current_digits in
+	1)
+		echo "000$val"
+		;;
+	2)
+		echo "00$val"
+		;;
+	3)
+		echo "0$val"
+		;;
+	4)
+		echo $val
+		;;
+	*)
+		echo "Error: Invalid digits: %val" 1>&2
+		return 1
+	esac
+}
+calc16() {
+	local bc_form=$1
+	local form_up=$(echo $bc_form | tr [:lower:] [:upper:])
+	echo "obase=16;ibase=16;$form_up" | bc
+}
+
+# ディレクトリヘッダ生成
+create_dir_head() {
+	echo -en "\x$(two_digits $num_files)"
+	echo -en '\xff\xff'
+}
+
+# ファイルヘッダ群生成
+create_file_heads() {
+	ofs=$(four_digits $(calc16 "3+(7*$num_files)"))
+	for f in $(ls $SRC_ROOTFS_DIR); do
+		name=$(echo $f | rev | cut -d'.' -f2- | rev | cut -c1-4)
+		echo -n $name | tr "$CONV_FROM" "$CONV_TO"
+		type=$(echo $f | rev | cut -d'.' -f1 | rev | tr '[:upper:]' '[:lower:]')
+		case $type in
+		exe|EXE)
+			echo -en '\x01'
+			;;
+		txt|TXT)
+			echo -en '\x02'
+			;;
+		2bpp|2BPP)
+			echo -en '\x03'
+			;;
+		*)
+			echo -en '\x00'
+		esac
+		echo_2bytes $ofs
+		sz=$(stat -c '%s' $SRC_ROOTFS_DIR/$f)
+		sz16=$(echo "obase=16;$sz" | bc)
+		ofs=$(four_digits $(calc16 "$ofs+2+$sz16"))
+	done
+}
 
 # データ領域生成
-for f in $(ls $SRC_ROOT_DIR); do
-	sz=$(stat -c '%s' $SRC_ROOT_DIR/$f)
-	sz16=$(four_digits $(echo "obase=16;$sz" | bc))
-	echo_2bytes $sz16
-	cat $SRC_ROOT_DIR/$f
-done
+create_data_area() {
+	for f in $(ls $SRC_ROOTFS_DIR); do
+		sz=$(stat -c '%s' $SRC_ROOTFS_DIR/$f)
+		sz16=$(four_digits $(echo "obase=16;$sz" | bc))
+		echo_2bytes $sz16
+		cat $SRC_ROOTFS_DIR/$f
+	done
+}
+
+create_rootfs() {
+	trap "rm -rf ${DST_ROOTFS_IMG}.o" EXIT
+	(
+		create_dir_head
+		create_file_heads
+		create_data_area
+	) >${DST_ROOTFS_IMG}.o
+	cat ${DST_ROOTFS_IMG}.o
+	local sz=$(stat -c '%s' ${DST_ROOTFS_IMG}.o)
+	local padding=$((GB_ROM_BANK_SIZE - sz))
+	dd if=/dev/zero bs=1 count=$padding 2>/dev/null
+}
+
+create_rootfs >${DST_ROOTFS_IMG}

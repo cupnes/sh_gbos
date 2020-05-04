@@ -3,8 +3,20 @@
 # set -uex
 set -ue
 
+usage() {
+	echo 'Usage:' 1>&2
+	echo -e "\t$0 SRC_IMG_FILE DST_IMG_FILE" 1>&2
+	echo -e "\t$0 -h" 1>&2
+}
+
+if [ $# -eq 1 ]; then
+	if [ "$1" = '-h' ]; then
+		usage
+		exit 0
+	fi
+fi
 if [ $# -ne 2 ]; then
-	echo "Usage: $0 SRC_IMG_FILE DST_IMG_FILE" 1>&2
+	usage
 	exit 1
 fi
 

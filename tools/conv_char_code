@@ -1,8 +1,38 @@
 #!/bin/bash
 
-set -uex
+# set -uex
+set -ue
+
+usage() {
+	echo 'Usage:' 1>&2
+	echo -e "\t$0" 1>&2
+	echo -e "\t$0 SRC_TXT_FILE" 1>&2
+	echo -e "\t$0 SRC_TXT_FILE DST_TXT_FILE" 1>&2
+	echo -e "\t$0 -h" 1>&2
+}
+
+if [ $# -eq 1 ]; then
+	if [ "$1" = '-h' ]; then
+		usage
+		exit 0
+	fi
+fi
 
 # 改行コードはLF(\n)限定
+CONV_FROM='[ 0-9A-Za-z]'
+CONV_TO='[\000\024-\035\036-\067\036-\067]'
 
-cat - | tr ' ' '\000' | tr '[0-9]' '[\024-\035]' | tr '[A-Z]' '[\036-\067]' \
-	| tr '[a-z]' '[\036-\067]'
+case $# in
+0)
+	cat - | tr "$CONV_FROM" "$CONV_TO"
+	;;
+1)
+	cat $1 | tr "$CONV_FROM" "$CONV_TO"
+	;;
+2)
+	cat $1 | tr "$CONV_FROM" "$CONV_TO" >$2
+	;;
+*)
+	usage
+	exit 1
+esac
