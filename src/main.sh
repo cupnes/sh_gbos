@@ -2206,13 +2206,34 @@ update_mouse_cursor() {
 }
 
 # ファイルを閲覧
-## TODO 現状ディレクトリにファイルは一つのみの想定
+# in : regA - ファイル番号
 view_file() {
-	# 現状、ファイルは1つしかない想定
-	# なので、ファイルタイプが書かれている場所へのオフセットは0x0007固定
-	local file_type_ofs=0007
-	local file_type_addr=$(calc16 "${GBOS_FS_BASE}+${file_type_ofs}")
-	lr35902_copy_to_regA_from_addr $file_type_addr
+	# Aは作業にも使うのでファイル番号はBへコピー
+	lr35902_copy_to_from regB regA
+
+	# ファイルタイプ取得
+	local file_type_1st_ofs=0007
+	local file_type_1st_addr=$(calc16 "${GBOS_FS_BASE}+${file_type_1st_ofs}")
+	lr35902_set_reg regHL $file_type_1st_addr
+	lr35902_compare_regA_and 00
+	(
+		# ファイル番号 != 0 の場合
+
+		lr35902_set_reg regDE $(four_digits $GBOS_FS_FILE_ATTR_SZ)
+
+		(
+			lr35902_add_to_regHL regDE
+			lr35902_dec regA
+		) >src/view_file.3.o
+		cat src/view_file.3.o
+		local sz_3=$(stat -c '%s' src/view_file.3.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_3 + 2)))
+	) >src/view_file.4.o
+	local sz_4=$(stat -c '%s' src/view_file.4.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
+	cat src/view_file.4.o
+	## ファイルタイプをAへ取得
+	lr35902_copy_to_from regA ptrHL
 
 	lr35902_compare_regA_and $GBOS_ICON_NUM_TXT
 	(
@@ -2241,6 +2262,8 @@ click_event() {
 	lr35902_clear_reg regA
 	lr35902_call $a_check_click_icon_area_x
 	lr35902_call $a_check_click_icon_area_y
+
+	view_file
 
 	lr35902_pop_reg regAF
 }
