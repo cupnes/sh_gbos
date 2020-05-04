@@ -1470,9 +1470,9 @@ f_view_dir_cyc() {
 
 # アイコン領域のクリック確認(X軸)
 # in : var_mouse_x変数
-# out: regA - ビット[1:0]に対応するファイル番号の下位2ビットを設定
-#             アイコン領域外の場合 80 を設定
-#             ※ ビット[1:0]はビットセットのみ行うので、予めクリアしておくこと
+# out: regA - クリック位置のファイル番号の下位2ビットをbit[1:0]に設定
+#             クリック位置がアイコン領域外の場合 $80 を設定
+#             ※ bit[1:0]はビットセットのみ行うので、予めクリアしておくこと
 # ※ OBJ座標系は右下原点なのでマウスX座標はカーソル先端(左上)から+8ピクセル
 f_view_dir_cyc >src/f_view_dir_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_view_dir_cyc.o))
@@ -1482,13 +1482,9 @@ echo -e "$a_check_click_icon_area_x\tcheck_click_icon_area_x()" >>$MAP_FILE_NAME
 f_check_click_icon_area_x() {
 	# push
 	lr35902_push_reg regAF
-	lr35902_push_reg regBC
 
 	# マウス座標(X)を取得
 	lr35902_copy_to_regA_from_addr $var_mouse_x
-
-	# 戻り値(一時的にBを使用)をアイコン領域外(80)で初期化
-	lr35902_set_reg regB 80
 
 	# A >= 16 ?
 	lr35902_compare_regA_and 18
@@ -1501,7 +1497,6 @@ f_check_click_icon_area_x() {
 			# A < 48 の場合
 
 			# pop & return
-			lr35902_pop_reg regBC
 			lr35902_pop_reg regAF
 			## bit[1:0] = %00
 			lr35902_return
@@ -1525,7 +1520,6 @@ f_check_click_icon_area_x() {
 			# A < 80 の場合
 
 			# pop & return
-			lr35902_pop_reg regBC
 			lr35902_pop_reg regAF
 			## bit[1:0] = %01
 			lr35902_add_to_regA 01
@@ -1550,7 +1544,6 @@ f_check_click_icon_area_x() {
 			# A < 112 の場合
 
 			# pop & return
-			lr35902_pop_reg regBC
 			lr35902_pop_reg regAF
 			## bit[1:0] = %10
 			lr35902_add_to_regA 02
@@ -1575,7 +1568,6 @@ f_check_click_icon_area_x() {
 			# A < 144 の場合
 
 			# pop & return
-			lr35902_pop_reg regBC
 			lr35902_pop_reg regAF
 			## bit[1:0] = %11
 			lr35902_add_to_regA 03
@@ -1590,7 +1582,125 @@ f_check_click_icon_area_x() {
 	cat src/f_check_click_icon_area_x.8.o
 
 	# pop & return
-	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_set_reg regA 80	# アイコン領域外
+	lr35902_return
+}
+
+# アイコン領域のクリック確認(Y軸)
+# in : var_mouse_y変数
+# out: regA - クリック位置のファイル番号のbit[3:2]をAレジスタのbit[3:2]に設定
+#             クリック位置がアイコン領域外の場合 $80 を設定
+#             ※ bit[3:2]はビットセットのみ行うので、予めクリアしておくこと
+# ※ OBJ座標系は右下原点なのでマウスY座標はカーソル先端(左上)から+16ピクセル
+f_check_click_icon_area_x >src/f_check_click_icon_area_x.o
+fsz=$(to16 $(stat -c '%s' src/f_check_click_icon_area_x.o))
+fadr=$(calc16 "${a_check_click_icon_area_x}+${fsz}")
+a_check_click_icon_area_y=$(four_digits $fadr)
+echo -e "$a_check_click_icon_area_y\tcheck_click_icon_area_y()" >>$MAP_FILE_NAME
+f_check_click_icon_area_y() {
+	# push
+	lr35902_push_reg regAF
+
+	# マウス座標(Y)を取得
+	lr35902_copy_to_regA_from_addr $var_mouse_y
+
+	# A >= 24 ?
+	lr35902_compare_regA_and 28
+	(
+		# A >= 24 の場合
+
+		# A < 48 ?
+		lr35902_compare_regA_and 40
+		(
+			# A < 48 の場合
+
+			# pop & return
+			lr35902_pop_reg regAF
+			## bit[3:2] = %00
+			lr35902_return
+		) >src/f_check_click_icon_area_y.1.o
+		local sz_1=$(stat -c '%s' src/f_check_click_icon_area_y.1.o)
+		lr35902_rel_jump_with_cond NC $(two_digits_d $sz_1)
+		cat src/f_check_click_icon_area_y.1.o
+	) >src/f_check_click_icon_area_y.2.o
+	local sz_2=$(stat -c '%s' src/f_check_click_icon_area_y.2.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_2)
+	cat src/f_check_click_icon_area_y.2.o
+
+	# A >= 48 ?
+	lr35902_compare_regA_and 40
+	(
+		# A >= 48 の場合
+
+		# A < 72 ?
+		lr35902_compare_regA_and 58
+		(
+			# A < 72 の場合
+
+			# pop & return
+			lr35902_pop_reg regAF
+			## bit[3:2] = %01
+			lr35902_add_to_regA 04
+			lr35902_return
+		) >src/f_check_click_icon_area_y.3.o
+		local sz_3=$(stat -c '%s' src/f_check_click_icon_area_y.3.o)
+		lr35902_rel_jump_with_cond NC $(two_digits_d $sz_3)
+		cat src/f_check_click_icon_area_y.3.o
+	) >src/f_check_click_icon_area_y.4.o
+	local sz_4=$(stat -c '%s' src/f_check_click_icon_area_y.4.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_4)
+	cat src/f_check_click_icon_area_y.4.o
+
+	# A >= 72 ?
+	lr35902_compare_regA_and 58
+	(
+		# A >= 72 の場合
+
+		# A < 96 ?
+		lr35902_compare_regA_and 70
+		(
+			# A < 96 の場合
+
+			# pop & return
+			lr35902_pop_reg regAF
+			## bit[3:2] = %10
+			lr35902_add_to_regA 08
+			lr35902_return
+		) >src/f_check_click_icon_area_y.5.o
+		local sz_5=$(stat -c '%s' src/f_check_click_icon_area_y.5.o)
+		lr35902_rel_jump_with_cond NC $(two_digits_d $sz_5)
+		cat src/f_check_click_icon_area_y.5.o
+	) >src/f_check_click_icon_area_y.6.o
+	local sz_6=$(stat -c '%s' src/f_check_click_icon_area_y.6.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_6)
+	cat src/f_check_click_icon_area_y.6.o
+
+	# A >= 96 ?
+	lr35902_compare_regA_and 70
+	(
+		# A >= 96 の場合
+
+		# A < 120 ?
+		lr35902_compare_regA_and 88
+		(
+			# A < 120 の場合
+
+			# pop & return
+			lr35902_pop_reg regAF
+			## bit[3:2] = %11
+			lr35902_add_to_regA 0c
+			lr35902_return
+		) >src/f_check_click_icon_area_y.7.o
+		local sz_7=$(stat -c '%s' src/f_check_click_icon_area_y.7.o)
+		lr35902_rel_jump_with_cond NC $(two_digits_d $sz_7)
+		cat src/f_check_click_icon_area_y.7.o
+	) >src/f_check_click_icon_area_y.8.o
+	local sz_8=$(stat -c '%s' src/f_check_click_icon_area_y.8.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_8)
+	cat src/f_check_click_icon_area_y.8.o
+
+	# pop & return
 	lr35902_pop_reg regAF
 	lr35902_set_reg regA 80	# アイコン領域外
 	lr35902_return
@@ -1636,6 +1746,7 @@ global_functions() {
 	f_view_dir
 	f_view_dir_cyc
 	f_check_click_icon_area_x
+	f_check_click_icon_area_y
 }
 
 gbos_vec() {
@@ -2129,6 +2240,7 @@ click_event() {
 
 	lr35902_clear_reg regA
 	lr35902_call $a_check_click_icon_area_x
+	lr35902_call $a_check_click_icon_area_y
 
 	lr35902_pop_reg regAF
 }
