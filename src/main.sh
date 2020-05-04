@@ -498,7 +498,8 @@ f_clr_win_old() {
 }
 
 # テキストファイルを表示
-# TODO 現状、ファイルは一つしか無いのでファイル番号などを引数で渡しはしない
+# in : regA  - ファイル番号
+#      regHL - ファイル先頭アドレス
 f_clr_win >src/f_clr_win.o
 fsz=$(to16 $(stat -c '%s' src/f_clr_win.o))
 fadr=$(calc16 "${a_clr_win}+${fsz}")
@@ -506,31 +507,22 @@ a_view_txt=$(four_digits $fadr)
 echo -e "$a_view_txt\tview_txt()" >>$MAP_FILE_NAME
 f_view_txt() {
 	lr35902_push_reg regAF
+	lr35902_push_reg regHL
 
 	lr35902_call $a_clr_win
 
 	# DA用変数設定
 
 	# 残り文字数
-	# 現状、ファイルは一つしか無い想定なので
-	# 1つ目のファイルサイズが書かれている場所へのオフセットは
-	# 0x000aで固定
-	local file_sz_ofs=000a
-	local file_sz_addr=$(calc16 "${GBOS_FS_BASE}+${file_sz_ofs}")
-	lr35902_copy_to_regA_from_addr $file_sz_addr
+	lr35902_copyinc_to_regA_from_ptrHL
 	lr35902_copy_to_addr_from_regA $var_da_var1
-	# TODO まずはファイルサイズは256バイト未満ということにする
-	lr35902_clear_reg regA
+	lr35902_copyinc_to_regA_from_ptrHL
 	lr35902_copy_to_addr_from_regA $var_da_var2
 
 	# 次に配置する文字のアドレス
-	# 同様に1つ目のファイルデータへのオフセットは
-	# 0x000cで固定
-	local file_data_ofs=000c
-	local file_data_addr=$(calc16 "${GBOS_FS_BASE}+${file_data_ofs}")
-	lr35902_set_reg regA $(echo $file_data_addr | cut -c3-4)
+	lr35902_copy_to_from regA regL
 	lr35902_copy_to_addr_from_regA $var_da_var3
-	lr35902_set_reg regA $(echo $file_data_addr | cut -c1-2)
+	lr35902_copy_to_from regA regH
 	lr35902_copy_to_addr_from_regA $var_da_var4
 
 	# 次に配置するウィンドウタイル座標
@@ -549,6 +541,7 @@ f_view_txt() {
 	lr35902_set_bitN_of_reg $GBOS_WST_BITNUM_TXT regA
 	lr35902_copy_to_addr_from_regA $var_win_stat
 
+	lr35902_pop_reg regHL
 	lr35902_pop_reg regAF
 	lr35902_return
 }
@@ -2208,6 +2201,9 @@ update_mouse_cursor() {
 # ファイルを閲覧
 # in : regA - ファイル番号
 view_file() {
+	# DEは呼び出し元で使っているので予め退避
+	lr35902_push_reg regDE
+
 	# Aは作業にも使うのでファイル番号はBへコピー
 	lr35902_copy_to_from regB regA
 
@@ -2235,9 +2231,28 @@ view_file() {
 	## ファイルタイプをAへ取得
 	lr35902_copy_to_from regA ptrHL
 
+	# Aは作業に使うのでCへコピー
+	lr35902_copy_to_from regC regA
+
+	# HLへファイル先頭アドレスを設定
+	## ファイルへのオフセットが格納されたアドレスを設定
+	lr35902_inc regHL
+	## ファイルへのオフセット取得
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_copy_to_from regE regA
+	lr35902_copy_to_from regA ptrHL
+	lr35902_copy_to_from regD regA
+	## FSベースアドレスと足してファイルデータ先頭アドレス取得
+	lr35902_set_reg regHL $GBOS_FS_BASE
+	lr35902_add_to_regHL regDE
+
+	# ファイルタイプをAへ復帰
+	lr35902_copy_to_from regA regC
+
 	lr35902_compare_regA_and $GBOS_ICON_NUM_TXT
 	(
 		# テキストファイルの場合
+		lr35902_copy_to_from regA regB
 		lr35902_call $a_view_txt
 	) >src/view_file.1.o
 	local sz_1=$(stat -c '%s' src/view_file.1.o)
@@ -2253,6 +2268,9 @@ view_file() {
 	local sz_2=$(stat -c '%s' src/view_file.2.o)
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
 	cat src/view_file.2.o
+
+	# DEを復帰
+	lr35902_pop_reg regDE
 }
 
 # クリックイベント処理

@@ -42,7 +42,7 @@ for f in $(ls $SRC_ROOT_DIR); do
 	echo_2bytes $ofs
 	sz=$(stat -c '%s' $SRC_ROOT_DIR/$f)
 	sz16=$(echo "obase=16;$sz" | bc)
-	ofs=$(four_digits $(calc16 "$ofs+$sz16"))
+	ofs=$(four_digits $(calc16 "$ofs+2+$sz16"))
 done
 
 # データ領域生成
