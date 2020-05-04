@@ -2295,11 +2295,21 @@ view_file() {
 click_event() {
 	lr35902_push_reg regAF
 
-	lr35902_clear_reg regA
-	lr35902_call $a_check_click_icon_area_x
-	lr35902_call $a_check_click_icon_area_y
+	# ウィンドウステータスが「ディレクトリ表示中」であるか確認
+	lr35902_copy_to_regA_from_addr $var_win_stat
+	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
+	(
+		# 「ディレクトリ表示中」の場合
 
-	view_file
+		lr35902_clear_reg regA
+		lr35902_call $a_check_click_icon_area_x
+		lr35902_call $a_check_click_icon_area_y
+
+		view_file
+	) >src/click_event.1.o
+	local sz_1=$(stat -c '%s' src/click_event.1.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
+	cat src/click_event.1.o
 
 	lr35902_pop_reg regAF
 }
