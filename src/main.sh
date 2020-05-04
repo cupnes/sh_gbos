@@ -141,6 +141,7 @@ var_dbg_over_vblank=cf00	# vblank期間を超えたことを示すフラグ
 #      regE  - タイル座標X
 # out: regHL - 9800h〜のアドレスを格納
 a_tcoord_to_addr=$GBOS_GFUNC_START
+echo -e "$a_tcoord_to_addr\ttcoord_to_addr()" >>$MAP_FILE_NAME
 f_tcoord_to_addr() {
 	local sz
 
@@ -180,6 +181,7 @@ f_tcoord_to_addr() {
 f_tcoord_to_addr >src/f_tcoord_to_addr.o
 fsz=$(to16 $(stat -c '%s' src/f_tcoord_to_addr.o))
 a_wtcoord_to_tcoord=$(four_digits $(calc16 "${a_tcoord_to_addr}+${fsz}"))
+echo -e "$a_wtcoord_to_tcoord\twtcoord_to_tcoord()" >>$MAP_FILE_NAME
 f_wtcoord_to_tcoord() {
 	lr35902_push_reg regAF
 
@@ -202,6 +204,7 @@ f_wtcoord_to_tcoord >src/f_wtcoord_to_tcoord.o
 fsz=$(to16 $(stat -c '%s' src/f_wtcoord_to_tcoord.o))
 fadr=$(calc16 "${a_wtcoord_to_tcoord}+${fsz}")
 a_lay_tile_at_tcoord=$(four_digits $fadr)
+echo -e "$a_lay_tile_at_tcoord\tlay_tile_at_tcoord()" >>$MAP_FILE_NAME
 f_lay_tile_at_tcoord() {
 	lr35902_call $a_tcoord_to_addr
 	lr35902_copy_to_ptrHL_from regA
@@ -217,6 +220,7 @@ f_lay_tile_at_tcoord >src/f_lay_tile_at_tcoord.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tile_at_tcoord.o))
 fadr=$(calc16 "${a_lay_tile_at_tcoord}+${fsz}")
 a_lay_tile_at_wtcoord=$(four_digits $fadr)
+echo -e "$a_lay_tile_at_wtcoord\tlay_tile_at_wtcoord()" >>$MAP_FILE_NAME
 f_lay_tile_at_wtcoord() {
 	lr35902_push_reg regDE
 	lr35902_push_reg regHL
@@ -239,6 +243,7 @@ f_lay_tile_at_wtcoord >src/f_lay_tile_at_wtcoord.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tile_at_wtcoord.o))
 fadr=$(calc16 "${a_lay_tile_at_wtcoord}+${fsz}")
 a_lay_tiles_at_tcoord_to_right=$(four_digits $fadr)
+echo -e "$a_lay_tiles_at_tcoord_to_right\tlay_tiles_at_tcoord_to_right()" >>$MAP_FILE_NAME
 f_lay_tiles_at_tcoord_to_right() {
 	lr35902_push_reg regBC
 	lr35902_push_reg regDE
@@ -268,6 +273,7 @@ f_lay_tiles_at_tcoord_to_right >src/f_lay_tiles_at_tcoord_to_right.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_tcoord_to_right.o))
 fadr=$(calc16 "${a_lay_tiles_at_tcoord_to_right}+${fsz}")
 a_lay_tiles_at_wtcoord_to_right=$(four_digits $fadr)
+echo -e "$a_lay_tiles_at_wtcoord_to_right\tlay_tiles_at_wtcoord_to_right()" >>$MAP_FILE_NAME
 f_lay_tiles_at_wtcoord_to_right() {
 	lr35902_push_reg regDE
 
@@ -287,6 +293,7 @@ f_lay_tiles_at_wtcoord_to_right >src/f_lay_tiles_at_wtcoord_to_right.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_wtcoord_to_right.o))
 fadr=$(calc16 "${a_lay_tiles_at_wtcoord_to_right}+${fsz}")
 a_lay_tiles_at_tcoord_to_low=$(four_digits $fadr)
+echo -e "$a_lay_tiles_at_tcoord_to_low\tlay_tiles_at_tcoord_to_low()" >>$MAP_FILE_NAME
 f_lay_tiles_at_tcoord_to_low() {
 	lr35902_push_reg regBC
 	lr35902_push_reg regDE
@@ -318,6 +325,7 @@ f_lay_tiles_at_tcoord_to_low >src/f_lay_tiles_at_tcoord_to_low.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_tcoord_to_low.o))
 fadr=$(calc16 "${a_lay_tiles_at_tcoord_to_low}+${fsz}")
 a_lay_tiles_at_wtcoord_to_low=$(four_digits $fadr)
+echo -e "$a_lay_tiles_at_wtcoord_to_low\tlay_tiles_at_wtcoord_to_low()" >>$MAP_FILE_NAME
 f_lay_tiles_at_wtcoord_to_low() {
 	lr35902_push_reg regDE
 
@@ -335,6 +343,7 @@ f_lay_tiles_at_wtcoord_to_low >src/f_lay_tiles_at_wtcoord_to_low.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_wtcoord_to_low.o))
 fadr=$(calc16 "${a_lay_tiles_at_wtcoord_to_low}+${fsz}")
 a_objnum_to_addr=$(four_digits $fadr)
+echo -e "$a_objnum_to_addr\tobjnum_to_addr()" >>$MAP_FILE_NAME
 f_objnum_to_addr() {
 	lr35902_push_reg regBC
 
@@ -356,6 +365,7 @@ f_objnum_to_addr >src/f_objnum_to_addr.o
 fsz=$(to16 $(stat -c '%s' src/f_objnum_to_addr.o))
 fadr=$(calc16 "${a_objnum_to_addr}+${fsz}")
 a_set_objpos=$(four_digits $fadr)
+echo -e "$a_set_objpos\tset_objpos()" >>$MAP_FILE_NAME
 f_set_objpos() {
 	lr35902_push_reg regHL
 
@@ -375,6 +385,7 @@ f_set_objpos >src/f_set_objpos.o
 fsz=$(to16 $(stat -c '%s' src/f_set_objpos.o))
 fadr=$(calc16 "${a_set_objpos}+${fsz}")
 a_lay_icon=$(four_digits $fadr)
+echo -e "$a_lay_icon\tlay_icon()" >>$MAP_FILE_NAME
 f_lay_icon() {
 	lr35902_push_reg regAF
 	lr35902_push_reg regDE
@@ -415,6 +426,7 @@ f_lay_icon >src/f_lay_icon.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_icon.o))
 fadr=$(calc16 "${a_lay_icon}+${fsz}")
 a_clr_win=$(four_digits $fadr)
+echo -e "$a_clr_win\tclr_win()" >>$MAP_FILE_NAME
 f_clr_win() {
 	lr35902_push_reg regAF
 
@@ -491,6 +503,7 @@ f_clr_win >src/f_clr_win.o
 fsz=$(to16 $(stat -c '%s' src/f_clr_win.o))
 fadr=$(calc16 "${a_clr_win}+${fsz}")
 a_view_txt=$(four_digits $fadr)
+echo -e "$a_view_txt\tview_txt()" >>$MAP_FILE_NAME
 f_view_txt() {
 	lr35902_push_reg regAF
 
@@ -546,6 +559,7 @@ f_view_txt >src/f_view_txt.o
 fsz=$(to16 $(stat -c '%s' src/f_view_txt.o))
 fadr=$(calc16 "${a_view_txt}+${fsz}")
 a_view_txt_cyc=$(four_digits $fadr)
+echo -e "$a_view_txt_cyc\tview_txt_cyc()" >>$MAP_FILE_NAME
 f_view_txt_cyc() {
 	lr35902_push_reg regAF
 	lr35902_push_reg regBC
@@ -683,6 +697,7 @@ f_view_txt_cyc >src/f_view_txt_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_view_txt_cyc.o))
 fadr=$(calc16 "${a_view_txt_cyc}+${fsz}")
 a_clr_win_cyc=$(four_digits $fadr)
+echo -e "$a_clr_win_cyc\tclr_win_cyc()" >>$MAP_FILE_NAME
 f_clr_win_cyc() {
 	lr35902_push_reg regAF
 	lr35902_push_reg regDE
@@ -740,6 +755,7 @@ f_clr_win_cyc >src/f_clr_win_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_clr_win_cyc.o))
 fadr=$(calc16 "${a_clr_win_cyc}+${fsz}")
 a_tn_to_addr=$(four_digits $fadr)
+echo -e "$a_tn_to_addr\ttn_to_addr()" >>$MAP_FILE_NAME
 f_tn_to_addr() {
 	local sz
 
@@ -789,6 +805,7 @@ f_tn_to_addr >src/f_tn_to_addr.o
 fsz=$(to16 $(stat -c '%s' src/f_tn_to_addr.o))
 fadr=$(calc16 "${a_tn_to_addr}+${fsz}")
 a_view_img=$(four_digits $fadr)
+echo -e "$a_view_img\tview_img()" >>$MAP_FILE_NAME
 f_view_img() {
 	# 画像解像度は16x13タイル(128x104ピクセル)固定
 	# なので、ファイルサイズは0x0d00固定
@@ -881,6 +898,7 @@ f_view_img >src/f_view_img.o
 fsz=$(to16 $(stat -c '%s' src/f_view_img.o))
 fadr=$(calc16 "${a_view_img}+${fsz}")
 a_view_img_cyc=$(four_digits $fadr)
+echo -e "$a_view_img_cyc\tview_img_cyc()" >>$MAP_FILE_NAME
 f_view_img_cyc() {
 	# push
 	lr35902_push_reg regAF
@@ -1071,6 +1089,7 @@ f_view_img_cyc >src/f_view_img_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_view_img_cyc.o))
 fadr=$(calc16 "${a_view_img_cyc}+${fsz}")
 a_rstr_tiles=$(four_digits $fadr)
+echo -e "$a_rstr_tiles\trstr_tiles()" >>$MAP_FILE_NAME
 f_rstr_tiles() {
 	# push
 	lr35902_push_reg regAF
@@ -1097,6 +1116,7 @@ f_rstr_tiles >src/f_rstr_tiles.o
 fsz=$(to16 $(stat -c '%s' src/f_rstr_tiles.o))
 fadr=$(calc16 "${a_rstr_tiles}+${fsz}")
 a_rstr_tiles_cyc=$(four_digits $fadr)
+echo -e "$a_rstr_tiles_cyc\trstr_tiles_cyc()" >>$MAP_FILE_NAME
 f_rstr_tiles_cyc() {
 	# push
 	lr35902_push_reg regAF
@@ -1193,6 +1213,7 @@ f_rstr_tiles_cyc >src/f_rstr_tiles_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_rstr_tiles_cyc.o))
 fadr=$(calc16 "${a_rstr_tiles_cyc}+${fsz}")
 a_view_dir=$(four_digits $fadr)
+echo -e "$a_view_dir\tview_dir()" >>$MAP_FILE_NAME
 f_view_dir() {
 	# push
 	lr35902_push_reg regAF
@@ -1218,6 +1239,7 @@ f_view_dir >src/f_view_dir.o
 fsz=$(to16 $(stat -c '%s' src/f_view_dir.o))
 fadr=$(calc16 "${a_view_dir}+${fsz}")
 a_view_dir_cyc=$(four_digits $fadr)
+echo -e "$a_view_dir_cyc\tview_dir_cyc()" >>$MAP_FILE_NAME
 # アイコンを配置するウィンドウY座標を
 # レジスタAに格納されたファイル番目で算出し
 # レジスタDへ設定
@@ -1451,9 +1473,12 @@ f_view_dir_cyc() {
 # out: regA - ビット[1:0]に対応するファイル番号の下位2ビットを設定
 #             アイコン領域外の場合 80 を設定
 #             ※ ビット[1:0]はビットセットのみ行うので、予めクリアしておくこと
+# ※ OBJ座標系は右下原点なのでマウスX座標はカーソル先端(左上)から+8ピクセル
 f_view_dir_cyc >src/f_view_dir_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_view_dir_cyc.o))
 fadr=$(calc16 "${a_view_dir_cyc}+${fsz}")
+a_check_click_icon_area_x=$(four_digits $fadr)
+echo -e "$a_check_click_icon_area_x\tcheck_click_icon_area_x()" >>$MAP_FILE_NAME
 f_check_click_icon_area_x() {
 	# push
 	lr35902_push_reg regAF
@@ -1466,12 +1491,12 @@ f_check_click_icon_area_x() {
 	lr35902_set_reg regB 80
 
 	# A >= 16 ?
-	lr35902_compare_regA_and 10
+	lr35902_compare_regA_and 18
 	(
 		# A >= 16 の場合
 
 		# A < 48 ?
-		lr35902_compare_regA_and 30
+		lr35902_compare_regA_and 38
 		(
 			# A < 48 の場合
 
@@ -1490,12 +1515,12 @@ f_check_click_icon_area_x() {
 	cat src/f_check_click_icon_area_x.2.o
 
 	# A >= 48 ?
-	lr35902_compare_regA_and 30
+	lr35902_compare_regA_and 38
 	(
 		# A >= 48 の場合
 
 		# A < 80 ?
-		lr35902_compare_regA_and 50
+		lr35902_compare_regA_and 58
 		(
 			# A < 80 の場合
 
@@ -1515,12 +1540,12 @@ f_check_click_icon_area_x() {
 	cat src/f_check_click_icon_area_x.4.o
 
 	# A >= 80 ?
-	lr35902_compare_regA_and 50
+	lr35902_compare_regA_and 58
 	(
 		# A >= 80 の場合
 
 		# A < 112 ?
-		lr35902_compare_regA_and 70
+		lr35902_compare_regA_and 78
 		(
 			# A < 112 の場合
 
@@ -1540,12 +1565,12 @@ f_check_click_icon_area_x() {
 	cat src/f_check_click_icon_area_x.6.o
 
 	# A >= 112 ?
-	lr35902_compare_regA_and 70
+	lr35902_compare_regA_and 78
 	(
 		# A >= 112 の場合
 
 		# A < 144 ?
-		lr35902_compare_regA_and 90
+		lr35902_compare_regA_and 98
 		(
 			# A < 144 の場合
 
@@ -1586,7 +1611,7 @@ f_check_click_icon_area_x() {
 	# lr35902_ei_and_ret
 # }
 
-# 0500h〜の領域に配置される
+# 1000h〜の領域に配置される
 global_functions() {
 	f_tcoord_to_addr
 	f_wtcoord_to_tcoord
@@ -2102,39 +2127,8 @@ view_file() {
 click_event() {
 	lr35902_push_reg regAF
 
-	local sz
-	local sx=$(calc16_2 "${GBOS_ICON_BASE_X}+${GBOS_OBJ_WIDTH}")
-	local sy=$(calc16_2 "${GBOS_ICON_BASE_Y}+${GBOS_OBJ_HEIGHT}")
-	local ex=$(calc16_2 "${GBOS_ICON_BASE_X}+${CLICK_WIDTH}+${GBOS_OBJ_WIDTH}")
-	local ey=$(calc16_2 "${GBOS_ICON_BASE_Y}+${CLICK_HEIGHT}+${GBOS_OBJ_HEIGHT}")
-
-	lr35902_copy_to_regA_from_addr $var_mouse_x
-	lr35902_compare_regA_and $ex
-	(
-		lr35902_compare_regA_and $sx
-		(
-			lr35902_copy_to_regA_from_addr $var_mouse_y
-			lr35902_compare_regA_and $ey
-			(
-				lr35902_compare_regA_and $sy
-				(
-					view_file
-				) >src/click_event.4.o
-				sz=$(stat -c '%s' src/click_event.4.o)
-				lr35902_rel_jump_with_cond C $(two_digits_d $sz)
-				cat src/click_event.4.o
-			) >src/click_event.3.o
-			sz=$(stat -c '%s' src/click_event.3.o)
-			lr35902_rel_jump_with_cond NC $(two_digits_d $sz)
-			cat src/click_event.3.o
-		) >src/click_event.2.o
-		sz=$(stat -c '%s' src/click_event.2.o)
-		lr35902_rel_jump_with_cond C $(two_digits_d $sz)
-		cat src/click_event.2.o
-	) >src/click_event.1.o
-	sz=$(stat -c '%s' src/click_event.1.o)
-	lr35902_rel_jump_with_cond NC $(two_digits_d $sz)
-	cat src/click_event.1.o
+	lr35902_clear_reg regA
+	lr35902_call $a_check_click_icon_area_x
 
 	lr35902_pop_reg regAF
 }

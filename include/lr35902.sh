@@ -8,6 +8,7 @@ INCLUDE_LR35902_SH=true
 LR35902_ENTRY_ADDR=0100
 
 ASM_LIST_FILE=asm.lst
+rm -f $ASM_LIST_FILE
 
 to_regname() {
 	local reg=$1
