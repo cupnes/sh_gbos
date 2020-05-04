@@ -4,5 +4,6 @@
 *.2bpp
 *.lst
 *.img
+map.txt
 
 rootfs*
