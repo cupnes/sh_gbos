@@ -2226,6 +2226,9 @@ update_mouse_cursor() {
 
 # ファイルを閲覧
 # in : regA - ファイル番号
+## TODO 関数化
+## TODO regA == 80 の時、直ちにret
+## TODO regA >= ファイル数 の時、直ちにret
 view_file() {
 	# DEは呼び出し元で使っているので予め退避
 	lr35902_push_reg regDE
