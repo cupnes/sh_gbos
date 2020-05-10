@@ -29,6 +29,8 @@ GBOS_WINDOW_TILEMAP_START=9c00
 GBOS_FS_BASE=4000
 GBOS_FS_FILE_ATTR_SZ=07
 
+GBOS_APP_MEM_BASE=$GB_WRAM1_BASE
+
 # マウス座標
 ## TODO: ウィンドウを動かすようになったら
 ##       GBOS_WIN_DEF_{X,Y}_Tを使っている部分は直す
@@ -98,6 +100,7 @@ GBOS_DA_BITNUM_VIEW_DIR=1
 GBOS_DA_BITNUM_VIEW_TXT=2
 GBOS_DA_BITNUM_VIEW_IMG=3
 GBOS_DA_BITNUM_RSTR_TILES=4
+GBOS_DA_BITNUM_RUN_EXE=5
 
 # ウィンドウステータス用定数
 GBOS_WST_BITNUM_DIR=0	# ディレクトリ表示中
@@ -1718,6 +1721,50 @@ f_check_click_icon_area_y() {
 	lr35902_return
 }
 
+# 実行ファイル実行開始関数
+# in : regHL - ファイル先頭アドレス
+#              (ファイルサイズ(2バイト)以降の領域の先頭アドレス)
+f_check_click_icon_area_y >src/f_check_click_icon_area_y.o
+fsz=$(to16 $(stat -c '%s' src/f_check_click_icon_area_y.o))
+fadr=$(calc16 "${a_check_click_icon_area_y}+${fsz}")
+a_run_exe=$(four_digits $fadr)
+echo -e "$a_run_exe\trun_exe()" >>$MAP_FILE_NAME
+f_run_exe() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	# RAM(0xD000-)へロード
+	## TODO ファイルサイズの2バイト目を使う
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_inc regHL
+	lr35902_copy_to_from regC regA
+	lr35902_set_reg regDE $GBOS_APP_MEM_BASE
+	(
+		lr35902_copyinc_to_regA_from_ptrHL
+		lr35902_copy_to_from ptrDE regA
+		lr35902_inc regDE
+		lr35902_dec regC
+	) >src/f_run_exe.1.o
+	cat src/f_run_exe.1.o
+	local sz_1=$(stat -c '%s' src/f_run_exe.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+
+	# DASにrun_exeのビットをセット
+	lr35902_copy_to_regA_from_addr $var_draw_act_stat
+	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
+	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -1759,6 +1806,7 @@ global_functions() {
 	f_view_dir_cyc
 	f_check_click_icon_area_x
 	f_check_click_icon_area_y
+	f_run_exe
 }
 
 gbos_vec() {
@@ -2277,6 +2325,16 @@ view_file() {
 
 	# ファイルタイプをAへ復帰
 	lr35902_copy_to_from regA regC
+
+	lr35902_compare_regA_and $GBOS_ICON_NUM_EXE
+	(
+		# 実行ファイルの場合
+		lr35902_copy_to_from regA regB
+		lr35902_call $a_run_exe
+	) >src/view_file.5.o
+	local sz_5=$(stat -c '%s' src/view_file.5.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
+	cat src/view_file.5.o
 
 	lr35902_compare_regA_and $GBOS_ICON_NUM_TXT
 	(
