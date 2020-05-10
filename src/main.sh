@@ -1736,6 +1736,9 @@ f_run_exe() {
 	lr35902_push_reg regDE
 	lr35902_push_reg regHL
 
+	# 画面クリアをDAへ登録
+	lr35902_call $a_clr_win
+
 	# RAM(0xD000-)へロード
 	## TODO ファイルサイズの2バイト目を使う
 	lr35902_copyinc_to_regA_from_ptrHL
@@ -1761,6 +1764,24 @@ f_run_exe() {
 	lr35902_pop_reg regHL
 	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
+# 実行ファイル周期実行関数
+f_run_exe >src/f_run_exe.o
+fsz=$(to16 $(stat -c '%s' src/f_run_exe.o))
+fadr=$(calc16 "${a_run_exe}+${fsz}")
+a_run_exe_cyc=$(four_digits $fadr)
+echo -e "$a_run_exe_cyc\trun_exe_cyc()" >>$MAP_FILE_NAME
+f_run_exe_cyc() {
+	# push
+	lr35902_push_reg regAF
+
+	# $GBOS_APP_MEM_BASE をcall
+	lr35902_call $GBOS_APP_MEM_BASE
+
+	# pop & return
 	lr35902_pop_reg regAF
 	lr35902_return
 }
@@ -1807,6 +1828,7 @@ global_functions() {
 	f_check_click_icon_area_x
 	f_check_click_icon_area_y
 	f_run_exe
+	f_run_exe_cyc
 }
 
 gbos_vec() {
@@ -2470,6 +2492,17 @@ das_handler() {
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
 		# view_dirがセットされていた場合
 		cat src/das_handler.6.o
+
+		# run_exeのチェック
+		lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
+		(
+			# run_exeがセットされていた場合
+			lr35902_call $a_run_exe_cyc
+		) >src/das_handler.7.o
+		local sz_7=$(stat -c '%s' src/das_handler.7.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_7)
+		# run_exeがセットされていた場合
+		cat src/das_handler.7.o
 
 		# view_txtのチェック
 		lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_VIEW_TXT regA
