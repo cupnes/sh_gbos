@@ -20,9 +20,19 @@ init_glider() {
 	local base_y=$GBOS_WIN_DRAWABLE_BASE_YT
 
 	lr35902_set_reg regA $GBOS_TILE_NUM_BLACK
+
 	lr35902_set_reg regD $base_y
 	lr35902_set_reg regE $(calc16_2 "$base_x+1")
 	lr35902_call $a_lay_tile_at_wtcoord
+
+	lr35902_set_reg regD $(calc16_2 "$base_y+1")
+	lr35902_set_reg regE $(calc16_2 "$base_x+2")
+	lr35902_call $a_lay_tile_at_wtcoord
+
+	lr35902_set_reg regC 03
+	lr35902_set_reg regD $(calc16_2 "$base_y+2")
+	lr35902_set_reg regE $base_x
+	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 }
 
 main() {
