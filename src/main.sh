@@ -5,26 +5,13 @@ SRC_MAIN_SH=true
 
 . include/gb.sh
 . include/tiles.sh
+. include/gbos.sh
 . src/tiles.sh
 
 rm -f $MAP_FILE_NAME
 
 debug_mode=true
 
-GBOS_WIN_DEF_X_T=00
-GBOS_WIN_DEF_Y_T=00
-
-# ウィンドウの見かけ上の幅/高さ
-# (描画用の1タイル分の幅/高さは除く)
-GBOS_WIN_WIDTH_T=$(calc16_2 "${GB_DISP_WIDTH_T}-2")
-GBOS_WIN_HEIGHT_T=$(calc16_2 "${GB_DISP_HEIGHT_T}-2")
-GBOS_WIN_DRAWABLE_WIDTH_T=$(calc16_2 "${GBOS_WIN_WIDTH_T}-2")
-GBOS_WIN_DRAWABLE_HEIGHT_T=$(calc16_2 "${GBOS_WIN_HEIGHT_T}-3")
-GBOS_WIN_DRAWABLE_BASE_XT=$(calc16_2 "${GBOS_WIN_DEF_X_T}+2")
-GBOS_WIN_DRAWABLE_MAX_XT=$(calc16_2 "${GBOS_WIN_DRAWABLE_BASE_XT}+${GBOS_WIN_DRAWABLE_WIDTH_T}-1")
-
-GBOS_WX_DEF=00
-GBOS_WY_DEF=00
 GBOS_ROM_TILE_DATA_START=$GB_ROM_FREE_BASE
 GBOS_TILE_DATA_START=8000
 GBOS_BG_TILEMAP_START=9800
@@ -39,10 +26,10 @@ GBOS_APP_MEM_BASE=$GB_WRAM1_BASE
 ##       GBOS_WIN_DEF_{X,Y}_Tを使っている部分は直す
 ## ウィンドウのアイコン領域のベースアドレス
 GBOS_ICON_BASE_X=$(
-	calc16_2 "(${GBOS_WIN_DEF_X_T}*${GB_TILE_WIDTH})+(${GB_TILE_WIDTH}*2)"
+	calc16_2 "(${GBOS_WX_DEF}*${GB_TILE_WIDTH})+(${GB_TILE_WIDTH}*2)"
 		)
 GBOS_ICON_BASE_Y=$(
-	calc16_2 "(${GBOS_WIN_DEF_Y_T}*${GB_TILE_HEIGHT})+(${GB_TILE_HEIGHT}*3)"
+	calc16_2 "(${GBOS_WY_DEF}*${GB_TILE_HEIGHT})+(${GB_TILE_HEIGHT}*3)"
 		)
 CLICK_WIDTH=$(calc16_2 "${GB_TILE_WIDTH}*4")
 CLICK_HEIGHT=$(calc16_2 "${GB_TILE_HEIGHT}*3")
@@ -2180,7 +2167,7 @@ init() {
 	hide_all_objs
 
 	# ウィンドウ座標(タイル番目)の変数へデフォルト値設定
-	set_win_coord $GBOS_WIN_DEF_X_T $GBOS_WIN_DEF_Y_T
+	set_win_coord $GBOS_WX_DEF $GBOS_WY_DEF
 
 	# タイトル・中身空のウィンドウを描画
 	draw_blank_window
