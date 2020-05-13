@@ -5,8 +5,7 @@ INCLUDE_COMMON_SH=true
 
 . include/lr35902.sh
 
-MAP_FILE_NAME=map.txt
-rm -f $MAP_FILE_NAME
+MAP_FILE_NAME=include/map.sh
 
 echo_2bytes() {
 	local val=$1

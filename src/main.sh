@@ -6,6 +6,8 @@ SRC_MAIN_SH=true
 . include/gb.sh
 . src/tiles.sh
 
+rm -f $MAP_FILE_NAME
+
 debug_mode=true
 
 GBOS_WIN_DEF_X_T=00
@@ -146,7 +148,7 @@ var_dbg_over_vblank=cf00	# vblank期間を超えたことを示すフラグ
 #      regE  - タイル座標X
 # out: regHL - 9800h〜のアドレスを格納
 a_tcoord_to_addr=$GBOS_GFUNC_START
-echo -e "$a_tcoord_to_addr\ttcoord_to_addr()" >>$MAP_FILE_NAME
+echo -e "a_tcoord_to_addr=$a_tcoord_to_addr" >>$MAP_FILE_NAME
 f_tcoord_to_addr() {
 	local sz
 
@@ -186,7 +188,7 @@ f_tcoord_to_addr() {
 f_tcoord_to_addr >src/f_tcoord_to_addr.o
 fsz=$(to16 $(stat -c '%s' src/f_tcoord_to_addr.o))
 a_wtcoord_to_tcoord=$(four_digits $(calc16 "${a_tcoord_to_addr}+${fsz}"))
-echo -e "$a_wtcoord_to_tcoord\twtcoord_to_tcoord()" >>$MAP_FILE_NAME
+echo -e "a_wtcoord_to_tcoord=$a_wtcoord_to_tcoord" >>$MAP_FILE_NAME
 f_wtcoord_to_tcoord() {
 	lr35902_push_reg regAF
 
@@ -209,7 +211,7 @@ f_wtcoord_to_tcoord >src/f_wtcoord_to_tcoord.o
 fsz=$(to16 $(stat -c '%s' src/f_wtcoord_to_tcoord.o))
 fadr=$(calc16 "${a_wtcoord_to_tcoord}+${fsz}")
 a_lay_tile_at_tcoord=$(four_digits $fadr)
-echo -e "$a_lay_tile_at_tcoord\tlay_tile_at_tcoord()" >>$MAP_FILE_NAME
+echo -e "a_lay_tile_at_tcoord=$a_lay_tile_at_tcoord" >>$MAP_FILE_NAME
 f_lay_tile_at_tcoord() {
 	lr35902_call $a_tcoord_to_addr
 	lr35902_copy_to_ptrHL_from regA
@@ -225,7 +227,7 @@ f_lay_tile_at_tcoord >src/f_lay_tile_at_tcoord.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tile_at_tcoord.o))
 fadr=$(calc16 "${a_lay_tile_at_tcoord}+${fsz}")
 a_lay_tile_at_wtcoord=$(four_digits $fadr)
-echo -e "$a_lay_tile_at_wtcoord\tlay_tile_at_wtcoord()" >>$MAP_FILE_NAME
+echo -e "a_lay_tile_at_wtcoord=$a_lay_tile_at_wtcoord" >>$MAP_FILE_NAME
 f_lay_tile_at_wtcoord() {
 	lr35902_push_reg regDE
 	lr35902_push_reg regHL
@@ -248,7 +250,7 @@ f_lay_tile_at_wtcoord >src/f_lay_tile_at_wtcoord.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tile_at_wtcoord.o))
 fadr=$(calc16 "${a_lay_tile_at_wtcoord}+${fsz}")
 a_lay_tiles_at_tcoord_to_right=$(four_digits $fadr)
-echo -e "$a_lay_tiles_at_tcoord_to_right\tlay_tiles_at_tcoord_to_right()" >>$MAP_FILE_NAME
+echo -e "a_lay_tiles_at_tcoord_to_right=$a_lay_tiles_at_tcoord_to_right" >>$MAP_FILE_NAME
 f_lay_tiles_at_tcoord_to_right() {
 	lr35902_push_reg regBC
 	lr35902_push_reg regDE
@@ -278,7 +280,7 @@ f_lay_tiles_at_tcoord_to_right >src/f_lay_tiles_at_tcoord_to_right.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_tcoord_to_right.o))
 fadr=$(calc16 "${a_lay_tiles_at_tcoord_to_right}+${fsz}")
 a_lay_tiles_at_wtcoord_to_right=$(four_digits $fadr)
-echo -e "$a_lay_tiles_at_wtcoord_to_right\tlay_tiles_at_wtcoord_to_right()" >>$MAP_FILE_NAME
+echo -e "a_lay_tiles_at_wtcoord_to_right=$a_lay_tiles_at_wtcoord_to_right" >>$MAP_FILE_NAME
 f_lay_tiles_at_wtcoord_to_right() {
 	lr35902_push_reg regDE
 
@@ -298,7 +300,7 @@ f_lay_tiles_at_wtcoord_to_right >src/f_lay_tiles_at_wtcoord_to_right.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_wtcoord_to_right.o))
 fadr=$(calc16 "${a_lay_tiles_at_wtcoord_to_right}+${fsz}")
 a_lay_tiles_at_tcoord_to_low=$(four_digits $fadr)
-echo -e "$a_lay_tiles_at_tcoord_to_low\tlay_tiles_at_tcoord_to_low()" >>$MAP_FILE_NAME
+echo -e "a_lay_tiles_at_tcoord_to_low=$a_lay_tiles_at_tcoord_to_low" >>$MAP_FILE_NAME
 f_lay_tiles_at_tcoord_to_low() {
 	lr35902_push_reg regBC
 	lr35902_push_reg regDE
@@ -330,7 +332,7 @@ f_lay_tiles_at_tcoord_to_low >src/f_lay_tiles_at_tcoord_to_low.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_tcoord_to_low.o))
 fadr=$(calc16 "${a_lay_tiles_at_tcoord_to_low}+${fsz}")
 a_lay_tiles_at_wtcoord_to_low=$(four_digits $fadr)
-echo -e "$a_lay_tiles_at_wtcoord_to_low\tlay_tiles_at_wtcoord_to_low()" >>$MAP_FILE_NAME
+echo -e "a_lay_tiles_at_wtcoord_to_low=$a_lay_tiles_at_wtcoord_to_low" >>$MAP_FILE_NAME
 f_lay_tiles_at_wtcoord_to_low() {
 	lr35902_push_reg regDE
 
@@ -348,7 +350,7 @@ f_lay_tiles_at_wtcoord_to_low >src/f_lay_tiles_at_wtcoord_to_low.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_tiles_at_wtcoord_to_low.o))
 fadr=$(calc16 "${a_lay_tiles_at_wtcoord_to_low}+${fsz}")
 a_objnum_to_addr=$(four_digits $fadr)
-echo -e "$a_objnum_to_addr\tobjnum_to_addr()" >>$MAP_FILE_NAME
+echo -e "a_objnum_to_addr=$a_objnum_to_addr" >>$MAP_FILE_NAME
 f_objnum_to_addr() {
 	lr35902_push_reg regBC
 
@@ -370,7 +372,7 @@ f_objnum_to_addr >src/f_objnum_to_addr.o
 fsz=$(to16 $(stat -c '%s' src/f_objnum_to_addr.o))
 fadr=$(calc16 "${a_objnum_to_addr}+${fsz}")
 a_set_objpos=$(four_digits $fadr)
-echo -e "$a_set_objpos\tset_objpos()" >>$MAP_FILE_NAME
+echo -e "a_set_objpos=$a_set_objpos" >>$MAP_FILE_NAME
 f_set_objpos() {
 	lr35902_push_reg regHL
 
@@ -390,7 +392,7 @@ f_set_objpos >src/f_set_objpos.o
 fsz=$(to16 $(stat -c '%s' src/f_set_objpos.o))
 fadr=$(calc16 "${a_set_objpos}+${fsz}")
 a_lay_icon=$(four_digits $fadr)
-echo -e "$a_lay_icon\tlay_icon()" >>$MAP_FILE_NAME
+echo -e "a_lay_icon=$a_lay_icon" >>$MAP_FILE_NAME
 f_lay_icon() {
 	lr35902_push_reg regAF
 	lr35902_push_reg regDE
@@ -431,7 +433,7 @@ f_lay_icon >src/f_lay_icon.o
 fsz=$(to16 $(stat -c '%s' src/f_lay_icon.o))
 fadr=$(calc16 "${a_lay_icon}+${fsz}")
 a_clr_win=$(four_digits $fadr)
-echo -e "$a_clr_win\tclr_win()" >>$MAP_FILE_NAME
+echo -e "a_clr_win=$a_clr_win" >>$MAP_FILE_NAME
 f_clr_win() {
 	lr35902_push_reg regAF
 
@@ -515,7 +517,7 @@ f_clr_win >src/f_clr_win.o
 fsz=$(to16 $(stat -c '%s' src/f_clr_win.o))
 fadr=$(calc16 "${a_clr_win}+${fsz}")
 a_view_txt=$(four_digits $fadr)
-echo -e "$a_view_txt\tview_txt()" >>$MAP_FILE_NAME
+echo -e "a_view_txt=$a_view_txt" >>$MAP_FILE_NAME
 f_view_txt() {
 	lr35902_push_reg regAF
 	lr35902_push_reg regHL
@@ -566,7 +568,7 @@ f_view_txt >src/f_view_txt.o
 fsz=$(to16 $(stat -c '%s' src/f_view_txt.o))
 fadr=$(calc16 "${a_view_txt}+${fsz}")
 a_view_txt_cyc=$(four_digits $fadr)
-echo -e "$a_view_txt_cyc\tview_txt_cyc()" >>$MAP_FILE_NAME
+echo -e "a_view_txt_cyc=$a_view_txt_cyc" >>$MAP_FILE_NAME
 f_view_txt_cyc() {
 	lr35902_push_reg regAF
 	lr35902_push_reg regBC
@@ -704,7 +706,7 @@ f_view_txt_cyc >src/f_view_txt_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_view_txt_cyc.o))
 fadr=$(calc16 "${a_view_txt_cyc}+${fsz}")
 a_clr_win_cyc=$(four_digits $fadr)
-echo -e "$a_clr_win_cyc\tclr_win_cyc()" >>$MAP_FILE_NAME
+echo -e "a_clr_win_cyc=$a_clr_win_cyc" >>$MAP_FILE_NAME
 f_clr_win_cyc() {
 	lr35902_push_reg regAF
 	lr35902_push_reg regDE
@@ -762,7 +764,7 @@ f_clr_win_cyc >src/f_clr_win_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_clr_win_cyc.o))
 fadr=$(calc16 "${a_clr_win_cyc}+${fsz}")
 a_tn_to_addr=$(four_digits $fadr)
-echo -e "$a_tn_to_addr\ttn_to_addr()" >>$MAP_FILE_NAME
+echo -e "a_tn_to_addr=$a_tn_to_addr" >>$MAP_FILE_NAME
 f_tn_to_addr() {
 	local sz
 
@@ -812,7 +814,7 @@ f_tn_to_addr >src/f_tn_to_addr.o
 fsz=$(to16 $(stat -c '%s' src/f_tn_to_addr.o))
 fadr=$(calc16 "${a_tn_to_addr}+${fsz}")
 a_view_img=$(four_digits $fadr)
-echo -e "$a_view_img\tview_img()" >>$MAP_FILE_NAME
+echo -e "a_view_img=$a_view_img" >>$MAP_FILE_NAME
 f_view_img() {
 	# 画像解像度は16x13タイル(128x104ピクセル)固定
 	# なので、ファイルサイズは0x0d00固定
@@ -908,7 +910,7 @@ f_view_img >src/f_view_img.o
 fsz=$(to16 $(stat -c '%s' src/f_view_img.o))
 fadr=$(calc16 "${a_view_img}+${fsz}")
 a_view_img_cyc=$(four_digits $fadr)
-echo -e "$a_view_img_cyc\tview_img_cyc()" >>$MAP_FILE_NAME
+echo -e "a_view_img_cyc=$a_view_img_cyc" >>$MAP_FILE_NAME
 f_view_img_cyc() {
 	# push
 	lr35902_push_reg regAF
@@ -1099,7 +1101,7 @@ f_view_img_cyc >src/f_view_img_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_view_img_cyc.o))
 fadr=$(calc16 "${a_view_img_cyc}+${fsz}")
 a_rstr_tiles=$(four_digits $fadr)
-echo -e "$a_rstr_tiles\trstr_tiles()" >>$MAP_FILE_NAME
+echo -e "a_rstr_tiles=$a_rstr_tiles" >>$MAP_FILE_NAME
 f_rstr_tiles() {
 	# push
 	lr35902_push_reg regAF
@@ -1126,7 +1128,7 @@ f_rstr_tiles >src/f_rstr_tiles.o
 fsz=$(to16 $(stat -c '%s' src/f_rstr_tiles.o))
 fadr=$(calc16 "${a_rstr_tiles}+${fsz}")
 a_rstr_tiles_cyc=$(four_digits $fadr)
-echo -e "$a_rstr_tiles_cyc\trstr_tiles_cyc()" >>$MAP_FILE_NAME
+echo -e "a_rstr_tiles_cyc=$a_rstr_tiles_cyc" >>$MAP_FILE_NAME
 f_rstr_tiles_cyc() {
 	# push
 	lr35902_push_reg regAF
@@ -1223,7 +1225,7 @@ f_rstr_tiles_cyc >src/f_rstr_tiles_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_rstr_tiles_cyc.o))
 fadr=$(calc16 "${a_rstr_tiles_cyc}+${fsz}")
 a_view_dir=$(four_digits $fadr)
-echo -e "$a_view_dir\tview_dir()" >>$MAP_FILE_NAME
+echo -e "a_view_dir=$a_view_dir" >>$MAP_FILE_NAME
 f_view_dir() {
 	# push
 	lr35902_push_reg regAF
@@ -1254,7 +1256,7 @@ f_view_dir >src/f_view_dir.o
 fsz=$(to16 $(stat -c '%s' src/f_view_dir.o))
 fadr=$(calc16 "${a_view_dir}+${fsz}")
 a_view_dir_cyc=$(four_digits $fadr)
-echo -e "$a_view_dir_cyc\tview_dir_cyc()" >>$MAP_FILE_NAME
+echo -e "a_view_dir_cyc=$a_view_dir_cyc" >>$MAP_FILE_NAME
 # アイコンを配置するウィンドウY座標を
 # レジスタAに格納されたファイル番目で算出し
 # レジスタDへ設定
@@ -1493,7 +1495,7 @@ f_view_dir_cyc >src/f_view_dir_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_view_dir_cyc.o))
 fadr=$(calc16 "${a_view_dir_cyc}+${fsz}")
 a_check_click_icon_area_x=$(four_digits $fadr)
-echo -e "$a_check_click_icon_area_x\tcheck_click_icon_area_x()" >>$MAP_FILE_NAME
+echo -e "a_check_click_icon_area_x=$a_check_click_icon_area_x" >>$MAP_FILE_NAME
 f_check_click_icon_area_x() {
 	# push
 	lr35902_push_reg regAF
@@ -1612,7 +1614,7 @@ f_check_click_icon_area_x >src/f_check_click_icon_area_x.o
 fsz=$(to16 $(stat -c '%s' src/f_check_click_icon_area_x.o))
 fadr=$(calc16 "${a_check_click_icon_area_x}+${fsz}")
 a_check_click_icon_area_y=$(four_digits $fadr)
-echo -e "$a_check_click_icon_area_y\tcheck_click_icon_area_y()" >>$MAP_FILE_NAME
+echo -e "a_check_click_icon_area_y=$a_check_click_icon_area_y" >>$MAP_FILE_NAME
 f_check_click_icon_area_y() {
 	# push
 	lr35902_push_reg regAF
@@ -1728,7 +1730,7 @@ f_check_click_icon_area_y >src/f_check_click_icon_area_y.o
 fsz=$(to16 $(stat -c '%s' src/f_check_click_icon_area_y.o))
 fadr=$(calc16 "${a_check_click_icon_area_y}+${fsz}")
 a_run_exe=$(four_digits $fadr)
-echo -e "$a_run_exe\trun_exe()" >>$MAP_FILE_NAME
+echo -e "a_run_exe=$a_run_exe" >>$MAP_FILE_NAME
 f_run_exe() {
 	# push
 	lr35902_push_reg regAF
@@ -1773,7 +1775,7 @@ f_run_exe >src/f_run_exe.o
 fsz=$(to16 $(stat -c '%s' src/f_run_exe.o))
 fadr=$(calc16 "${a_run_exe}+${fsz}")
 a_run_exe_cyc=$(four_digits $fadr)
-echo -e "$a_run_exe_cyc\trun_exe_cyc()" >>$MAP_FILE_NAME
+echo -e "a_run_exe_cyc=$a_run_exe_cyc" >>$MAP_FILE_NAME
 f_run_exe_cyc() {
 	# push
 	lr35902_push_reg regAF
