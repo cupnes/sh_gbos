@@ -4,6 +4,7 @@ fi
 SRC_MAIN_SH=true
 
 . include/gb.sh
+. include/tiles.sh
 . src/tiles.sh
 
 rm -f $MAP_FILE_NAME
