@@ -5,6 +5,8 @@ set -uex
 
 . include/gb.sh
 . include/map.sh
+. include/tiles.sh
+. include/gbos.sh
 
 VARS_BASE=$GB_WRAM1_BASE	# make_bin()で更新する
 
@@ -14,9 +16,12 @@ vars() {
 }
 
 init_glider() {
-	lr35902_set_reg regA 09
-	lr35902_set_reg regD 03
-	lr35902_set_reg regE 03
+	local base_x=$GBOS_WIN_DRAWABLE_BASE_XT
+	local base_y=$GBOS_WIN_DRAWABLE_BASE_YT
+
+	lr35902_set_reg regA $GBOS_TILE_NUM_BLACK
+	lr35902_set_reg regD $base_y
+	lr35902_set_reg regE $(calc16_2 "$base_x+1")
 	lr35902_call $a_lay_tile_at_wtcoord
 }
 
