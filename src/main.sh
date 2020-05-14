@@ -98,6 +98,12 @@ GBOS_WST_BITNUM_EXE=1	# 実行ファイル実行中
 GBOS_WST_BITNUM_TXT=2	# テキストファイル表示中
 GBOS_WST_BITNUM_IMG=3	# 画像ファイル表示中
 
+# タイル描画キュー用定数
+GBOS_TDQ_FIRST=c300
+GBOS_TDQ_LAST=cefd
+GBOS_TDQ_END=cf00
+GBOS_TDQ_ENTRY_SIZE=03
+
 # 変数
 var_mouse_x=c000	# マウスカーソルX座標
 var_mouse_y=c001	# マウスカーソルY座標
@@ -128,6 +134,11 @@ var_view_img_nyt=c013	# view_img: 次に描画するウィンドウタイル座�
 var_view_img_nxt=c014	# view_img: 次に描画するウィンドウタイル座標X
 var_win_stat=c015	# ウィンドウステータス
 var_view_dir_file_th=c016	# view_dir: 表示するのは何番目のファイルか(0始まり)
+var_tdq_head_bh=c017	# tdq.head[7:0]
+var_tdq_head_th=c018	# tdq.head[15:8]
+var_tdq_tail_bh=c019	# tdq.tail[7:0]
+var_tdq_tail_th=c01a	# tdq.tail[15:8]
+var_tdq_is_empty=c01b	# tdq.is_empty
 
 var_dbg_over_vblank=cf00	# vblank期間を超えたことを示すフラグ
 
@@ -201,9 +212,16 @@ fadr=$(calc16 "${a_wtcoord_to_tcoord}+${fsz}")
 a_lay_tile_at_tcoord=$(four_digits $fadr)
 echo -e "a_lay_tile_at_tcoord=$a_lay_tile_at_tcoord" >>$MAP_FILE_NAME
 f_lay_tile_at_tcoord() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regHL
+
 	lr35902_call $a_tcoord_to_addr
 	lr35902_copy_to_ptrHL_from regA
 
+	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regAF
 	lr35902_return
 }
 
@@ -2211,6 +2229,16 @@ init() {
 	# - ウィンドウステータスをディレクトリ表示中で初期化
 	lr35902_set_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
 	lr35902_copy_to_addr_from_regA $var_win_stat
+	# - tdq.head = tdq.tail = TDQ_FIRST
+	lr35902_set_reg regA $(echo $GBOS_TDQ_FIRST | cut -c3-4)
+	lr35902_copy_to_addr_from_regA $var_tdq_head_bh
+	lr35902_copy_to_addr_from_regA $var_tdq_tail_bh
+	lr35902_set_reg regA $(echo $GBOS_TDQ_FIRST | cut -c1-2)
+	lr35902_copy_to_addr_from_regA $var_tdq_head_th
+	lr35902_copy_to_addr_from_regA $var_tdq_tail_th
+	# - tdq.is_empty = 1
+	lr35902_set_reg regA 01
+	lr35902_copy_to_addr_from_regA $var_tdq_is_empty
 
 	# LCD再開
 	lr35902_set_reg regA $(calc16 "${GBOS_LCDC_BASE}+${GB_LCDC_BIT_DE}")
@@ -2448,6 +2476,98 @@ btn_release_handler() {
 	cat src/btn_release_handler.2.o
 }
 
+# タイル描画キュー処理
+# 書き換え不可レジスタ: regD
+# (変更する場合はpush/popすること)
+tdq_handler() {
+	lr35902_copy_to_regA_from_addr $var_tdq_is_empty
+	lr35902_compare_regA_and 00
+	(
+		# A != 0x00 (tdq is not empty)
+
+		# push
+		lr35902_push_reg regDE
+
+		# HL = tdq.head
+		lr35902_copy_to_regA_from_addr $var_tdq_head_bh
+		lr35902_copy_to_from regL regA
+		lr35902_copy_to_regA_from_addr $var_tdq_head_th
+		lr35902_copy_to_from regH regA
+
+		# E = (HL++)
+		lr35902_copyinc_to_regA_from_ptrHL
+		lr35902_copy_to_from regE regA
+		# D = (HL++)
+		lr35902_copyinc_to_regA_from_ptrHL
+		lr35902_copy_to_from regD regA
+		# A = (HL++)
+		lr35902_copyinc_to_regA_from_ptrHL
+
+		# lay_tile_at_tcoord()
+		lr35902_call $a_lay_tile_at_tcoord
+
+		# L == TDQ_END[7:0] ?
+		lr35902_copy_to_from regA regL
+		lr35902_compare_regA_and $(echo $GBOS_TDQ_END | cut -c3-4)
+		(
+			# L == TDQ_END[7:0]
+
+			# H == TDQ_END[15:8] ?
+			lr35902_copy_to_from regA regH
+			lr35902_compare_regA_and $(echo $GBOS_TDQ_END | cut -c1-2)
+			(
+				# H == TDQ_END[15:8]
+
+				# HL = TDQ_FIRST
+				lr35902_set_reg regL $(echo $GBOS_TDQ_FIRST | cut -c3-4)
+				lr35902_set_reg regH $(echo $GBOS_TDQ_FIRST | cut -c1-2)
+			) >src/tdq_handler.5.o
+			local sz_5=$(stat -c '%s' src/tdq_handler.5.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
+			cat src/tdq_handler.5.o
+		) >src/tdq_handler.4.o
+		local sz_4=$(stat -c '%s' src/tdq_handler.4.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_4)
+		cat src/tdq_handler.4.o
+
+		# tdq.head = HL
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_tdq_head_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_tdq_head_th
+
+		# tdq.head[7:0] == tdq.tail[7:0] ?
+		lr35902_copy_to_regA_from_addr $var_tdq_tail_bh
+		lr35902_compare_regA_and regL
+		(
+			# tdq.head[7:0] == tdq.tail[7:0]
+
+			# tdq.head[15:8] == tdq.tail[15:8] ?
+			lr35902_copy_to_regA_from_addr $var_tdq_tail_th
+			lr35902_compare_regA_and regH
+			(
+				# tdq.head[15:8] == tdq.tail[15:8]
+
+				# tdq.is_empty = 1
+				lr35902_set_reg regA 01
+				lr35902_copy_to_addr_from_regA $var_tdq_is_empty
+			) >src/tdq_handler.3.o
+			local sz_3=$(stat -c '%s' src/tdq_handler.3.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+			cat src/tdq_handler.3.o
+		) >src/tdq_handler.2.o
+		local sz_2=$(stat -c '%s' src/tdq_handler.2.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
+		cat src/tdq_handler.2.o
+
+		# pop
+		lr35902_pop_reg regDE
+	) >src/tdq_handler.1.o
+	local sz_1=$(stat -c '%s' src/tdq_handler.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
+	cat src/tdq_handler.1.o
+}
+
 # DASのビットに応じた処理を呼び出す
 # in : regA - DAS
 das_handler() {
@@ -2570,6 +2690,11 @@ event_driven() {
 	sz=$(stat -c '%s' src/event_driven.1.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
 	cat src/event_driven.1.o
+
+	# [タイル描画キュー処理]
+	tdq_handler
+
+	# [描画アクション(DA)あるいはボタンリリース処理]
 
 	# DASに何らかのビットがセットされているか
 	lr35902_copy_to_regA_from_addr $var_draw_act_stat
