@@ -99,6 +99,11 @@ GBOS_WST_BITNUM_EXE=1	# 実行ファイル実行中
 GBOS_WST_BITNUM_TXT=2	# テキストファイル表示中
 GBOS_WST_BITNUM_IMG=3	# 画像ファイル表示中
 
+# タイルミラー領域
+GBOS_TMRR_BASE=dc00	# タイルミラー領域ベースアドレス
+GBOS_TMRR_BASE_TH=dc	# タイルミラー領域ベースアドレス(上位8ビット)
+GBOS_TOFS_MASK_TH=03	# タイルアドレスオフセット部マスク(上位8ビット)
+
 # タイル描画キュー用定数
 GBOS_TDQ_FIRST=c300
 GBOS_TDQ_LAST=cefd
@@ -2471,8 +2476,17 @@ tdq_handler() {
 			# A = (HL++)
 			lr35902_copyinc_to_regA_from_ptrHL
 
-			# lay_tile_at_tcoord()
-			lr35902_call $a_lay_tile_at_tcoord
+			# (DE) = A
+			lr35902_copy_to_from ptrDE regA
+
+			# タイルミラー領域(0xDC00-)更新
+			lr35902_copy_to_from regB regA
+			lr35902_copy_to_from regA regD
+			lr35902_and_to_regA $GBOS_TOFS_MASK_TH
+			lr35902_add_to_regA $GBOS_TMRR_BASE_TH
+			lr35902_copy_to_from regD regA
+			lr35902_copy_to_from regA regB
+			lr35902_copy_to_from ptrDE regA
 
 			# L == TDQ_END[7:0] ?
 			lr35902_copy_to_from regA regL
