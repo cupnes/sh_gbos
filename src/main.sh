@@ -103,6 +103,7 @@ GBOS_TDQ_FIRST=c300
 GBOS_TDQ_LAST=cefd
 GBOS_TDQ_END=cf00
 GBOS_TDQ_ENTRY_SIZE=03
+GBOS_TDQ_MAX_DRAW_TILES=02
 
 # 変数
 var_mouse_x=c000	# マウスカーソルX座標
@@ -2494,71 +2495,98 @@ tdq_handler() {
 		lr35902_copy_to_regA_from_addr $var_tdq_head_th
 		lr35902_copy_to_from regH regA
 
-		# E = (HL++)
-		lr35902_copyinc_to_regA_from_ptrHL
-		lr35902_copy_to_from regE regA
-		# D = (HL++)
-		lr35902_copyinc_to_regA_from_ptrHL
-		lr35902_copy_to_from regD regA
-		# A = (HL++)
-		lr35902_copyinc_to_regA_from_ptrHL
+		# 1周期の最大描画タイル数をCへ設定
+		lr35902_set_reg regC $GBOS_TDQ_MAX_DRAW_TILES
 
-		# lay_tile_at_tcoord()
-		lr35902_call $a_lay_tile_at_tcoord
-
-		# L == TDQ_END[7:0] ?
-		lr35902_copy_to_from regA regL
-		lr35902_compare_regA_and $(echo $GBOS_TDQ_END | cut -c3-4)
 		(
-			# L == TDQ_END[7:0]
+			# E = (HL++)
+			lr35902_copyinc_to_regA_from_ptrHL
+			lr35902_copy_to_from regE regA
+			# D = (HL++)
+			lr35902_copyinc_to_regA_from_ptrHL
+			lr35902_copy_to_from regD regA
+			# A = (HL++)
+			lr35902_copyinc_to_regA_from_ptrHL
 
-			# H == TDQ_END[15:8] ?
+			# lay_tile_at_tcoord()
+			lr35902_call $a_lay_tile_at_tcoord
+
+			# L == TDQ_END[7:0] ?
+			lr35902_copy_to_from regA regL
+			lr35902_compare_regA_and $(echo $GBOS_TDQ_END | cut -c3-4)
+			(
+				# L == TDQ_END[7:0]
+
+				# H == TDQ_END[15:8] ?
+				lr35902_copy_to_from regA regH
+				lr35902_compare_regA_and $(echo $GBOS_TDQ_END | cut -c1-2)
+				(
+					# H == TDQ_END[15:8]
+
+					# HL = TDQ_FIRST
+					lr35902_set_reg regL $(echo $GBOS_TDQ_FIRST | cut -c3-4)
+					lr35902_set_reg regH $(echo $GBOS_TDQ_FIRST | cut -c1-2)
+				) >src/tdq_handler.5.o
+				local sz_5=$(stat -c '%s' src/tdq_handler.5.o)
+				lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
+				cat src/tdq_handler.5.o
+			) >src/tdq_handler.4.o
+			local sz_4=$(stat -c '%s' src/tdq_handler.4.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_4)
+			cat src/tdq_handler.4.o
+
+			# tdq.head = HL
+			lr35902_copy_to_from regA regL
+			lr35902_copy_to_addr_from_regA $var_tdq_head_bh
 			lr35902_copy_to_from regA regH
-			lr35902_compare_regA_and $(echo $GBOS_TDQ_END | cut -c1-2)
+			lr35902_copy_to_addr_from_regA $var_tdq_head_th
+
+			# is_emptyを設定したか否かを判別するフラグとしてBに初期値設定
+			lr35902_set_reg regB 01
+
+			# tdq.head[7:0] == tdq.tail[7:0] ?
+			lr35902_copy_to_regA_from_addr $var_tdq_tail_bh
+			lr35902_compare_regA_and regL
 			(
-				# H == TDQ_END[15:8]
+				# tdq.head[7:0] == tdq.tail[7:0]
 
-				# HL = TDQ_FIRST
-				lr35902_set_reg regL $(echo $GBOS_TDQ_FIRST | cut -c3-4)
-				lr35902_set_reg regH $(echo $GBOS_TDQ_FIRST | cut -c1-2)
-			) >src/tdq_handler.5.o
-			local sz_5=$(stat -c '%s' src/tdq_handler.5.o)
-			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
-			cat src/tdq_handler.5.o
-		) >src/tdq_handler.4.o
-		local sz_4=$(stat -c '%s' src/tdq_handler.4.o)
-		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_4)
-		cat src/tdq_handler.4.o
+				# tdq.head[15:8] == tdq.tail[15:8] ?
+				lr35902_copy_to_regA_from_addr $var_tdq_tail_th
+				lr35902_compare_regA_and regH
+				(
+					# tdq.head[15:8] == tdq.tail[15:8]
 
-		# tdq.head = HL
-		lr35902_copy_to_from regA regL
-		lr35902_copy_to_addr_from_regA $var_tdq_head_bh
-		lr35902_copy_to_from regA regH
-		lr35902_copy_to_addr_from_regA $var_tdq_head_th
+					# tdq.is_empty = 1
+					lr35902_set_reg regA 01
+					lr35902_copy_to_addr_from_regA $var_tdq_is_empty
 
-		# tdq.head[7:0] == tdq.tail[7:0] ?
-		lr35902_copy_to_regA_from_addr $var_tdq_tail_bh
-		lr35902_compare_regA_and regL
-		(
-			# tdq.head[7:0] == tdq.tail[7:0]
+					# is_emptyを設定した旨をBで示す
+					lr35902_clear_reg regB
+				) >src/tdq_handler.3.o
+				local sz_3=$(stat -c '%s' src/tdq_handler.3.o)
+				lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+				cat src/tdq_handler.3.o
+			) >src/tdq_handler.2.o
+			local sz_2=$(stat -c '%s' src/tdq_handler.2.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
+			cat src/tdq_handler.2.o
 
-			# tdq.head[15:8] == tdq.tail[15:8] ?
-			lr35902_copy_to_regA_from_addr $var_tdq_tail_th
-			lr35902_compare_regA_and regH
-			(
-				# tdq.head[15:8] == tdq.tail[15:8]
+			# tdqが空だったらpopまでジャンプ
+			# デクリメント命令サイズ(1)+相対ジャンプ命令サイズ(2)=3
+			lr35902_copy_to_from regA regB
+			lr35902_compare_regA_and 00
+			lr35902_rel_jump_with_cond Z 03
+		) >src/tdq_handler.6.o
+		cat src/tdq_handler.6.o
+		local sz_6=$(stat -c '%s' src/tdq_handler.6.o)
 
-				# tdq.is_empty = 1
-				lr35902_set_reg regA 01
-				lr35902_copy_to_addr_from_regA $var_tdq_is_empty
-			) >src/tdq_handler.3.o
-			local sz_3=$(stat -c '%s' src/tdq_handler.3.o)
-			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
-			cat src/tdq_handler.3.o
-		) >src/tdq_handler.2.o
-		local sz_2=$(stat -c '%s' src/tdq_handler.2.o)
-		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
-		cat src/tdq_handler.2.o
+		# Cをデクリメント
+		lr35902_dec regC
+
+		# C != 0 なら繰り返す
+		# tdq_handler.6.oのサイズに
+		# デクリメント命令サイズと相対ジャンプ命令サイズを足す
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_6+3)))
 
 		# pop
 		lr35902_pop_reg regDE
@@ -2607,7 +2635,10 @@ das_handler() {
 		lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
 		(
 			# run_exeがセットされていた場合
+			# TIMA = 01
 			lr35902_call $a_run_exe_cyc
+			# TIMA = 02
+			# (* (/ 1 16384.0) 1000)0.06103515625 ms
 		) >src/das_handler.7.o
 		local sz_7=$(stat -c '%s' src/das_handler.7.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_7)
@@ -2699,6 +2730,7 @@ event_driven() {
 	# DASに何らかのビットがセットされているか
 	lr35902_copy_to_regA_from_addr $var_draw_act_stat
 	lr35902_compare_regA_and 00
+	# TIMA = 01
 	(
 		# DASに何らかのビットがセットされていた場合の処理
 		das_handler
