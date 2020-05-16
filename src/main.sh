@@ -101,6 +101,7 @@ GBOS_WST_BITNUM_IMG=3	# 画像ファイル表示中
 
 # タイルミラー領域
 GBOS_TMRR_BASE=dc00	# タイルミラー領域ベースアドレス
+GBOS_TMRR_BASE_BH=00	# タイルミラー領域ベースアドレス(下位8ビット)
 GBOS_TMRR_BASE_TH=dc	# タイルミラー領域ベースアドレス(上位8ビット)
 GBOS_TOFS_MASK_TH=03	# タイルアドレスオフセット部マスク(上位8ビット)
 
@@ -2120,6 +2121,23 @@ proc_bar_end() {
 	fi
 }
 
+# タイルミラー領域を空白タイルで初期化
+init_tmrr() {
+	lr35902_set_reg regL $GBOS_TMRR_BASE_BH
+	lr35902_set_reg regH $GBOS_TMRR_BASE_TH
+
+	(
+		lr35902_set_reg regA $GBOS_TILE_NUM_SPC
+		lr35902_copyinc_to_ptrHL_from_regA
+
+		lr35902_copy_to_from regA regH
+		lr35902_compare_regA_and e0
+	) >src/init_tmrr.1.o
+	cat src/init_tmrr.1.o
+	local sz_1=$(stat -c '%s' src/init_tmrr.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+}
+
 init() {
 	# 割り込みは一旦無効にする
 	lr35902_disable_interrupts
@@ -2208,6 +2226,9 @@ init() {
 	# - tdq.is_empty = 1
 	lr35902_set_reg regA 01
 	lr35902_copy_to_addr_from_regA $var_tdq_is_empty
+
+	# タイルミラー領域の初期化
+	init_tmrr
 
 	# LCD再開
 	lr35902_set_reg regA $(calc16 "${GBOS_LCDC_BASE}+${GB_LCDC_BIT_DE}")
