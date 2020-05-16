@@ -36,6 +36,6 @@ var_tdq_head_bh=c017	# tdq.head[7:0]
 var_tdq_head_th=c018	# tdq.head[15:8]
 var_tdq_tail_bh=c019	# tdq.tail[7:0]
 var_tdq_tail_th=c01a	# tdq.tail[15:8]
-var_tdq_is_empty=c01b	# tdq.is_empty
+var_tdq_stat=c01b	# tdq.stat
 
 var_dbg_over_vblank=cf00	# vblank期間を超えたことを示すフラグ

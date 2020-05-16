@@ -7,6 +7,7 @@ SRC_MAIN_SH=true
 . include/vars.sh
 . include/tiles.sh
 . include/gbos.sh
+. include/tdq.sh
 . src/tiles.sh
 
 rm -f $MAP_FILE_NAME
@@ -104,13 +105,6 @@ GBOS_TMRR_BASE=dc00	# タイルミラー領域ベースアドレス
 GBOS_TMRR_BASE_BH=00	# タイルミラー領域ベースアドレス(下位8ビット)
 GBOS_TMRR_BASE_TH=dc	# タイルミラー領域ベースアドレス(上位8ビット)
 GBOS_TOFS_MASK_TH=03	# タイルアドレスオフセット部マスク(上位8ビット)
-
-# タイル描画キュー用定数
-GBOS_TDQ_FIRST=c300
-GBOS_TDQ_LAST=cefd
-GBOS_TDQ_END=cf00
-GBOS_TDQ_ENTRY_SIZE=0a
-GBOS_TDQ_MAX_DRAW_TILES=04
 
 # タイル座標をアドレスへ変換
 # in : regD  - タイル座標Y
@@ -2223,9 +2217,9 @@ init() {
 	lr35902_set_reg regA $(echo $GBOS_TDQ_FIRST | cut -c1-2)
 	lr35902_copy_to_addr_from_regA $var_tdq_head_th
 	lr35902_copy_to_addr_from_regA $var_tdq_tail_th
-	# - tdq.is_empty = 1
+	# - tdq.stat = is_empty
 	lr35902_set_reg regA 01
-	lr35902_copy_to_addr_from_regA $var_tdq_is_empty
+	lr35902_copy_to_addr_from_regA $var_tdq_stat
 
 	# タイルミラー領域の初期化
 	init_tmrr
@@ -2470,10 +2464,10 @@ btn_release_handler() {
 # 書き換え不可レジスタ: regD
 # (変更する場合はpush/popすること)
 tdq_handler() {
-	lr35902_copy_to_regA_from_addr $var_tdq_is_empty
-	lr35902_compare_regA_and 00
+	lr35902_copy_to_regA_from_addr $var_tdq_stat
+	lr35902_test_bitN_of_reg $GBOS_TDQ_STAT_BITNUM_EMPTY regA
 	(
-		# A != 0x00 (tdq is not empty)
+		# tdq is not empty
 
 		# push
 		lr35902_push_reg regDE
@@ -2539,9 +2533,6 @@ tdq_handler() {
 			lr35902_copy_to_from regA regH
 			lr35902_copy_to_addr_from_regA $var_tdq_head_th
 
-			# is_emptyを設定したか否かを判別するフラグとしてBに初期値設定
-			lr35902_set_reg regB 01
-
 			# tdq.head[7:0] == tdq.tail[7:0] ?
 			lr35902_copy_to_regA_from_addr $var_tdq_tail_bh
 			lr35902_compare_regA_and regL
@@ -2554,12 +2545,14 @@ tdq_handler() {
 				(
 					# tdq.head[15:8] == tdq.tail[15:8]
 
-					# tdq.is_empty = 1
+					# tdq.stat = empty
 					lr35902_set_reg regA 01
-					lr35902_copy_to_addr_from_regA $var_tdq_is_empty
+					lr35902_copy_to_addr_from_regA $var_tdq_stat
 
-					# is_emptyを設定した旨をBで示す
-					lr35902_clear_reg regB
+					# popまでジャンプ
+					# デクリメント命令サイズ(1)+相対ジャンプ命令サイズ(2)
+					# +レジスタAクリアサイズ(1)+tdq.stat設定サイズ(3)=7
+					lr35902_rel_jump 07
 				) >src/tdq_handler.3.o
 				local sz_3=$(stat -c '%s' src/tdq_handler.3.o)
 				lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
@@ -2568,12 +2561,6 @@ tdq_handler() {
 			local sz_2=$(stat -c '%s' src/tdq_handler.2.o)
 			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
 			cat src/tdq_handler.2.o
-
-			# tdqが空だったらpopまでジャンプ
-			# デクリメント命令サイズ(1)+相対ジャンプ命令サイズ(2)=3
-			lr35902_copy_to_from regA regB
-			lr35902_compare_regA_and 00
-			lr35902_rel_jump_with_cond Z 03
 		) >src/tdq_handler.6.o
 		cat src/tdq_handler.6.o
 		local sz_6=$(stat -c '%s' src/tdq_handler.6.o)
@@ -2585,6 +2572,10 @@ tdq_handler() {
 		# tdq_handler.6.oのサイズに
 		# デクリメント命令サイズと相対ジャンプ命令サイズを足す
 		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_6+3)))
+
+		# tdq.stat = 0
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $var_tdq_stat
 
 		# pop
 		lr35902_pop_reg regDE
