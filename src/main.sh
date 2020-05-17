@@ -1758,6 +1758,47 @@ f_run_exe_cyc() {
 	lr35902_return
 }
 
+# タイル座標をミラーアドレスへ変換
+# in : regD  - タイル座標Y
+#      regE  - タイル座標X
+# out: regHL - dc00h〜のアドレスを格納
+f_run_exe_cyc >src/f_run_exe_cyc.o
+fsz=$(to16 $(stat -c '%s' src/f_run_exe_cyc.o))
+fadr=$(calc16 "${a_run_exe_cyc}+${fsz}")
+a_tcoord_to_mrraddr=$(four_digits $fadr)
+echo -e "a_tcoord_to_mrraddr=$a_tcoord_to_mrraddr" >>$MAP_FILE_NAME
+f_tcoord_to_mrraddr() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+
+	local sz
+	lr35902_set_reg regHL $GBOS_TMRR_BASE
+	lr35902_clear_reg regA
+	lr35902_compare_regA_and regD
+	(
+		lr35902_set_reg regBC $(four_digits $GB_SC_WIDTH_T)
+		(
+			lr35902_add_to_regHL regBC
+			lr35902_dec regD
+		) >src/f_tcoord_to_mrraddr.1.o
+		cat src/f_tcoord_to_mrraddr.1.o
+		sz=$(stat -c '%s' src/f_tcoord_to_mrraddr.1.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+	) >src/f_tcoord_to_mrraddr.2.o
+	sz=$(stat -c '%s' src/f_tcoord_to_mrraddr.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
+	cat src/f_tcoord_to_mrraddr.2.o
+	lr35902_add_to_regHL regDE
+
+	# pop & return
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -1801,6 +1842,7 @@ global_functions() {
 	f_check_click_icon_area_y
 	f_run_exe
 	f_run_exe_cyc
+	f_tcoord_to_mrraddr
 }
 
 gbos_vec() {

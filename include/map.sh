@@ -24,3 +24,4 @@ a_check_click_icon_area_x=1337
 a_check_click_icon_area_y=136D
 a_run_exe=13A3
 a_run_exe_cyc=13C3
+a_tcoord_to_mrraddr=13C9
