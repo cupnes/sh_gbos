@@ -11,11 +11,37 @@ set -uex
 . include/tdq.sh
 
 VARS_BASE=$GB_WRAM1_BASE	# make_bin()で更新する
+LOCAL_FUNCS_BASE=$(calc16 "$VARS_BASE+100")	# make_bin()で更新する
+
+local_map_file=map.sh
+rm -f $local_map_file
 
 vars() {
 	# 汎用フラグ変数
 	echo -en '\x00'	# 全て0
-	echo -en '\x00'
+}
+
+vars_map() {
+	# 汎用フラグ変数
+	var_general_flgs=$VARS_BASE
+	echo -e "var_general_flgs=$var_general_flgs" >>$local_map_file
+}
+
+# 指定したセルの生死を取得
+# in : regD  - タイル座標Y
+#      regE  - タイル座標X
+# out: regA  - 生(=1)死(=0)
+f_get_cell_is_alive() {
+	# D < $GBOS_WIN_DRAWABLE_BASE_YT だったらreturn
+}
+
+local_functions() {
+	f_get_cell_is_alive
+}
+
+local_functions_map() {
+	a_get_cell_is_alive=$LOCAL_FUNCS_BASE
+	echo -e "a_get_cell_is_alive=$a_get_cell_is_alive" >>$local_map_file
 }
 
 init_glider() {
@@ -129,11 +155,21 @@ tdq_enqueue() {
 	cat tdq_enqueue.5.o
 }
 
+# 指定した座標のセルを更新
+# in : regD  - タイル座標Y
+#      regE  - タイル座標X
+update_cell() {
+	lr35902_call $a_tcoord_to_mrraddr
+}
+
 main() {
 	local flg_bitnum_inited=0
 
 	# push
 	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
 
 	# フラグ変数の初期化済みフラグチェック
 	lr35902_copy_to_regA_from_addr $VARS_BASE
@@ -144,34 +180,9 @@ main() {
 
 	(
 		# 定常処理
-
-		local var_blink_tile_flg=$(calc16 "$VARS_BASE+1")
-		lr35902_copy_to_regA_from_addr $var_blink_tile_flg
-		lr35902_xor_to_regA 01
-		(
-			# A == 0
-			lr35902_set_reg regB $GBOS_TILE_NUM_SPC
-		) >main.4.o
-		(
-			# A != 0
-			lr35902_set_reg regB $GBOS_TILE_NUM_BLACK
-
-			# A == 0 の処理を飛ばす
-			local sz_4=$(stat -c '%s' main.4.o)
-			lr35902_rel_jump $(two_digits_d $sz_4)
-		) >main.3.o
-		local sz_3=$(stat -c '%s' main.3.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
-		cat main.3.o	# A != 0
-		cat main.4.o	# A == 0
-		lr35902_copy_to_addr_from_regA $var_blink_tile_flg
-
-		local blink_tile_addr_bh=66
-		local blink_tile_addr_th=98
-		lr35902_set_reg regE $blink_tile_addr_bh
-		lr35902_set_reg regD $blink_tile_addr_th
-
-		tdq_enqueue
+		lr35902_set_reg regD 03
+		lr35902_set_reg regE 02
+		update_cell
 	) >main.2.o
 
 	(
@@ -194,6 +205,9 @@ main() {
 	cat main.2.o
 
 	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
 	lr35902_return
 }
@@ -201,6 +215,9 @@ main() {
 make_bin() {
 	# vars.o生成
 	vars >vars.o
+
+	# local_functions.o生成
+	local_functions >local_functions.o
 
 	# main.oのサイズ確認
 	main >main.o
