@@ -10,21 +10,22 @@ set -uex
 . include/gbos.sh
 . include/tdq.sh
 
-VARS_BASE=$GB_WRAM1_BASE	# make_bin()で更新する
-LOCAL_FUNCS_BASE=$(calc16 "$VARS_BASE+100")	# make_bin()で更新する
+# アプリのメモリマップ
+APP_MAIN_SZ=0500
+APP_VARS_SZ=0200
+APP_FUNCS_SZ=0500
+APP_MAIN_BASE=$GB_WRAM1_BASE
+APP_VARS_BASE=$(calc16 "$APP_MAIN_BASE+$APP_MAIN_SZ")
+APP_FUNCS_BASE=$(calc16 "$APP_VARS_BASE+$APP_VARS_SZ")
 
-local_map_file=map.sh
-rm -f $local_map_file
+map_file=map.sh
+rm -f $map_file
 
 vars() {
 	# 汎用フラグ変数
+	var_general_flgs=$APP_VARS_BASE
+	echo -e "var_general_flgs=$var_general_flgs" >>$map_file
 	echo -en '\x00'	# 全て0
-}
-
-vars_map() {
-	# 汎用フラグ変数
-	var_general_flgs=$VARS_BASE
-	echo -e "var_general_flgs=$var_general_flgs" >>$local_map_file
 }
 
 # 指定したセルの生死を取得
@@ -35,13 +36,11 @@ f_get_cell_is_alive() {
 	# D < $GBOS_WIN_DRAWABLE_BASE_YT だったらreturn
 }
 
-local_functions() {
+funcs() {
+	# 指定したセルの生死を取得
+	a_get_cell_is_alive=$APP_FUNCS_BASE
+	echo -e "a_get_cell_is_alive=$a_get_cell_is_alive" >>$map_file
 	f_get_cell_is_alive
-}
-
-local_functions_map() {
-	a_get_cell_is_alive=$LOCAL_FUNCS_BASE
-	echo -e "a_get_cell_is_alive=$a_get_cell_is_alive" >>$local_map_file
 }
 
 init_glider() {
@@ -213,25 +212,33 @@ main() {
 }
 
 make_bin() {
-	# vars.o生成
+	local file_sz
+	local area_sz
+	local pad_sz
+
+	# メインプログラム領域
+	main >main.o
+	cat main.o
+	file_sz=$(stat -c '%s' main.o)
+	area_sz=$(echo "ibase=16;$APP_MAIN_SZ" | bc)
+	pad_sz=$((area_sz - file_sz))
+	dd if=/dev/zero bs=1 count=$pad_sz
+
+	# 変数領域
 	vars >vars.o
+	cat vars.o
+	file_sz=$(stat -c '%s' vars.o)
+	area_sz=$(echo "ibase=16;$APP_VARS_SZ" | bc)
+	pad_sz=$((area_sz - file_sz))
+	dd if=/dev/zero bs=1 count=$pad_sz
 
-	# local_functions.o生成
-	local_functions >local_functions.o
-
-	# main.oのサイズ確認
-	main >main.o
-	local sz_main=$(stat -c '%s' main.o)
-	local sz_main16=$(to16 $sz_main)
-
-	# 変数領域ベースアドレス算出
-	VARS_BASE=$(calc16 "$VARS_BASE + $sz_main16")
-
-	# main.o再生成
-	main >main.o
-
-	# 結合
-	cat main.o vars.o
+	# 関数領域
+	funcs >funcs.o
+	cat funcs.o
+	file_sz=$(stat -c '%s' funcs.o)
+	area_sz=$(echo "ibase=16;$APP_FUNCS_SZ" | bc)
+	pad_sz=$((area_sz - file_sz))
+	dd if=/dev/zero bs=1 count=$pad_sz
 }
 
 make_bin
