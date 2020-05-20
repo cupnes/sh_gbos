@@ -1712,20 +1712,41 @@ f_run_exe() {
 	lr35902_call $a_clr_win
 
 	# RAM(0xD000-)へロード
-	## TODO ファイルサイズの2バイト目を使う
 	lr35902_copyinc_to_regA_from_ptrHL
-	lr35902_inc regHL
 	lr35902_copy_to_from regC regA
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_copy_to_from regB regA
 	lr35902_set_reg regDE $GBOS_APP_MEM_BASE
+	lr35902_push_reg regHL
+	lr35902_copy_to_from regL regE
+	lr35902_copy_to_from regH regD
+	lr35902_add_to_regHL regBC
+	lr35902_copy_to_from regC regL
+	lr35902_copy_to_from regB regH
+	lr35902_pop_reg regHL
 	(
-		lr35902_copyinc_to_regA_from_ptrHL
-		lr35902_copy_to_from ptrDE regA
-		lr35902_inc regDE
-		lr35902_dec regC
-	) >src/f_run_exe.1.o
-	cat src/f_run_exe.1.o
-	local sz_1=$(stat -c '%s' src/f_run_exe.1.o)
-	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+		(
+			lr35902_copyinc_to_regA_from_ptrHL
+			lr35902_copy_to_from ptrDE regA
+			lr35902_inc regDE
+
+			# DE != BC の間ループする
+
+			# D == B ?
+			lr35902_copy_to_from regA regD
+			lr35902_compare_regA_and regB
+		) >src/f_run_exe.1.o
+		cat src/f_run_exe.1.o
+		local sz_1=$(stat -c '%s' src/f_run_exe.1.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+
+		# E == C ?
+		lr35902_copy_to_from regA regE
+		lr35902_compare_regA_and regC
+	) >src/f_run_exe.2.o
+	cat src/f_run_exe.2.o
+	local sz_2=$(stat -c '%s' src/f_run_exe.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_2 + 2)))
 
 	# DASにrun_exeのビットをセット
 	lr35902_copy_to_regA_from_addr $var_draw_act_stat
