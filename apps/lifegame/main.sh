@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# TODO 1バイト分のファイルサイズしかロードしない件を直す必要がある
-
 set -uex
 # set -ue
 
@@ -36,6 +34,7 @@ vars() {
 # out: regA  - 生(=1)死(=0)
 f_get_cell_is_alive() {
 	# push
+	lr35902_set_reg regA 00	# 戻り値は死(0)で初期化
 	lr35902_push_reg regAF
 
 	lr35902_copy_to_from regA regD
@@ -94,6 +93,7 @@ f_get_cell_is_alive() {
 
 	# pop & return
 	lr35902_pop_reg regAF
+	lr35902_set_reg regA 01
 	lr35902_return
 }
 
