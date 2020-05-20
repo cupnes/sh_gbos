@@ -3,6 +3,11 @@
 set -uex
 # set -ue
 
+# TODO 最初の座標の8近傍の状態取得
+# TODO update_cellの無限ループをやめる
+# TODO init_gliderを遅延描画で実装
+# TODO ミラーの読み出しを始める前に1画面の描画完了を待つようにする
+
 . include/gb.sh
 . include/map.sh
 . include/vars.sh
