@@ -89,11 +89,31 @@ f_get_cell_is_alive() {
 	lr35902_rel_jump_with_cond C $(two_digits_d $sz_4)
 	cat f_get_cell_is_alive.4.o
 
-	# TODO
+	# push
+	lr35902_push_reg regHL
 
+	# (E, D) のミラータイル値を取得
+	lr35902_call $a_tcoord_to_mrraddr
+	lr35902_copy_to_from regA ptrHL
+
+	# 生死判定
+	lr35902_compare_regA_and $GBOS_TILE_NUM_SPC
+	(
+		# A != $GBOS_TILE_NUM_SPC (生)
+		lr35902_pop_reg regHL
+		lr35902_pop_reg regAF
+		lr35902_set_reg regA 01
+		lr35902_return
+	) >f_get_cell_is_alive.5.o
+	local sz_5=$(stat -c '%s' f_get_cell_is_alive.5.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_5)
+	cat f_get_cell_is_alive.5.o
+
+	# A == $GBOS_TILE_NUM_SPC (死)
 	# pop & return
+	lr35902_pop_reg regHL
 	lr35902_pop_reg regAF
-	lr35902_set_reg regA 01
+	lr35902_set_reg regA 00
 	lr35902_return
 }
 
