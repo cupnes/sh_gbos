@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# TODO 1バイト分のファイルサイズしかロードしない件を直す必要がある
+
 set -uex
 # set -ue
 
@@ -33,7 +35,66 @@ vars() {
 #      regE  - タイル座標X
 # out: regA  - 生(=1)死(=0)
 f_get_cell_is_alive() {
-	# D < $GBOS_WIN_DRAWABLE_BASE_YT だったらreturn
+	# push
+	lr35902_push_reg regAF
+
+	lr35902_copy_to_from regA regD
+
+	# D < $GBOS_WIN_DRAWABLE_BASE_YT ならreturn
+	# (D >= $GBOS_WIN_DRAWABLE_BASE_YT ならreturn処理をスキップ)
+	lr35902_compare_regA_and $GBOS_WIN_DRAWABLE_BASE_YT
+	(
+		# pop & return
+		lr35902_pop_reg regAF
+		lr35902_return
+	) >f_get_cell_is_alive.1.o
+	local sz_1=$(stat -c '%s' f_get_cell_is_alive.1.o)
+	lr35902_rel_jump_with_cond NC $(two_digits_d $sz_1)
+	cat f_get_cell_is_alive.1.o
+
+	# D >= ($GBOS_WIN_DRAWABLE_BASE_YT + $GBOS_WIN_DRAWABLE_HEIGHT_T) ならreturn
+	# (D < ($GBOS_WIN_DRAWABLE_BASE_YT + $GBOS_WIN_DRAWABLE_HEIGHT_T) ならreturn処理をスキップ)
+	lr35902_compare_regA_and $(calc16 "$GBOS_WIN_DRAWABLE_BASE_YT+$GBOS_WIN_DRAWABLE_HEIGHT_T")
+	(
+		# pop & return
+		lr35902_pop_reg regAF
+		lr35902_return
+	) >f_get_cell_is_alive.2.o
+	local sz_2=$(stat -c '%s' f_get_cell_is_alive.2.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_2)
+	cat f_get_cell_is_alive.2.o
+
+	lr35902_copy_to_from regA regE
+
+	# E < $GBOS_WIN_DRAWABLE_BASE_XT だったらreturn
+	# (E >= $GBOS_WIN_DRAWABLE_BASE_XT ならreturn処理をスキップ)
+	lr35902_compare_regA_and $GBOS_WIN_DRAWABLE_BASE_XT
+	(
+		# pop & return
+		lr35902_pop_reg regAF
+		lr35902_return
+	) >f_get_cell_is_alive.3.o
+	local sz_3=$(stat -c '%s' f_get_cell_is_alive.3.o)
+	lr35902_rel_jump_with_cond NC $(two_digits_d $sz_3)
+	cat f_get_cell_is_alive.3.o
+
+	# E >= ($GBOS_WIN_DRAWABLE_BASE_XT + $GBOS_WIN_DRAWABLE_WIDTH_T) ならreturn
+	# (E < ($GBOS_WIN_DRAWABLE_BASE_XT + $GBOS_WIN_DRAWABLE_WIDTH_T) ならreturn処理をスキップ)
+	lr35902_compare_regA_and $(calc16 "$GBOS_WIN_DRAWABLE_BASE_XT+$GBOS_WIN_DRAWABLE_WIDTH_T")
+	(
+		# pop & return
+		lr35902_pop_reg regAF
+		lr35902_return
+	) >f_get_cell_is_alive.4.o
+	local sz_4=$(stat -c '%s' f_get_cell_is_alive.4.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_4)
+	cat f_get_cell_is_alive.4.o
+
+	# TODO
+
+	# pop & return
+	lr35902_pop_reg regAF
+	lr35902_return
 }
 
 funcs() {
@@ -42,6 +103,9 @@ funcs() {
 	echo -e "a_get_cell_is_alive=$a_get_cell_is_alive" >>$map_file
 	f_get_cell_is_alive
 }
+# 変数設定のために空実行
+funcs >/dev/null
+rm -f $map_file
 
 init_glider() {
 	local base_x=$GBOS_WIN_DRAWABLE_BASE_XT
@@ -158,7 +222,12 @@ tdq_enqueue() {
 # in : regD  - タイル座標Y
 #      regE  - タイル座標X
 update_cell() {
-	lr35902_call $a_tcoord_to_mrraddr
+	(
+		lr35902_call $a_get_cell_is_alive
+	) >update_cell.1.o
+	cat update_cell.1.o
+	local sz_1=$(stat -c '%s' update_cell.1.o)
+	lr35902_rel_jump $(two_comp_d $((sz_1 + 2)))
 }
 
 main() {
@@ -171,7 +240,7 @@ main() {
 	lr35902_push_reg regHL
 
 	# フラグ変数の初期化済みフラグチェック
-	lr35902_copy_to_regA_from_addr $VARS_BASE
+	lr35902_copy_to_regA_from_addr $APP_VARS_BASE
 	lr35902_test_bitN_of_reg $flg_bitnum_inited regA
 
 	# フラグがセットされていたら(初期化済みだったら)、
@@ -189,9 +258,9 @@ main() {
 		init_glider
 
 		# 初期化済みフラグをセット
-		lr35902_copy_to_regA_from_addr $VARS_BASE
+		lr35902_copy_to_regA_from_addr $APP_VARS_BASE
 		lr35902_set_bitN_of_reg $flg_bitnum_inited regA
-		lr35902_copy_to_addr_from_regA $VARS_BASE
+		lr35902_copy_to_addr_from_regA $APP_VARS_BASE
 
 		# 定常処理をスキップ
 		local sz_2=$(stat -c '%s' main.2.o)
