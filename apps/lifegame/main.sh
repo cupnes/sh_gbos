@@ -243,16 +243,67 @@ tdq_enqueue() {
 	cat tdq_enqueue.5.o
 }
 
+# 指定したセルの8近傍の生きているセルの数を返す
+# in : regD  - タイル座標Y
+#      regE  - タイル座標X
+# out: regA  - 8近傍の生きているセルの数
+get_num_live_cells_8_neighbors() {
+	# カウンタクリア
+	lr35902_clear_reg regC
+
+	# get (X - 1, Y - 1)
+	lr35902_dec regD
+	lr35902_dec regE
+	lr35902_call $a_get_cell_is_alive
+	lr35902_copy_to_from regC regA
+
+	# get (X, Y - 1)
+	lr35902_inc regE
+	lr35902_call $a_get_cell_is_alive
+	lr35902_add_to_regA regC
+	lr35902_copy_to_from regC regA
+
+	# get (X + 1, Y - 1)
+	lr35902_inc regE
+	lr35902_call $a_get_cell_is_alive
+	lr35902_add_to_regA regC
+	lr35902_copy_to_from regC regA
+
+	# get (X + 1, Y)
+	lr35902_inc regD
+	lr35902_call $a_get_cell_is_alive
+	lr35902_add_to_regA regC
+	lr35902_copy_to_from regC regA
+
+	# get (X + 1, Y + 1)
+	lr35902_inc regD
+	lr35902_call $a_get_cell_is_alive
+	lr35902_add_to_regA regC
+	lr35902_copy_to_from regC regA
+
+	# get (X, Y + 1)
+	lr35902_dec regE
+	lr35902_call $a_get_cell_is_alive
+	lr35902_add_to_regA regC
+	lr35902_copy_to_from regC regA
+
+	# get (X - 1, Y + 1)
+	lr35902_dec regE
+	lr35902_call $a_get_cell_is_alive
+	lr35902_add_to_regA regC
+	lr35902_copy_to_from regC regA
+
+	# get (X - 1, Y)
+	lr35902_dec regD
+	lr35902_call $a_get_cell_is_alive
+	lr35902_add_to_regA regC
+}
+
 # 指定した座標のセルを更新
 # in : regD  - タイル座標Y
 #      regE  - タイル座標X
 update_cell() {
-	(
-		lr35902_call $a_get_cell_is_alive
-	) >update_cell.1.o
-	cat update_cell.1.o
-	local sz_1=$(stat -c '%s' update_cell.1.o)
-	lr35902_rel_jump $(two_comp_d $((sz_1 + 2)))
+	get_num_live_cells_8_neighbors
 }
 
 main() {
