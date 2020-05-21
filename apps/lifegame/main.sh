@@ -3,8 +3,6 @@
 set -uex
 # set -ue
 
-# TODO 最初の座標の8近傍の状態取得
-# TODO update_cellの無限ループをやめる
 # TODO init_gliderを遅延描画で実装
 # TODO ミラーの読み出しを始める前に1画面の描画完了を待つようにする
 
@@ -25,6 +23,10 @@ APP_FUNCS_BASE=$(calc16 "$APP_VARS_BASE+$APP_VARS_SZ")
 
 map_file=map.sh
 rm -f $map_file
+
+# 死んでいるセルのタイル番号は0である前提で作られている
+LG_DEAD_TILE_NO=$GBOS_TILE_NUM_SPC	# =0
+LG_LIVE_TILE_NO=$GBOS_TILE_NUM_BLACK
 
 vars() {
 	# 汎用フラグ変数
@@ -122,42 +124,17 @@ f_get_cell_is_alive() {
 	lr35902_return
 }
 
-funcs() {
-	# 指定したセルの生死を取得
-	a_get_cell_is_alive=$APP_FUNCS_BASE
-	echo -e "a_get_cell_is_alive=$a_get_cell_is_alive" >>$map_file
-	f_get_cell_is_alive
-}
-# 変数設定のために空実行
-funcs >/dev/null
-rm -f $map_file
-
-init_glider() {
-	local base_x=$GBOS_WIN_DRAWABLE_BASE_XT
-	local base_y=$GBOS_WIN_DRAWABLE_BASE_YT
-
-	lr35902_set_reg regA $GBOS_TILE_NUM_BLACK
-
-	lr35902_set_reg regD $base_y
-	lr35902_set_reg regE $(calc16_2 "$base_x+1")
-	lr35902_call $a_lay_tile_at_wtcoord
-
-	lr35902_set_reg regD $(calc16_2 "$base_y+1")
-	lr35902_set_reg regE $(calc16_2 "$base_x+2")
-	lr35902_call $a_lay_tile_at_wtcoord
-
-	lr35902_set_reg regC 03
-	lr35902_set_reg regD $(calc16_2 "$base_y+2")
-	lr35902_set_reg regE $base_x
-	lr35902_call $a_lay_tiles_at_wtcoord_to_right
-}
-
-# tdqへエントリを追加するマクロ
+# tdqへエントリを追加する
 # in : regB  - 配置するタイル番号
 #      regD  - VRAMアドレス[15:8]
 #      regE  - VRAMアドレス[7:0]
-tdq_enqueue() {
-	# TODO tdq.stat に is_full がセットされていたら以降の処理をスキップ
+f_tdq_enq() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
 	lr35902_copy_to_regA_from_addr $var_tdq_stat
 	lr35902_test_bitN_of_reg $GBOS_TDQ_STAT_BITNUM_FULL regA
 	(
@@ -241,6 +218,51 @@ tdq_enqueue() {
 	local sz_5=$(stat -c '%s' tdq_enqueue.5.o)
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
 	cat tdq_enqueue.5.o
+
+	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
+funcs() {
+	local fsz
+
+	# 指定したセルの生死を取得
+	a_get_cell_is_alive=$APP_FUNCS_BASE
+	echo -e "a_get_cell_is_alive=$a_get_cell_is_alive" >>$map_file
+	f_get_cell_is_alive
+
+	# tdqへエントリを追加する
+	f_get_cell_is_alive >f_get_cell_is_alive.o
+	fsz=$(to16 $(stat -c '%s' f_get_cell_is_alive.o))
+	a_tdq_enq=$(four_digits $(calc16 "${a_get_cell_is_alive}+${fsz}"))
+	f_tdq_enq
+}
+# 変数設定のために空実行
+funcs >/dev/null
+rm -f $map_file
+
+init_glider() {
+	local base_x=$GBOS_WIN_DRAWABLE_BASE_XT
+	local base_y=$GBOS_WIN_DRAWABLE_BASE_YT
+
+	lr35902_set_reg regA $GBOS_TILE_NUM_BLACK
+
+	lr35902_set_reg regD $base_y
+	lr35902_set_reg regE $(calc16_2 "$base_x+1")
+	lr35902_call $a_lay_tile_at_wtcoord
+
+	lr35902_set_reg regD $(calc16_2 "$base_y+1")
+	lr35902_set_reg regE $(calc16_2 "$base_x+2")
+	lr35902_call $a_lay_tile_at_wtcoord
+
+	lr35902_set_reg regC 03
+	lr35902_set_reg regD $(calc16_2 "$base_y+2")
+	lr35902_set_reg regE $base_x
+	lr35902_call $a_lay_tiles_at_wtcoord_to_right
 }
 
 # 指定したセルの8近傍の生きているセルの数を返す
@@ -297,13 +319,87 @@ get_num_live_cells_8_neighbors() {
 	lr35902_dec regD
 	lr35902_call $a_get_cell_is_alive
 	lr35902_add_to_regA regC
+
+	# (X, Y) へ戻す
+	lr35902_inc regE
 }
 
 # 指定した座標のセルを更新
 # in : regD  - タイル座標Y
 #      regE  - タイル座標X
 update_cell() {
+	# 8近傍の生きているセルの数をCへ取得
 	get_num_live_cells_8_neighbors
+	lr35902_copy_to_from regC regA
+
+	# 指定された座標のVRAMアドレスをHLへ取得
+	lr35902_call $a_tcoord_to_addr
+
+	# 指定されたセルの生死を確認
+	lr35902_call $a_get_cell_is_alive
+	lr35902_compare_regA_and 00
+	(
+		# 指定されたセルが死んでいる場合
+
+		# C == 3 ?
+		lr35902_copy_to_from regA regC
+		lr35902_compare_regA_and 03
+		(
+			# C == 3
+
+			# tdq.enq($LG_LIVE_TILE_NO, H, L)
+			lr35902_set_reg regB $LG_LIVE_TILE_NO
+			lr35902_copy_to_from regD regH
+			lr35902_copy_to_from regE regL
+			lr35902_call $a_tdq_enq
+		) >update_cell.3.o
+		local sz_3=$(stat -c '%s' update_cell.3.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+		cat update_cell.3.o
+	) >update_cell.1.o
+	(
+		# 指定されたセルが生きている場合
+
+		lr35902_copy_to_from regA regC
+
+		# C < 2 ?
+		lr35902_compare_regA_and 02
+		(
+			# C < 2
+
+			# tdq.enq($LG_DEAD_TILE_NO, H, L)
+			lr35902_set_reg regB $LG_DEAD_TILE_NO
+			lr35902_copy_to_from regD regH
+			lr35902_copy_to_from regE regL
+			lr35902_call $a_tdq_enq
+		) >update_cell.4.o
+		local sz_4=$(stat -c '%s' update_cell.4.o)
+		lr35902_rel_jump_with_cond NC $(two_digits_d $sz_4)
+		cat update_cell.4.o
+
+		# C >= 4 ?
+		lr35902_compare_regA_and 04
+		(
+			# C >= 4
+
+			# tdq.enq($LG_DEAD_TILE_NO, H, L)
+			lr35902_set_reg regB $LG_DEAD_TILE_NO
+			lr35902_copy_to_from regD regH
+			lr35902_copy_to_from regE regL
+			lr35902_call $a_tdq_enq
+		) >update_cell.5.o
+		local sz_5=$(stat -c '%s' update_cell.5.o)
+		lr35902_rel_jump_with_cond C $(two_digits_d $sz_5)
+		cat update_cell.5.o
+
+		# 死んでいる場合の処理を飛ばす
+		local sz_1=$(stat -c '%s' update_cell.1.o)
+		lr35902_rel_jump $(two_digits_d $sz_1)
+	) >update_cell.2.o
+	local sz_2=$(stat -c '%s' update_cell.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat update_cell.2.o
+	cat update_cell.1.o
 }
 
 main() {
