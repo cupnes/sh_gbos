@@ -3,8 +3,6 @@
 set -uex
 # set -ue
 
-# TODO 描画中周期(var_draw_cyc)と処理中周期(var_proc_cyc)の変数を用意
-# TODO init処理冒頭でvar_{draw,proc}_cycをゼロクリア
 # TODO 1周期分をtdqへ積み終わったらvar_draw_cycをインクリメントするエントリも積む
 #      「タイル番号」を「インクリメントした値」とし
 #      「アドレス」を「var_draw_cycのアドレス」にする
@@ -41,6 +39,16 @@ vars() {
 	var_general_flgs=$APP_VARS_BASE
 	echo -e "var_general_flgs=$var_general_flgs" >>$map_file
 	echo -en '\x00'	# 全て0
+
+	# 描画中周期変数
+	var_draw_cyc=$(calc16 "$var_general_flgs+1")
+	echo -e "var_draw_cyc=$var_draw_cyc" >>$map_file
+	echo -en '\x00'
+
+	# 処理中周期変数
+	var_proc_cyc=$(calc16 "$var_draw_cyc+1")
+	echo -e "var_proc_cyc=$var_proc_cyc" >>$map_file
+	echo -en '\x00'
 }
 
 # 指定したセルの生死を取得
