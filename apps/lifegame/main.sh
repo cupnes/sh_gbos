@@ -3,8 +3,16 @@
 set -uex
 # set -ue
 
-# TODO init_gliderを遅延描画で実装
-# TODO ミラーの読み出しを始める前に1画面の描画完了を待つようにする
+# TODO 描画中周期(var_draw_cyc)と処理中周期(var_proc_cyc)の変数を用意
+# TODO init処理冒頭でvar_{draw,proc}_cycをゼロクリア
+# TODO 1周期分をtdqへ積み終わったらvar_draw_cycをインクリメントするエントリも積む
+#      「タイル番号」を「インクリメントした値」とし
+#      「アドレス」を「var_draw_cycのアドレス」にする
+# TODO その周期の評価は (var_draw_cyc + 1) == var_proc_cyc になったら開始するようにする
+#      var_draw_cyc == var_proc_cyc なら何もせずreturn
+# TODO 全タイルの更新処理実装
+# TODO 各サイクルの時間評価
+# TODO 処理棒改善
 
 . include/gb.sh
 . include/map.sh
@@ -249,20 +257,42 @@ init_glider() {
 	local base_x=$GBOS_WIN_DRAWABLE_BASE_XT
 	local base_y=$GBOS_WIN_DRAWABLE_BASE_YT
 
-	lr35902_set_reg regA $GBOS_TILE_NUM_BLACK
+	lr35902_set_reg regB $GBOS_TILE_NUM_BLACK
 
 	lr35902_set_reg regD $base_y
 	lr35902_set_reg regE $(calc16_2 "$base_x+1")
-	lr35902_call $a_lay_tile_at_wtcoord
+	lr35902_call $a_tcoord_to_addr
+	lr35902_copy_to_from regD regH
+	lr35902_copy_to_from regE regL
+	lr35902_call $a_tdq_enq
 
 	lr35902_set_reg regD $(calc16_2 "$base_y+1")
 	lr35902_set_reg regE $(calc16_2 "$base_x+2")
-	lr35902_call $a_lay_tile_at_wtcoord
+	lr35902_call $a_tcoord_to_addr
+	lr35902_copy_to_from regD regH
+	lr35902_copy_to_from regE regL
+	lr35902_call $a_tdq_enq
 
-	lr35902_set_reg regC 03
 	lr35902_set_reg regD $(calc16_2 "$base_y+2")
 	lr35902_set_reg regE $base_x
-	lr35902_call $a_lay_tiles_at_wtcoord_to_right
+	lr35902_call $a_tcoord_to_addr
+	lr35902_copy_to_from regD regH
+	lr35902_copy_to_from regE regL
+	lr35902_call $a_tdq_enq
+
+	lr35902_set_reg regD $(calc16_2 "$base_y+2")
+	lr35902_set_reg regE $(calc16_2 "$base_x+1")
+	lr35902_call $a_tcoord_to_addr
+	lr35902_copy_to_from regD regH
+	lr35902_copy_to_from regE regL
+	lr35902_call $a_tdq_enq
+
+	lr35902_set_reg regD $(calc16_2 "$base_y+2")
+	lr35902_set_reg regE $(calc16_2 "$base_x+2")
+	lr35902_call $a_tcoord_to_addr
+	lr35902_copy_to_from regD regH
+	lr35902_copy_to_from regE regL
+	lr35902_call $a_tdq_enq
 }
 
 # 指定したセルの8近傍の生きているセルの数を返す
