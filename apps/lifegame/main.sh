@@ -50,6 +50,9 @@ vars() {
 	echo -e "var_proc_cyc=$var_proc_cyc" >>$map_file
 	echo -en '\x00'
 }
+# 変数設定のために空実行
+vars >/dev/null
+rm -f $map_file
 
 # 指定したセルの生死を取得
 # in : regD  - タイル座標Y
@@ -300,6 +303,12 @@ init_glider() {
 	lr35902_call $a_tcoord_to_addr
 	lr35902_copy_to_from regD regH
 	lr35902_copy_to_from regE regL
+	lr35902_call $a_tdq_enq
+
+	# var_draw_cycを1にするエントリを積む
+	lr35902_set_reg regB 01
+	lr35902_set_reg regD $(echo $var_draw_cyc | cut -c1-2)
+	lr35902_set_reg regE $(echo $var_draw_cyc | cut -c3-4)
 	lr35902_call $a_tdq_enq
 }
 
