@@ -6,8 +6,6 @@ set -uex
 # TODO 1周期分をtdqへ積み終わったらvar_draw_cycをインクリメントするエントリも積む
 #      「タイル番号」を「インクリメントした値」とし
 #      「アドレス」を「var_draw_cycのアドレス」にする
-# TODO その周期の評価は (var_draw_cyc + 1) == var_proc_cyc になったら開始するようにする
-#      var_draw_cyc == var_proc_cyc なら何もせずreturn
 # TODO 全タイルの更新処理実装
 # TODO 各サイクルの時間評価
 # TODO 処理棒改善
@@ -258,6 +256,7 @@ funcs() {
 	f_get_cell_is_alive >f_get_cell_is_alive.o
 	fsz=$(to16 $(stat -c '%s' f_get_cell_is_alive.o))
 	a_tdq_enq=$(four_digits $(calc16 "${a_get_cell_is_alive}+${fsz}"))
+	echo -e "a_tdq_enq=$a_tdq_enq" >>$map_file
 	f_tdq_enq
 }
 # 変数設定のために空実行
@@ -467,6 +466,25 @@ main() {
 
 	(
 		# 定常処理
+
+		# 描画中周期 == 処理中周期 だったら return
+		lr35902_copy_to_regA_from_addr $var_proc_cyc
+		lr35902_copy_to_from regB regA
+		lr35902_copy_to_regA_from_addr $var_draw_cyc
+		lr35902_compare_regA_and regB
+		(
+			# pop & return
+			lr35902_pop_reg regHL
+			lr35902_pop_reg regDE
+			lr35902_pop_reg regBC
+			lr35902_pop_reg regAF
+			lr35902_return
+		) >main.3.o
+		local sz_3=$(stat -c '%s' main.3.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+		cat main.3.o
+
+		# 更新処理
 		lr35902_set_reg regD 03
 		lr35902_set_reg regE 02
 		update_cell
