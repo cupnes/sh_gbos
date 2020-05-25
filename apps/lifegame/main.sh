@@ -489,10 +489,10 @@ main() {
 	(
 		# 定常処理
 
-		# 描画中周期 == 処理中周期 だったら return
-		lr35902_copy_to_regA_from_addr $var_proc_cyc
-		lr35902_copy_to_from regB regA
+		# 処理中周期(A) < 描画中周期(B) だったらreturn処理をスキップ
 		lr35902_copy_to_regA_from_addr $var_draw_cyc
+		lr35902_copy_to_from regB regA
+		lr35902_copy_to_regA_from_addr $var_proc_cyc
 		lr35902_compare_regA_and regB
 		(
 			# pop & return
@@ -503,7 +503,7 @@ main() {
 			lr35902_return
 		) >main.3.o
 		local sz_3=$(stat -c '%s' main.3.o)
-		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+		lr35902_rel_jump_with_cond C $(two_digits_d $sz_3)
 		cat main.3.o
 
 		# 更新処理
@@ -533,6 +533,8 @@ main() {
 
 		# var_draw_cycをインクリメントするエントリを積む
 		lr35902_copy_to_regA_from_addr $var_draw_cyc
+		lr35902_inc regA
+		lr35902_copy_to_from regB regA
 		lr35902_set_reg regD $(echo $var_draw_cyc | cut -c1-2)
 		lr35902_set_reg regE $(echo $var_draw_cyc | cut -c3-4)
 		lr35902_call $a_tdq_enq
