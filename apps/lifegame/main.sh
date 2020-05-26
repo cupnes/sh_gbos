@@ -3,10 +3,6 @@
 set -uex
 # set -ue
 
-# TODO 1周期分をtdqへ積み終わったらvar_draw_cycをインクリメントするエントリも積む
-#      「タイル番号」を「インクリメントした値」とし
-#      「アドレス」を「var_draw_cycのアドレス」にする
-# TODO 全タイルの更新処理実装
 # TODO 各サイクルの時間評価
 # TODO 処理棒改善
 
@@ -546,6 +542,11 @@ main() {
 	) >main.2.o
 
 	(
+		# LCDCへOBJ非表示設定
+		lr35902_copy_to_regA_from_ioport $GB_IO_LCDC
+		lr35902_res_bitN_of_reg $GB_LCDC_BITNUM_OE regA
+		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
+
 		# 初期化処理
 		init_glider
 

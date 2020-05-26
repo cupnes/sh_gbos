@@ -12,7 +12,7 @@ SRC_MAIN_SH=true
 
 rm -f $MAP_FILE_NAME
 
-debug_mode=true
+debug_mode=false
 
 GBOS_ROM_TILE_DATA_START=$GB_ROM_FREE_BASE
 GBOS_TILE_DATA_START=8000
