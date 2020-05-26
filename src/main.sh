@@ -2285,6 +2285,11 @@ init() {
 	# タイルミラー領域の初期化
 	init_tmrr
 
+	# タイマー設定&開始
+	lr35902_copy_to_regA_from_ioport $GB_IO_TAC
+	lr35902_or_to_regA $(calc16_2 "$GB_TAC_BIT_START+$GB_TAC_BIT_HZ_262144")
+	lr35902_copy_to_ioport_from_regA $GB_IO_TAC
+
 	# LCD再開
 	lr35902_set_reg regA $(calc16 "${GBOS_LCDC_BASE}+${GB_LCDC_BIT_DE}")
 	lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
