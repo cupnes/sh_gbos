@@ -8,7 +8,7 @@ SRC_TILES_SH=true
 GBOS_GFUNC_START=1000
 
 GBOS_TILEDATA_AREA_BYTES=$(calc16 "${GBOS_GFUNC_START}-150")
-GBOS_NUM_ALL_TILES=48
+GBOS_NUM_ALL_TILES=4b
 GBOS_NUM_ALL_TILE_BYTES=$(four_digits $(calc16 "${GBOS_NUM_ALL_TILES}*10"))
 
 tiles_bc_form="ibase=16;${GBOS_TILEDATA_AREA_BYTES}-${GBOS_NUM_ALL_TILE_BYTES}"
@@ -252,4 +252,15 @@ char_tiles() {
 	# 47: 左下
 	echo -en '\x40\x7f\x40\x7f\x40\x7f\x40\x7f'
 	echo -en '\x40\x7f\x7f\x7f\x00\x00\x00\x00'
+
+	# ひらがな
+	# 48: あ
+	echo -en '\x10\x10\x7f\x7f\x12\x12\x3f\x3f'
+	echo -en '\x55\x55\x59\x59\x51\x51\x26\x26'
+	# 49: い
+	echo -en '\x00\x00\x42\x42\x42\x42\x41\x41'
+	echo -en '\x41\x41\x41\x41\x49\x49\x38\x38'
+	# 4a: う
+	echo -en '\x00\x00\x3e\x3e\x00\x00\x1e\x1e'
+	echo -en '\x61\x61\x01\x01\x02\x02\x1c\x1c'
 }
