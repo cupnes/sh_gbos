@@ -2421,6 +2421,9 @@ view_file() {
 		# 実行ファイルの場合
 		lr35902_copy_to_from regA regB
 		lr35902_call $a_run_exe
+
+		# Aがこの後何にもヒットしないようにする
+		lr35902_clear_reg regA
 	) >src/view_file.5.o
 	local sz_5=$(stat -c '%s' src/view_file.5.o)
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
@@ -2431,6 +2434,9 @@ view_file() {
 		# テキストファイルの場合
 		lr35902_copy_to_from regA regB
 		lr35902_call $a_view_txt
+
+		# Aがこの後何にもヒットしないようにする
+		lr35902_clear_reg regA
 	) >src/view_file.1.o
 	local sz_1=$(stat -c '%s' src/view_file.1.o)
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
