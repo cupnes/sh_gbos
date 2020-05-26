@@ -489,6 +489,45 @@ main() {
 	(
 		# 定常処理
 
+		# Aボタン(右クリック)で終了
+		lr35902_copy_to_regA_from_addr $var_app_release_btn
+		lr35902_test_bitN_of_reg $GBOS_A_KEY_BITNUM regA
+		(
+			# Aボタン(右クリック)のリリースがあった場合
+
+			# DAS: run_exeをクリア
+			lr35902_copy_to_regA_from_addr $var_draw_act_stat
+			lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
+			lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+			# tdq初期化
+			# - tdq.head = tdq.tail = TDQ_FIRST
+			lr35902_set_reg regA $(echo $GBOS_TDQ_FIRST | cut -c3-4)
+			lr35902_copy_to_addr_from_regA $var_tdq_head_bh
+			lr35902_copy_to_addr_from_regA $var_tdq_tail_bh
+			lr35902_set_reg regA $(echo $GBOS_TDQ_FIRST | cut -c1-2)
+			lr35902_copy_to_addr_from_regA $var_tdq_head_th
+			lr35902_copy_to_addr_from_regA $var_tdq_tail_th
+			# - tdq.stat = is_empty
+			lr35902_set_reg regA 01
+			lr35902_copy_to_addr_from_regA $var_tdq_stat
+
+			# LCDCへOBJ表示設定
+			lr35902_copy_to_regA_from_ioport $GB_IO_LCDC
+			lr35902_set_bitN_of_reg $GB_LCDC_BITNUM_OE regA
+			lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
+
+			# pop & return
+			lr35902_pop_reg regHL
+			lr35902_pop_reg regDE
+			lr35902_pop_reg regBC
+			lr35902_pop_reg regAF
+			lr35902_return
+		) >main.6.o
+		local sz_6=$(stat -c '%s' main.6.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
+		cat main.6.o
+
 		# 処理中周期(A) < 描画中周期(B) だったらreturn処理をスキップ
 		lr35902_copy_to_regA_from_addr $var_draw_cyc
 		lr35902_copy_to_from regB regA
