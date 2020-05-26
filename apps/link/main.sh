@@ -463,8 +463,34 @@ init_rnd() {
 
 
 main() {
+	local sz
+
 	# push
 	lr35902_push_reg regAF
+
+	lr35902_set_reg regA 41
+	lr35902_copy_to_ioport_from_regA $GB_IO_SB
+	lr35902_set_reg regA 81
+	lr35902_copy_to_ioport_from_regA $GB_IO_SC
+	(
+		lr35902_copy_to_regA_from_ioport $GB_IO_SC
+		lr35902_test_bitN_of_reg 7 regA
+	) >main.1.o
+	cat main.1.o
+	sz=$(stat -c '%s' main.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+
+	lr35902_set_reg regA 0a
+	lr35902_copy_to_ioport_from_regA $GB_IO_SB
+	lr35902_set_reg regA 81
+	lr35902_copy_to_ioport_from_regA $GB_IO_SC
+	(
+		lr35902_copy_to_regA_from_ioport $GB_IO_SC
+		lr35902_test_bitN_of_reg 7 regA
+	) >main.2.o
+	cat main.2.o
+	sz=$(stat -c '%s' main.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
 
 	# pop & return
 	lr35902_pop_reg regAF
