@@ -2270,6 +2270,8 @@ init() {
 	lr35902_copy_to_addr_from_regA $var_prv_btn
 	# - DASをゼロクリア
 	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+	# - アプリ用ボタンリリースフラグをゼロクリア
+	lr35902_copy_to_addr_from_regA $var_app_release_btn
 	# - ウィンドウステータスをディレクトリ表示中で初期化
 	lr35902_set_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
 	lr35902_copy_to_addr_from_regA $var_win_stat
@@ -2777,6 +2779,28 @@ event_driven() {
 	# [タイル描画キュー処理]
 	tdq_handler
 
+
+	# [ボタンリリースフラグ更新]
+
+	# 前回の入力状態を変数から取得
+	lr35902_copy_to_regA_from_addr $var_prv_btn
+	lr35902_copy_to_from regE regA
+
+	# リリースのみ抽出(1->0の変化があったビットのみregAへ格納)
+	# 1. 現在と前回でxor
+	lr35902_xor_to_regA regD
+	# 2. 1.と前回でand
+	lr35902_and_to_regA regE
+
+	# リリースされたボタンをBへコピー
+	lr35902_copy_to_from regB regA
+
+	# アプリ用ボタンリリースフラグ更新
+	lr35902_copy_to_regA_from_addr $var_app_release_btn
+	lr35902_or_to_regA regB
+	lr35902_copy_to_addr_from_regA $var_app_release_btn
+
+
 	# [描画アクション(DA)あるいはボタンリリース処理]
 
 	# DASに何らかのビットがセットされているか
@@ -2791,17 +2815,8 @@ event_driven() {
 		# DASにビットが何もセットされていなかった場合の処理
 		# (ボタンリリースに応じた処理を実施)
 
-		# 前回の入力状態を変数から取得
-		lr35902_copy_to_regA_from_addr $var_prv_btn
-		lr35902_copy_to_from regE regA
-
-		# リリースのみ抽出(1->0の変化があったビットのみregAへ格納)
-		# 1. 現在と前回でxor
-		lr35902_xor_to_regA regD
-		# 2. 1.と前回でand
-		lr35902_and_to_regA regE
-
 		# ボタンのリリースがあった場合それに応じた処理を実施
+		lr35902_copy_to_from regA regB
 		lr35902_and_to_regA $GBOS_BTN_KEY_MASK
 		(
 			# ボタンリリースがあれば応じた処理を実施

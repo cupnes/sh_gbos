@@ -1026,6 +1026,48 @@ lr35902_and_to_regA() {
 	esac
 }
 
+lr35902_or_to_regA() {
+	local reg_or_val=$1
+	case $reg_or_val in
+	regB)
+		echo -en '\xb0'	# or b
+		echo -e 'or b\t;4' >>$ASM_LIST_FILE
+		;;
+	regC)
+		echo -en '\xb1'	# or c
+		echo -e 'or c\t;4' >>$ASM_LIST_FILE
+		;;
+	regD)
+		echo -en '\xb2'	# or d
+		echo -e 'or d\t;4' >>$ASM_LIST_FILE
+		;;
+	regE)
+		echo -en '\xb3'	# or e
+		echo -e 'or e\t;4' >>$ASM_LIST_FILE
+		;;
+	regH)
+		echo -en '\xb4'	# or h
+		echo -e 'or h\t;4' >>$ASM_LIST_FILE
+		;;
+	regL)
+		echo -en '\xb5'	# or l
+		echo -e 'or l\t;4' >>$ASM_LIST_FILE
+		;;
+	ptrHL)
+		echo -en '\xb6'	# or [hl]
+		echo -e 'or [hl]\t;8' >>$ASM_LIST_FILE
+		;;
+	regA)
+		echo -en '\xb7'	# or a
+		echo -e 'or a\t;4' >>$ASM_LIST_FILE
+		;;
+	*)
+		echo -en "\xf6\x${reg_or_val}"	# or ${reg_or_val}
+		echo -e "or \$$reg_or_val\t;8" >>$ASM_LIST_FILE
+		;;
+	esac
+}
+
 lr35902_xor_to_regA() {
 	local reg_or_val=$1
 

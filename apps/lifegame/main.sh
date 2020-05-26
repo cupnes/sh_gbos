@@ -5,6 +5,8 @@ set -uex
 
 # TODO アプリから戻れるように
 # TODO 初期パターンをランダム生成(別アプリで)
+# TODO FSから壊れたファイル削除
+# TODO シリアル通信プログラム
 # TODO 各サイクルの時間評価
 # TODO 処理棒改善
 
@@ -549,7 +551,11 @@ main() {
 		lr35902_res_bitN_of_reg $GB_LCDC_BITNUM_OE regA
 		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
 
-		# 初期化処理
+		# アプリ用リリースボタンフラグをクリア
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $var_app_release_btn
+
+		# 初期パターン配置
 		init_glider
 
 		# 初期化済みフラグをセット
