@@ -148,13 +148,53 @@ f_wtcoord_to_tcoord() {
 	lr35902_return
 }
 
+# タイル座標をミラーアドレスへ変換
+# in : regD  - タイル座標Y
+#      regE  - タイル座標X
+# out: regHL - dc00h〜のアドレスを格納
+f_wtcoord_to_tcoord >src/f_wtcoord_to_tcoord.o
+fsz=$(to16 $(stat -c '%s' src/f_wtcoord_to_tcoord.o))
+a_tcoord_to_mrraddr=$(four_digits $(calc16 "${a_wtcoord_to_tcoord}+${fsz}"))
+echo -e "a_tcoord_to_mrraddr=$a_tcoord_to_mrraddr" >>$MAP_FILE_NAME
+f_tcoord_to_mrraddr() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+
+	local sz
+	lr35902_set_reg regHL $GBOS_TMRR_BASE
+	lr35902_clear_reg regA
+	lr35902_compare_regA_and regD
+	(
+		lr35902_set_reg regBC $(four_digits $GB_SC_WIDTH_T)
+		(
+			lr35902_add_to_regHL regBC
+			lr35902_dec regD
+		) >src/f_tcoord_to_mrraddr.1.o
+		cat src/f_tcoord_to_mrraddr.1.o
+		sz=$(stat -c '%s' src/f_tcoord_to_mrraddr.1.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+	) >src/f_tcoord_to_mrraddr.2.o
+	sz=$(stat -c '%s' src/f_tcoord_to_mrraddr.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
+	cat src/f_tcoord_to_mrraddr.2.o
+	lr35902_add_to_regHL regDE
+
+	# pop & return
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # タイル座標の位置へ指定されたタイルを配置する
 # in : regA  - 配置するタイル番号
 #      regD  - タイル座標Y
 #      regE  - タイル座標X
-f_wtcoord_to_tcoord >src/f_wtcoord_to_tcoord.o
-fsz=$(to16 $(stat -c '%s' src/f_wtcoord_to_tcoord.o))
-fadr=$(calc16 "${a_wtcoord_to_tcoord}+${fsz}")
+f_tcoord_to_mrraddr >src/f_tcoord_to_mrraddr.o
+fsz=$(to16 $(stat -c '%s' src/f_tcoord_to_mrraddr.o))
+fadr=$(calc16 "${a_tcoord_to_mrraddr}+${fsz}")
 a_lay_tile_at_tcoord=$(four_digits $fadr)
 echo -e "a_lay_tile_at_tcoord=$a_lay_tile_at_tcoord" >>$MAP_FILE_NAME
 f_lay_tile_at_tcoord() {
@@ -204,9 +244,13 @@ fadr=$(calc16 "${a_lay_tile_at_wtcoord}+${fsz}")
 a_lay_tiles_at_tcoord_to_right=$(four_digits $fadr)
 echo -e "a_lay_tiles_at_tcoord_to_right=$a_lay_tiles_at_tcoord_to_right" >>$MAP_FILE_NAME
 f_lay_tiles_at_tcoord_to_right() {
+	local sz
+
 	lr35902_push_reg regBC
 	lr35902_push_reg regDE
 	lr35902_push_reg regHL
+
+	lr35902_copy_to_from regB regC
 
 	lr35902_call $a_tcoord_to_addr
 	(
@@ -214,7 +258,18 @@ f_lay_tiles_at_tcoord_to_right() {
 		lr35902_dec regC
 	) >src/f_lay_tiles_at_tcoord_to_right.1.o
 	cat src/f_lay_tiles_at_tcoord_to_right.1.o
-	local sz=$(stat -c '%s' src/f_lay_tiles_at_tcoord_to_right.1.o)
+	sz=$(stat -c '%s' src/f_lay_tiles_at_tcoord_to_right.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
+
+	lr35902_copy_to_from regC regB
+
+	lr35902_call $a_tcoord_to_mrraddr
+	(
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_dec regC
+	) >src/f_lay_tiles_at_tcoord_to_right.2.o
+	cat src/f_lay_tiles_at_tcoord_to_right.2.o
+	sz=$(stat -c '%s' src/f_lay_tiles_at_tcoord_to_right.2.o)
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
 
 	lr35902_pop_reg regHL
@@ -1761,47 +1816,6 @@ f_run_exe_cyc() {
 	lr35902_return
 }
 
-# タイル座標をミラーアドレスへ変換
-# in : regD  - タイル座標Y
-#      regE  - タイル座標X
-# out: regHL - dc00h〜のアドレスを格納
-f_run_exe_cyc >src/f_run_exe_cyc.o
-fsz=$(to16 $(stat -c '%s' src/f_run_exe_cyc.o))
-fadr=$(calc16 "${a_run_exe_cyc}+${fsz}")
-a_tcoord_to_mrraddr=$(four_digits $fadr)
-echo -e "a_tcoord_to_mrraddr=$a_tcoord_to_mrraddr" >>$MAP_FILE_NAME
-f_tcoord_to_mrraddr() {
-	# push
-	lr35902_push_reg regAF
-	lr35902_push_reg regBC
-	lr35902_push_reg regDE
-
-	local sz
-	lr35902_set_reg regHL $GBOS_TMRR_BASE
-	lr35902_clear_reg regA
-	lr35902_compare_regA_and regD
-	(
-		lr35902_set_reg regBC $(four_digits $GB_SC_WIDTH_T)
-		(
-			lr35902_add_to_regHL regBC
-			lr35902_dec regD
-		) >src/f_tcoord_to_mrraddr.1.o
-		cat src/f_tcoord_to_mrraddr.1.o
-		sz=$(stat -c '%s' src/f_tcoord_to_mrraddr.1.o)
-		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz + 2)))
-	) >src/f_tcoord_to_mrraddr.2.o
-	sz=$(stat -c '%s' src/f_tcoord_to_mrraddr.2.o)
-	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
-	cat src/f_tcoord_to_mrraddr.2.o
-	lr35902_add_to_regHL regDE
-
-	# pop & return
-	lr35902_pop_reg regDE
-	lr35902_pop_reg regBC
-	lr35902_pop_reg regAF
-	lr35902_return
-}
-
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -1821,6 +1835,7 @@ f_tcoord_to_mrraddr() {
 global_functions() {
 	f_tcoord_to_addr
 	f_wtcoord_to_tcoord
+	f_tcoord_to_mrraddr
 	f_lay_tile_at_tcoord
 	f_lay_tile_at_wtcoord
 	f_lay_tiles_at_tcoord_to_right
@@ -1845,7 +1860,6 @@ global_functions() {
 	f_check_click_icon_area_y
 	f_run_exe
 	f_run_exe_cyc
-	f_tcoord_to_mrraddr
 }
 
 gbos_vec() {
