@@ -2290,6 +2290,12 @@ init() {
 	lr35902_or_to_regA $(calc16_2 "$GB_TAC_BIT_START+$GB_TAC_BIT_HZ_262144")
 	lr35902_copy_to_ioport_from_regA $GB_IO_TAC
 
+	# サウンドの初期化
+	# - サウンド無効化(使う時にONにする)
+	lr35902_copy_to_regA_from_ioport $GB_IO_NR52
+	lr35902_res_bitN_of_reg $GB_NR52_BITNUM_ALL_ONOFF regA
+	lr35902_copy_to_ioport_from_regA $GB_IO_NR52
+
 	# LCD再開
 	lr35902_set_reg regA $(calc16 "${GBOS_LCDC_BASE}+${GB_LCDC_BIT_DE}")
 	lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
