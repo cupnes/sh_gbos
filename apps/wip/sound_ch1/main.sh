@@ -52,6 +52,10 @@ init() {
 	lr35902_set_reg regA $(calc16 "$GB_NR50_BIT_VIN_SO2_EN+$s02_lv+$GB_NR50_BIT_VIN_SO1_EN+$s01_lv")
 	lr35902_copy_to_ioport_from_regA $GB_IO_NR50
 
+	# サウンド出力設定
+	lr35902_set_reg regA ff
+	lr35902_copy_to_ioport_from_regA $GB_IO_NR51
+
 	# 初期化済みフラグをセットする
 	lr35902_set_reg regA 01
 	lr35902_copy_to_addr_from_regA $var_is_inited
