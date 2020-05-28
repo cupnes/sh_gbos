@@ -56,6 +56,31 @@ init() {
 	lr35902_set_reg regA ff
 	lr35902_copy_to_ioport_from_regA $GB_IO_NR51
 
+	# ch1: 有効化
+	lr35902_set_reg regA f8
+	lr35902_copy_to_ioport_from_regA $GB_IO_NR12
+	lr35902_set_reg regA 80
+	lr35902_copy_to_ioport_from_regA $GB_IO_NR14
+
+	# ch2: ミュート
+	lr35902_clear_reg regA
+	lr35902_copy_to_ioport_from_regA $GB_IO_NR22
+	lr35902_set_reg regA 80
+	lr35902_copy_to_ioport_from_regA $GB_IO_NR24
+
+	# ch3: ミュート
+	lr35902_clear_reg regA
+	lr35902_copy_to_ioport_from_regA $GB_IO_NR30
+	lr35902_copy_to_ioport_from_regA $GB_IO_NR32
+	lr35902_set_reg regA 80
+	lr35902_copy_to_ioport_from_regA $GB_IO_NR34
+
+	# ch4: ミュート
+	lr35902_clear_reg regA
+	lr35902_copy_to_ioport_from_regA $GB_IO_NR42
+	lr35902_set_reg regA 80
+	lr35902_copy_to_ioport_from_regA $GB_IO_NR44
+
 	# 初期化済みフラグをセットする
 	lr35902_set_reg regA 01
 	lr35902_copy_to_addr_from_regA $var_is_inited
@@ -72,16 +97,8 @@ main() {
 		# 初期化済みフラグ == 0
 		init
 	) >main.1.o
-	(
-		# 初期化済みフラグ == 1
-
-		# 初期化済みフラグ == 0 の処理をスキップ
-		local sz_1=$(stat -c '%s' main.1.o)
-		lr35902_rel_jump $(two_digits_d $sz_1)
-	) >main.2.o
-	local sz_2=$(stat -c '%s' main.2.o)
-	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
-	cat main.2.o
+	local sz_1=$(stat -c '%s' main.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
 	cat main.1.o
 
 	# pop & return
