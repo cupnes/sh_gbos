@@ -19,18 +19,75 @@ if [ $# -eq 1 ]; then
 fi
 
 # 改行コードはLF(\n)限定
-CONV_FROM='[ 0-9A-Za-z]'
-CONV_TO='[\000\024-\035\036-\067\036-\067]'
+CONV_FROM='[ 0-9A-Za-z()@!?\-]'
+CONV_TO='[\000\024-\035\036-\067\036-\067\110\111\112\175\176\177]'
+SED_SCR='
+s/■/\x09/g;
+s/→/\x10/g;
+s/←/\x11/g;
+s/↑/\x12/g;
+s/↓/\x13/g;
+s/゛/\x4b/g;
+s/あ/\x4c/g;
+s/い/\x4d/g;
+s/う/\x4e/g;
+s/え/\x4f/g;
+s/お/\x50/g;
+s/か/\x51/g;
+s/き/\x52/g;
+s/く/\x53/g;
+s/け/\x54/g;
+s/こ/\x55/g;
+s/さ/\x56/g;
+s/し/\x57/g;
+s/す/\x58/g;
+s/せ/\x59/g;
+s/そ/\x5a/g;
+s/た/\x5b/g;
+s/ち/\x5c/g;
+s/つ/\x5d/g;
+s/て/\x5e/g;
+s/と/\x5f/g;
+s/な/\x60/g;
+s/に/\x61/g;
+s/ぬ/\x62/g;
+s/ね/\x63/g;
+s/の/\x64/g;
+s/は/\x65/g;
+s/ひ/\x66/g;
+s/ふ/\x67/g;
+s/へ/\x68/g;
+s/ほ/\x69/g;
+s/ま/\x6a/g;
+s/み/\x6b/g;
+s/む/\x6c/g;
+s/め/\x6d/g;
+s/も/\x6e/g;
+s/や/\x6f/g;
+s/ゆ/\x70/g;
+s/よ/\x71/g;
+s/ら/\x72/g;
+s/り/\x73/g;
+s/る/\x74/g;
+s/れ/\x75/g;
+s/ろ/\x76/g;
+s/わ/\x77/g;
+s/を/\x78/g;
+s/ん/\x79/g;
+s/゜/\x7a/g;
+s/、/\x7b/g;
+s/。/\x7c/g;
+'
 
 case $# in
 0)
-	cat - | tr "$CONV_FROM" "$CONV_TO"
+	cat - | tr "$CONV_FROM" "$CONV_TO" | sed -f <(echo $SED_SCR)
 	;;
 1)
-	cat $1 | tr "$CONV_FROM" "$CONV_TO"
+	cat $1 | tr "$CONV_FROM" "$CONV_TO" | sed -f <(echo $SED_SCR)
 	;;
 2)
-	cat $1 | tr "$CONV_FROM" "$CONV_TO" >$2
+	cat $1 | tr "$CONV_FROM" "$CONV_TO" | sed -f <(echo $SED_SCR) >$2
 	;;
 *)
 	usage
