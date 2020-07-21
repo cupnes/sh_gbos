@@ -82,15 +82,20 @@ calc16() {
 	echo "obase=16;ibase=16;$form_up" | bc
 }
 
+to16() {
+	local val=$1
+	echo "obase=16;$val" | bc
+}
+
 # ディレクトリヘッダ生成
 create_dir_head() {
-	echo -en "\x$(two_digits $num_files)"
+	echo -en "\x$(two_digits $(to16 $num_files))"
 	echo -en '\xff\xff'
 }
 
 # ファイルヘッダ群生成
 create_file_heads() {
-	ofs=$(four_digits $(calc16 "3+(7*$num_files)"))
+	ofs=$(four_digits $(calc16 "3+(7*$(to16 $num_files))"))
 	for f in $(ls $SRC_ROOTFS_DIR); do
 		name=$(echo $f | rev | cut -d'.' -f2- | rev | cut -c1-4)
 		echo -n $name | tr "$CONV_FROM" "$CONV_TO"
