@@ -76,6 +76,15 @@ GBOS_SELECT_KEY_MASK=40
 GBOS_B_KEY_MASK=20
 GBOS_A_KEY_MASK=10
 
+GBOS_JOYP_BITNUM_RIGHT=0
+GBOS_JOYP_BITNUM_LEFT=1
+GBOS_JOYP_BITNUM_UP=2
+GBOS_JOYP_BITNUM_DOWN=3
+GBOS_JOYP_BITNUM_A=4
+GBOS_JOYP_BITNUM_B=5
+GBOS_JOYP_BITNUM_SELECT=6
+GBOS_JOYP_BITNUM_START=7
+
 # ウィンドウステータス用定数
 GBOS_WST_BITNUM_DIR=0	# ディレクトリ表示中
 GBOS_WST_BITNUM_EXE=1	# 実行ファイル実行中
@@ -1250,6 +1259,10 @@ f_view_dir() {
 	lr35902_copy_to_regA_from_addr $var_win_stat
 	lr35902_set_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
 	lr35902_copy_to_addr_from_regA $var_win_stat
+
+	# 隠しコマンドステートをクリア
+	lr35902_clear_reg regA
+	lr35902_copy_to_addr_from_regA $var_hidden_com_stat
 
 	# pop & return
 	lr35902_pop_reg regAF
@@ -2808,10 +2821,58 @@ event_driven() {
 	# リリースされたボタンをBへコピー
 	lr35902_copy_to_from regB regA
 
-	# アプリ用ボタンリリースフラグ更新
-	lr35902_copy_to_regA_from_addr $var_app_release_btn
-	lr35902_or_to_regA regB
-	lr35902_copy_to_addr_from_regA $var_app_release_btn
+	# ウィンドウステータスがディレクトリ表示中であるか否か
+	lr35902_copy_to_regA_from_addr $var_win_stat
+	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
+	(
+		# ディレクトリ表示中以外の場合
+
+		# アプリ用ボタンリリースフラグ更新
+		lr35902_copy_to_regA_from_addr $var_app_release_btn
+		lr35902_or_to_regA regB
+		lr35902_copy_to_addr_from_regA $var_app_release_btn
+	) >src/event_driven.5.o
+	(
+		# ディレクトリ表示中の場合
+
+		# 隠しコマンドステートをAへロード
+		lr35902_copy_to_regA_from_addr $var_hidden_com_stat
+
+		# 隠しコマンド入力判定状態遷移
+		## ↑のリリースチェック
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_UP regB
+		(
+			# ↑のリリース有り
+
+			# stat は 0 or 1 か ?
+		) >src/hidden_com_stat_up.o
+		local sz_hcs_up=$(stat -c '%s' src/hidden_com_stat_up.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_hcs_up)
+
+		## ↓のリリースチェック
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_DOWN regB
+
+		## ←のリリースチェック
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_LEFT regB
+
+		## →のリリースチェック
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_RIGHT regB
+
+		## Bのリリースチェック
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_B regB
+
+		## Aのリリースチェック
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_A regB
+
+		## stat >= 10 ?
+
+		# ディレクトリ表示中以外の場合の処理を飛ばす
+		local sz5=$(stat -c '%s' src/event_driven.5.o)
+	) >src/event_driven.6.o
+	local sz6=$(stat -c '%s' src/event_driven.6.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz6)
+	cat src/event_driven.6.o
+	cat src/event_driven.5.o
 
 
 	# [描画アクション(DA)あるいはボタンリリース処理]
