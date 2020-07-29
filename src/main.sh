@@ -1,3 +1,6 @@
+# (TODO) f_view_{txt,img,dir} では GBOS_WST_NUM_{TXT,IMG,DIR}を使って
+#        対象ビットのみを設定するようにする
+
 if [ "${SRC_MAIN_SH+is_defined}" ]; then
 	return
 fi
@@ -90,6 +93,10 @@ GBOS_WST_BITNUM_DIR=0	# ディレクトリ表示中
 GBOS_WST_BITNUM_EXE=1	# 実行ファイル実行中
 GBOS_WST_BITNUM_TXT=2	# テキストファイル表示中
 GBOS_WST_BITNUM_IMG=3	# 画像ファイル表示中
+GBOS_WST_NUM_DIR=01	# ディレクトリ表示中
+GBOS_WST_NUM_EXE=02	# 実行ファイル実行中
+GBOS_WST_NUM_TXT=04	# テキストファイル表示中
+GBOS_WST_NUM_IMG=08	# 画像ファイル表示中
 
 # タイルミラー領域
 GBOS_TMRR_BASE=dc00	# タイルミラー領域ベースアドレス
@@ -462,10 +469,11 @@ f_clr_win() {
 	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_CLR_WIN regA
 	lr35902_copy_to_addr_from_regA $var_draw_act_stat
 
-	# ウィンドウステータスのview系ビットをクリア
+	# ウィンドウステータスのview系/run系ビットをクリア
 	lr35902_copy_to_regA_from_addr $var_win_stat
 	lr35902_res_bitN_of_reg $GBOS_WST_BITNUM_TXT regA
 	lr35902_res_bitN_of_reg $GBOS_WST_BITNUM_IMG regA
+	lr35902_res_bitN_of_reg $GBOS_WST_BITNUM_EXE regA
 	lr35902_copy_to_addr_from_regA $var_win_stat
 
 	lr35902_pop_reg regAF
@@ -1803,6 +1811,10 @@ f_run_exe() {
 	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
 	lr35902_copy_to_addr_from_regA $var_draw_act_stat
 
+	# ウィンドウステータスに「実行ファイル実行中」のみを設定
+	lr35902_set_reg regA $GBOS_WST_NUM_EXE
+	lr35902_copy_to_addr_from_regA $var_win_stat
+
 	# pop & return
 	lr35902_pop_reg regHL
 	lr35902_pop_reg regDE
@@ -2844,33 +2856,111 @@ event_driven() {
 		(
 			# ↑のリリース有り
 
-			# stat は 0 or 1 か ?
+			# stat は 0 or 1 か ? (stat < 2 ?)
+			lr35902_compare_regA_and 2
+			(
+				# stat != 0 or 1
+
+				# stat = 1
+				lr35902_set_reg regA 01
+				lr35902_copy_to_addr_from_regA $var_hidden_com_stat
+			) >src/hidden_com_stat_up.2.o
+			(
+				# stat == 0 or 1
+
+				# stat++
+				lr35902_inc regA
+				lr35902_copy_to_addr_from_regA $var_hidden_com_stat
+
+				# stat != 0 or 1 の場合の処理を飛ばす
+				local sz_hcs_up_2=$(stat -c '%s' src/hidden_com_stat_up.2.o)
+				lr35902_rel_jump $(two_digits_d $sz_hcs_up_2)
+			) >src/hidden_com_stat_up.1.o
+			local sz_hcs_up_1=$(stat -c '%s' src/hidden_com_stat_up.1.o)
+			lr35902_rel_jump_with_cond NC $(two_digits_d $sz_hcs_up_1)
+			cat src/hidden_com_stat_up.1.o
+			cat src/hidden_com_stat_up.2.o
 		) >src/hidden_com_stat_up.o
 		local sz_hcs_up=$(stat -c '%s' src/hidden_com_stat_up.o)
-		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_hcs_up)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_hcs_up)
+		cat src/hidden_com_stat_up.o
 
 		## ↓のリリースチェック
 		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_DOWN regB
+		(
+			# ↓のリリース有り
+
+			# stat は 2 or 3 か ?
+			# (2を引いた後、0xfeとの&を取ると0になるか?)
+
+			## CへAを退避
+			lr35902_copy_to_from regC regA
+
+			## 2を引いた後、0xfeとの&を取ると0になるか?
+			lr35902_sub_to_regA 2
+			lr35902_and_to_regA fe
+			(
+				# stat != 2 or 3 (A != 0)
+
+				# stat = 0
+				lr35902_clear_reg regA
+				lr35902_copy_to_addr_from_regA $var_hidden_com_stat
+			) >src/hidden_com_stat_down.2.o
+			(
+				# stat == 2 or 3 (A == 0)
+
+				# AへCを復帰
+				lr35902_copy_to_from regA regC
+
+				# stat++
+				lr35902_inc regA
+				lr35902_copy_to_addr_from_regA $var_hidden_com_stat
+
+				# stat != 2 or 3 の場合の処理を飛ばす
+				local sz_hcs_down_2=$(stat -c '%s' src/hidden_com_stat_down.2.o)
+				lr35902_rel_jump $(two_digits_d $sz_hcs_down_2)
+			) >src/hidden_com_stat_down.1.o
+			local sz_hcs_down_1=$(stat -c '%s' src/hidden_com_stat_down.1.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_hcs_down_1)
+			cat src/hidden_com_stat_down.1.o
+			cat src/hidden_com_stat_down.2.o
+		) >src/hidden_com_stat_down.o
+		local sz_hcs_down=$(stat -c '%s' src/hidden_com_stat_down.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_hcs_down)
+		cat src/hidden_com_stat_down.o
+
+		## stat == 4 ?
+		lr35902_compare_regA_and 4
+		(
+			local cursor_oam_tile_num_addr=fe02
+			local tile_num=4c	# あい
+			lr35902_set_reg regA $tile_num
+			lr35902_copy_to_addr_from_regA $cursor_oam_tile_num_addr
+		) >src/hidden_com_stat_goal.o
+		local sz_hcs_goal=$(stat -c '%s' src/hidden_com_stat_goal.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_hcs_goal)
+		cat src/hidden_com_stat_goal.o
 
 		## ←のリリースチェック
-		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_LEFT regB
+		# lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_LEFT regB
 
 		## →のリリースチェック
-		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_RIGHT regB
+		# lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_RIGHT regB
 
 		## Bのリリースチェック
-		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_B regB
+		# lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_B regB
 
 		## Aのリリースチェック
-		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_A regB
+		# lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_A regB
 
 		## stat >= 10 ?
 
 		# ディレクトリ表示中以外の場合の処理を飛ばす
 		local sz5=$(stat -c '%s' src/event_driven.5.o)
+		lr35902_rel_jump $(two_digits_d $sz5)
 	) >src/event_driven.6.o
 	local sz6=$(stat -c '%s' src/event_driven.6.o)
-	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz6)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz6)
 	cat src/event_driven.6.o
 	cat src/event_driven.5.o
 
