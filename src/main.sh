@@ -2857,7 +2857,7 @@ event_driven() {
 			# ↑のリリース有り
 
 			# stat は 0 or 1 か ? (stat < 2 ?)
-			lr35902_compare_regA_and 2
+			lr35902_compare_regA_and 02
 			(
 				# stat != 0 or 1
 
@@ -2897,7 +2897,7 @@ event_driven() {
 			lr35902_copy_to_from regC regA
 
 			## 2を引いた後、0xfeとの&を取ると0になるか?
-			lr35902_sub_to_regA 2
+			lr35902_sub_to_regA 02
 			lr35902_and_to_regA fe
 			(
 				# stat != 2 or 3 (A != 0)
@@ -2935,25 +2935,23 @@ event_driven() {
 			# ←のリリース有り
 
 			# stat は 4 or 6 か ?
-
-			# 以降、TODO
-			# (2を引いた後、0xfeとの&を取ると0になるか?)
+			# (4を引いた後、0xfdとの&を取ると0になるか?)
 
 			## CへAを退避
 			lr35902_copy_to_from regC regA
 
-			## 2を引いた後、0xfeとの&を取ると0になるか?
-			lr35902_sub_to_regA 2
-			lr35902_and_to_regA fe
+			## 4を引いた後、0xfdとの&を取ると0になるか?
+			lr35902_sub_to_regA 04
+			lr35902_and_to_regA fd
 			(
-				# stat != 4 or 6
+				# stat != 4 or 6 (A != 0)
 
 				# stat = 0
 				lr35902_clear_reg regA
 				lr35902_copy_to_addr_from_regA $var_hidden_com_stat
 			) >src/hidden_com_stat_left.2.o
 			(
-				# stat == 4 or 6
+				# stat == 4 or 6 (A == 0)
 
 				# AへCを復帰
 				lr35902_copy_to_from regA regC
@@ -2967,7 +2965,7 @@ event_driven() {
 				lr35902_rel_jump $(two_digits_d $sz_hcs_left_2)
 			) >src/hidden_com_stat_left.1.o
 			local sz_hcs_left_1=$(stat -c '%s' src/hidden_com_stat_left.1.o)
-			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_hcs_left_1)	# TODO
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_hcs_left_1)
 			cat src/hidden_com_stat_left.1.o
 			cat src/hidden_com_stat_left.2.o
 		) >src/hidden_com_stat_left.o
@@ -2976,15 +2974,128 @@ event_driven() {
 		cat src/hidden_com_stat_left.o
 
 		## →のリリースチェック
-		# lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_RIGHT regB
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_RIGHT regB
+		(
+			# →のリリース有り
+
+			# stat は 5 or 7 か ?
+			# (5を引いた後、0xfdとの&を取ると0になるか?)
+
+			## CへAを退避
+			lr35902_copy_to_from regC regA
+
+			## 5を引いた後、0xfdとの&を取ると0になるか?
+			lr35902_sub_to_regA 05
+			lr35902_and_to_regA fd
+			(
+				# stat != 5 or 7 (A != 0)
+
+				# stat = 0
+				lr35902_clear_reg regA
+				lr35902_copy_to_addr_from_regA $var_hidden_com_stat
+			) >src/hidden_com_stat_right.2.o
+			(
+				# stat == 5 or 7 (A == 0)
+
+				# AへCを復帰
+				lr35902_copy_to_from regA regC
+
+				# stat++
+				lr35902_inc regA
+				lr35902_copy_to_addr_from_regA $var_hidden_com_stat
+
+				# stat != 5 or 7 の場合の処理を飛ばす
+				local sz_hcs_right_2=$(stat -c '%s' src/hidden_com_stat_right.2.o)
+				lr35902_rel_jump $(two_digits_d $sz_hcs_right_2)
+			) >src/hidden_com_stat_right.1.o
+			local sz_hcs_right_1=$(stat -c '%s' src/hidden_com_stat_right.1.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_hcs_right_1)
+			cat src/hidden_com_stat_right.1.o
+			cat src/hidden_com_stat_right.2.o
+		) >src/hidden_com_stat_right.o
+		local sz_hcs_right=$(stat -c '%s' src/hidden_com_stat_right.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_hcs_right)
+		cat src/hidden_com_stat_right.o
 
 		## Bのリリースチェック
-		# lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_B regB
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_B regB
+		(
+			# Bのリリース有り
+
+			# stat は 8 か ?
+			lr35902_compare_regA_and 08
+			(
+				# stat != 8
+
+				# stat = 0
+				lr35902_clear_reg regA
+				lr35902_copy_to_addr_from_regA $var_hidden_com_stat
+			) >src/hidden_com_stat_b.2.o
+			(
+				# stat == 8
+
+				# stat++
+				lr35902_inc regA
+				lr35902_copy_to_addr_from_regA $var_hidden_com_stat
+
+				# stat != 8 の場合の処理を飛ばす
+				local sz_hcs_b_2=$(stat -c '%s' src/hidden_com_stat_b.2.o)
+				lr35902_rel_jump $(two_digits_d $sz_hcs_b_2)
+			) >src/hidden_com_stat_b.1.o
+			local sz_hcs_b_1=$(stat -c '%s' src/hidden_com_stat_b.1.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_hcs_b_1)
+			cat src/hidden_com_stat_b.1.o
+			cat src/hidden_com_stat_b.2.o
+		) >src/hidden_com_stat_b.o
+		local sz_hcs_b=$(stat -c '%s' src/hidden_com_stat_b.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_hcs_b)
+		cat src/hidden_com_stat_b.o
 
 		## Aのリリースチェック
-		# lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_A regB
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_A regB
+		(
+			# Aのリリース有り
+
+			# stat は 9 か ?
+			lr35902_compare_regA_and 09
+			(
+				# stat != 9
+
+				# stat = 0
+				lr35902_clear_reg regA
+				lr35902_copy_to_addr_from_regA $var_hidden_com_stat
+			) >src/hidden_com_stat_a.2.o
+			(
+				# stat == 9
+
+				# stat++
+				lr35902_inc regA
+				lr35902_copy_to_addr_from_regA $var_hidden_com_stat
+
+				# stat != 9 の場合の処理を飛ばす
+				local sz_hcs_a_2=$(stat -c '%s' src/hidden_com_stat_a.2.o)
+				lr35902_rel_jump $(two_digits_d $sz_hcs_a_2)
+			) >src/hidden_com_stat_a.1.o
+			local sz_hcs_a_1=$(stat -c '%s' src/hidden_com_stat_a.1.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_hcs_a_1)
+			cat src/hidden_com_stat_a.1.o
+			cat src/hidden_com_stat_a.2.o
+		) >src/hidden_com_stat_a.o
+		local sz_hcs_a=$(stat -c '%s' src/hidden_com_stat_a.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_hcs_a)
+		cat src/hidden_com_stat_a.o
 
 		## stat >= 10 ?
+		lr35902_compare_regA_and 0a
+		(
+			local cursor_oam_tile_num_addr=fe02
+			local tile_num=10	# →←
+			lr35902_set_reg regA $tile_num
+			lr35902_copy_to_addr_from_regA $cursor_oam_tile_num_addr
+		) >src/hidden_com_stat_goal.o
+		local sz_hcs_goal=$(stat -c '%s' src/hidden_com_stat_goal.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_hcs_goal)
+		cat src/hidden_com_stat_goal.o
 
 		# ディレクトリ表示中以外の場合の処理を飛ばす
 		local sz5=$(stat -c '%s' src/event_driven.5.o)
