@@ -25,3 +25,4 @@ a_check_click_icon_area_x=135C
 a_check_click_icon_area_y=1392
 a_run_exe=13C8
 a_run_exe_cyc=13FA
+a_update_hidden_com_stat=1400
