@@ -27,7 +27,7 @@ print_boot_kern() {
 	local entry_addr=$(echo $bc_form | bc)
 	bc_form="obase=16;ibase=16;${entry_addr}+10000"
 	local entry_addr_4digits=$(echo $bc_form | bc | cut -c2-5)
-	gb_cart_header_no_title $entry_addr_4digits
+	gb_cart_header_no_title_mbc1 $entry_addr_4digits
 
 	# 0x0150 - 0x3fff: カートリッジROM(Bank 00) (16048バイト)
 	gbos_main >gbos_main.o

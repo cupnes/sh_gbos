@@ -115,6 +115,37 @@ gb_cart_header_no_title() {
 	echo -en '\x00\x00'
 }
 
+# タイトル文字列無しのヘッダ(カートリッジタイプ:MBC1)
+gb_cart_header_no_title_mbc1() {
+	local entry_addr=$(four_digits $1)
+
+	# エントリアドレスへジャンプ
+	echo -en '\x00\xc3'
+	echo_2bytes $entry_addr
+
+	# Nintendoロゴデータ
+	gb_nintendo_logo
+
+	# アドレス0x0134-0x0146(19バイト)のヘッダ情報はすべて0にする
+	dd if=/dev/zero bs=1 count=19 2>/dev/null
+
+	# 0x0147 - Cartridge Type
+	echo -en "\x01"	# MBC1
+
+	# 0x0148 - ROM Size
+	echo -en "\x01"	# 2MB
+
+	# アドレス0x0149-0x014c(4バイト)のヘッダ情報はすべて0にする
+	dd if=/dev/zero bs=1 count=4 2>/dev/null
+
+	# ヘッダのチェックサム
+	echo -en '\xe5'
+
+	# グローバルチェックサム
+	# (実機では見ない情報だし設定しない)
+	echo -en '\x00\x00'
+}
+
 gb_all_nop_vector_table() {
 	dd if=/dev/zero bs=1 count=256 2>/dev/null
 }
