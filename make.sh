@@ -43,6 +43,12 @@ print_boot_kern() {
 print_rom() {
 	print_boot_kern >boot_kern.bin
 	cat boot_kern.bin $ROOTFS_IMAGE_FILE
+
+	# 2MBカートリッジ対応
+	# ROMサイズを2MBにするため、
+	# (- (* 2 1024 1024) (* 16 1024) (* 16 1024))2064384
+	# バイト分の0x00を更に足す
+	dd if=/dev/zero bs=1 count=2064384 2>/dev/null
 }
 
 print_rom >$ROM_FILE_NAME
