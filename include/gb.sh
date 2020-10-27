@@ -126,20 +126,47 @@ gb_cart_header_no_title_mbc1() {
 	# Nintendoロゴデータ
 	gb_nintendo_logo
 
-	# アドレス0x0134-0x0146(19バイト)のヘッダ情報はすべて0にする
-	dd if=/dev/zero bs=1 count=19 2>/dev/null
+	# アドレス0x0134-0x0142(15バイト)のヘッダ情報はすべて0にする
+	dd if=/dev/zero bs=1 count=15 2>/dev/null
+
+	# 0x0143 - CGB Flag
+	# 0x80 - Game supports CGB functions, but works on old gameboys also.
+	echo -en '\x80'
+
+	# 0x0144-0145 - New Licensee Code
+	# 0x00 - none
+	echo -en '\x00\x00'
+
+	# 0x0146 - SGB Flag
+	# 0x03 - Game supports SGB functions
+	echo -en '\x03'
 
 	# 0x0147 - Cartridge Type
-	echo -en "\x01"	# MBC1
+	echo -en '\x01'	# MBC1
 
 	# 0x0148 - ROM Size
-	echo -en "\x01"	# 2MB
+	# 0x01 - 64 KByte(4 banks)
+	echo -en '\x01'
 
-	# アドレス0x0149-0x014c(4バイト)のヘッダ情報はすべて0にする
-	dd if=/dev/zero bs=1 count=4 2>/dev/null
+	# 0x0149 - RAM Size
+	# 0x00 - None
+	echo -en '\x00'
 
-	# ヘッダのチェックサム
-	echo -en '\xe5'
+	# 0x014A - Destination Code
+	# 0x00 - Japanese
+	echo -en '\x00'
+
+	# 0x014B - Old Licensee Code
+	# A value of 33h signalizes that the New License Code in header bytes 0144-0145 is used instead.
+	# (Super Game Boy functions won't work if <> $33.)
+	echo -en '\x33'
+
+	# 014C - Mask ROM Version number
+	# Specifies the version number of the game. That is usually 00h.
+	echo -en '\x00'
+
+	# 014D - Header Checksum
+	echo -en '\x2f'
 
 	# グローバルチェックサム
 	# (実機では見ない情報だし設定しない)
