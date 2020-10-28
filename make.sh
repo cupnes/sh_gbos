@@ -41,14 +41,18 @@ print_boot_kern() {
 }
 
 print_rom() {
+	# 0x00 0000 - 0x00 3fff: Bank 000 (16KB)
 	print_boot_kern >boot_kern.bin
+	# 0x00 4000 - 0x00 7fff: Bank 001 (16KB)
 	cat boot_kern.bin $ROOTFS_IMAGE_FILE
 
-	# 2MBカートリッジ対応
-	# ROMサイズを2MBにするため、
-	# (- (* 2 1024 1024) (* 16 1024) (* 16 1024))2064384
-	# バイト分の0x00を更に足す
-	dd if=/dev/zero bs=1 count=2064384 2>/dev/null
+	# 0x00 8000 - 0x1f bfff: Bank 002 - 126 (2000KB)
+	dd if=/dev/zero bs=K count=2000 2>/dev/null
+
+	# 0x1f c000 - 0x1f ffff: Bank 127 (16KB)
+	dd if=/dev/zero bs=1 count=260 2>/dev/null
+	dd if=logo.gb bs=1 count=48 ibs=1 skip=260
+	dd if=/dev/zero bs=1 count=$(((16 * 1024) - 260 - 48)) 2>/dev/null
 }
 
 print_rom >$ROM_FILE_NAME

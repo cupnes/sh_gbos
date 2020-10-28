@@ -83,6 +83,8 @@ GB_WX_ORIG=07
 GB_BGP_DEFAULT=e4		# %11100100
 GB_OBP_DEFAULT=e0		# %11100000
 
+GB_MBC_ADDR=2000
+
 # Nintendoロゴデータ
 gb_nintendo_logo() {
 	echo -en '\xce\xed\x66\x66\xcc\x0d\x00\x0b'
