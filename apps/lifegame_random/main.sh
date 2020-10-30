@@ -522,7 +522,9 @@ main() {
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
 		cat main.6.o
 
-		# 処理中周期(A) < 描画中周期(B) だったらreturn処理をスキップ
+		# 処理中周期(regA) < 描画中周期(regB) すなわち
+		# TDQで描画済みの画面を処理中(画面を走査して画面更新する)の間は
+		# ここでreturnせず、後続の更新処理を実施する
 		lr35902_copy_to_regA_from_addr $var_draw_cyc
 		lr35902_copy_to_from regB regA
 		lr35902_copy_to_regA_from_addr $var_proc_cyc

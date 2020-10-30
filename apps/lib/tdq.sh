@@ -3,11 +3,34 @@ if [ "${LIB_TDQ_SH+is_defined}" ]; then
 fi
 LIB_TDQ_SH=true
 
+# memo
+# - var_draw_cycle
+#   - 画面描画周期
+#   - tdq自体は単なるキューで、
+#     「アドレスXXへYYを書いて欲しい」というリクエストの連続でしかない
+#   - 1画面分の描画リクエストを積み終わった所で
+#     var_draw_cycleをインクリメントするリクエストを積むことで
+#     var_draw_cycleを見ていれば「今描画周期何番の描画中なのか」が分かるようになる
+
+# tdq初期化
+tdq_init() {
+	# - tdq.head = tdq.tail = TDQ_FIRST
+	lr35902_set_reg regA $(echo $GBOS_TDQ_FIRST | cut -c3-4)
+	lr35902_copy_to_addr_from_regA $var_tdq_head_bh
+	lr35902_copy_to_addr_from_regA $var_tdq_tail_bh
+	lr35902_set_reg regA $(echo $GBOS_TDQ_FIRST | cut -c1-2)
+	lr35902_copy_to_addr_from_regA $var_tdq_head_th
+	lr35902_copy_to_addr_from_regA $var_tdq_tail_th
+	# - tdq.stat = is_empty
+	lr35902_set_reg regA 01
+	lr35902_copy_to_addr_from_regA $var_tdq_stat
+}
+
 # tdqへエントリを追加する
 # in : regB  - 配置するタイル番号
 #      regD  - VRAMアドレス[15:8]
 #      regE  - VRAMアドレス[7:0]
-f_tdq_enq() {
+tdq_enq() {
 	# push
 	lr35902_push_reg regAF
 	lr35902_push_reg regBC
