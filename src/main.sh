@@ -2109,6 +2109,29 @@ f_update_hidden_com_stat() {
 	lr35902_return
 }
 
+# tdqを初期化する
+f_update_hidden_com_stat >src/f_update_hidden_com_stat.o
+fsz=$(to16 $(stat -c '%s' src/f_update_hidden_com_stat.o))
+fadr=$(calc16 "${a_update_hidden_com_stat}+${fsz}")
+a_init_tdq=$(four_digits $fadr)
+echo -e "a_init_tdq=$a_init_tdq" >>$MAP_FILE_NAME
+f_init_tdq() {
+	tdq_init
+}
+
+# tdqへエンキューする
+# in : regB  - 配置するタイル番号
+#      regD  - VRAMアドレス[15:8]
+#      regE  - VRAMアドレス[7:0]
+f_init_tdq >src/f_init_tdq.o
+fsz=$(to16 $(stat -c '%s' src/f_init_tdq.o))
+fadr=$(calc16 "${a_init_tdq}+${fsz}")
+a_enq_tdq=$(four_digits $fadr)
+echo -e "a_enq_tdq=$a_enq_tdq" >>$MAP_FILE_NAME
+f_enq_tdq() {
+	tdq_enq
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2154,6 +2177,8 @@ global_functions() {
 	f_run_exe
 	f_run_exe_cyc
 	f_update_hidden_com_stat
+	f_init_tdq
+	f_enq_tdq
 }
 
 gbos_vec() {
