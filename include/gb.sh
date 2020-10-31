@@ -144,7 +144,8 @@ gb_cart_header_no_title_mbc1() {
 	echo -en '\x03'
 
 	# 0x0147 - Cartridge Type
-	echo -en '\x01'	# MBC1
+	# echo -en '\x01'	# MBC1
+	echo -en '\x03'	# MBC1+RAM+BATTERY
 
 	# 0x0148 - ROM Size
 	# 0x01 - 64 KByte(4 banks)
@@ -152,7 +153,9 @@ gb_cart_header_no_title_mbc1() {
 
 	# 0x0149 - RAM Size
 	# 0x00 - None
-	echo -en '\x00'
+	# echo -en '\x00'
+	# 0x03 - 32 KBytes (4 banks of 8KBytes each)
+	echo -en '\x03'
 
 	# 0x014A - Destination Code
 	# 0x00 - Japanese
@@ -168,7 +171,8 @@ gb_cart_header_no_title_mbc1() {
 	echo -en '\x00'
 
 	# 014D - Header Checksum
-	echo -en '\x2f'
+	# echo -en '\x2f'
+	echo -en '\x2a'
 
 	# グローバルチェックサム
 	# (実機では見ない情報だし設定しない)
