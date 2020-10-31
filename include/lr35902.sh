@@ -169,6 +169,16 @@ lr35902_ei_and_ret() {
 	echo -e 'reti\t;16' >>$ASM_LIST_FILE
 }
 
+lr35902_set_carry() {
+	echo -en '\x37'	# scf
+	echo -e 'scf\t;4' >>$ASM_LIST_FILE
+}
+
+lr35902_comp_carry() {
+	echo -en '\x3f'	# ccf
+	echo -e 'ccf\t;4' >>$ASM_LIST_FILE
+}
+
 lr35902_set_reg() {
 	local reg=$1
 	local val=$2
@@ -1116,6 +1126,10 @@ lr35902_complement_regA() {
 #   0xaa(carry=0) -> 0x55(carry=0)
 #   0x55(carry=1) -> 0xaa(carry=1)
 #   0xaa(carry=1) -> 0xd5(carry=0)
+lr35902_rot_regA_right_th_carry() {
+	echo -en '\x1f'	# rra
+	echo -e 'rra\t;4' >>$ASM_LIST_FILE
+}
 
 # 0xcb 0[8-f] (rrc reg)
 # 少なくともBGB(emu)は認識しない

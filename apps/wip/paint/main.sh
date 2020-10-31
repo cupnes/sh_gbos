@@ -47,14 +47,6 @@ main() {
 	lr35902_push_reg regDE
 	lr35902_push_reg regHL
 
-	# [DEBUG]
-	# set carry flag
-	echo -en '\x37'
-	# complement carry flag
-	echo -en '\x3f'
-	# Rotate A right through Carry flag.
-	echo -en '\x1f'
-
 	# フラグ変数の初期化済みフラグチェック
 	lr35902_copy_to_regA_from_addr $APP_VARS_BASE
 	lr35902_test_bitN_of_reg $flg_bitnum_inited regA
@@ -93,19 +85,67 @@ main() {
 		cat main.6.o
 
 		# Bボタン(左クリック): マウスカーソルの座標へ黒タイル配置
-		# lr35902_test_bitN_of_reg $GBOS_B_KEY_BITNUM regA
-		# (
-		# 	# Bボタン(左クリック)のリリースがあった場合
+		lr35902_test_bitN_of_reg $GBOS_B_KEY_BITNUM regA
+		(
+			# Bボタン(左クリック)のリリースがあった場合
 
-		# 	# TODO マウスカーソルの座標を取得
+			# ボタンリリース状態をregCへ取っておく
+			lr35902_copy_to_from regC regA
 
-		# 	# TODO 黒タイル配置
+			# マウスカーソルの座標を取得
+			## タイル座標Y -> regD
+			### マウスカーソルY座標 -> regA
+			lr35902_copy_to_regA_from_addr $var_mouse_y
+			### regA - 16 -> regA
+			lr35902_set_reg regB 10
+			lr35902_sub_to_regA regB
+			### regAを3ビット右シフト
+			lr35902_set_carry
+			lr35902_comp_carry
+			lr35902_rot_regA_right_th_carry
+			lr35902_set_carry
+			lr35902_comp_carry
+			lr35902_rot_regA_right_th_carry
+			lr35902_set_carry
+			lr35902_comp_carry
+			lr35902_rot_regA_right_th_carry
+			### regA -> regD
+			lr35902_copy_to_from regD regA
 
-		# 	# TODO リリース情報のBボタン(左クリック)のビットをクリア
-		# ) >main.3.o
-		# local sz_3=$(stat -c '%s' main.3.o)
-		# lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
-		# cat main.3.o
+			## タイル座標X -> regE
+			### マウスカーソルX座標 -> regA
+			lr35902_copy_to_regA_from_addr $var_mouse_x
+			### regA - 8 -> regA
+			lr35902_set_reg regB 08
+			lr35902_sub_to_regA regB
+			### regAを3ビット右シフト
+			lr35902_set_carry
+			lr35902_comp_carry
+			lr35902_rot_regA_right_th_carry
+			lr35902_set_carry
+			lr35902_comp_carry
+			lr35902_rot_regA_right_th_carry
+			lr35902_set_carry
+			lr35902_comp_carry
+			lr35902_rot_regA_right_th_carry
+			### regA -> regE
+			lr35902_copy_to_from regE regA
+
+			# 黒タイル配置
+			lr35902_call $a_tcoord_to_addr
+			lr35902_copy_to_from regD regH
+			lr35902_copy_to_from regE regL
+			lr35902_set_reg regB $GBOS_TILE_NUM_BLACK
+			lr35902_call $a_enq_tdq
+
+			# リリース情報のBボタン(左クリック)のビットをクリア
+			lr35902_copy_to_from regA regC
+			lr35902_res_bitN_of_reg $GBOS_B_KEY_BITNUM regA
+			lr35902_copy_to_addr_from_regA $var_app_release_btn
+		) >main.3.o
+		local sz_3=$(stat -c '%s' main.3.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
+		cat main.3.o
 	) >main.2.o
 
 	(
