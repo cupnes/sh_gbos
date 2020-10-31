@@ -2519,7 +2519,7 @@ init() {
 
 	# MBCへROMバンク番号1を設定
 	lr35902_set_reg regA 01
-	lr35902_copy_to_addr_from_regA $GB_MBC_ADDR
+	lr35902_copy_to_addr_from_regA $GB_MBC_ROM_BANK_ADDR
 
 	# スクロールレジスタクリア
 	gb_reset_scroll_pos

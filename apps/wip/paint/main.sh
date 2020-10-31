@@ -26,6 +26,16 @@ vars() {
 	var_general_flgs=$APP_VARS_BASE
 	echo -e "var_general_flgs=$var_general_flgs" >>$map_file
 	echo -en '\x00'	# 全て0
+
+	# バックアップアドレス(下位8ビット)
+	var_bkup_bh=$(calc16 "$var_general_flgs+1")
+	echo -e "var_bkup_bh=$var_bkup_bh" >>$map_file
+	echo -en '\x02'
+
+	# バックアップアドレス(上位8ビット)
+	var_bkup_th=$(calc16 "$var_bkup_bh+1")
+	echo -e "var_bkup_th=$var_bkup_th" >>$map_file
+	echo -en '\xa0'
 }
 # 変数設定のために空実行
 vars >/dev/null
@@ -64,9 +74,6 @@ main() {
 		lr35902_test_bitN_of_reg $GBOS_A_KEY_BITNUM regA
 		(
 			# Aボタン(右クリック)のリリースがあった場合
-
-			# TODO 描画されているタイル座標のリストを
-			#      バックアップRAMへ保存
 
 			# DAS: run_exeをクリア
 			lr35902_copy_to_regA_from_addr $var_draw_act_stat
@@ -138,6 +145,11 @@ main() {
 			lr35902_set_reg regB $GBOS_TILE_NUM_BLACK
 			lr35902_call $a_enq_tdq
 
+			# TODO バックアップ
+			## WALもどき
+			## var_bkup_{th,bh}が挿す場所にX,Y座標値を書いて
+			## var_bkup_{th,bh}を更新(+2バイトする)
+
 			# リリース情報のBボタン(左クリック)のビットをクリア
 			lr35902_copy_to_from regA regC
 			lr35902_res_bitN_of_reg $GBOS_B_KEY_BITNUM regA
@@ -146,6 +158,17 @@ main() {
 		local sz_3=$(stat -c '%s' main.3.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
 		cat main.3.o
+
+		# TODO セレクトボタン: バックアップをロード
+		## カートリッジRAMのデータを元に画面描画する
+		## var_bkup_{th,bh}変数の内容もRAM[0:1]の内容で更新
+		## バックアップデータのフォーマット:
+		## A000h | var_bkup_bh   | var_bkup_th   |
+		## A002h | draw_log[0].x | draw_log[0].y |
+		## A004h | draw_log[1].x | draw_log[1].y |
+		## ※ var_bkup_{th,bh}は次にログを保存できる場所を挿す
+		##    この例の場合、A003hまではデータが既に入っているので
+		##    var_bkup_th=A0h,var_bkup_bh=06hとなる
 	) >main.2.o
 
 	(
@@ -153,8 +176,9 @@ main() {
 		lr35902_clear_reg regA
 		lr35902_copy_to_addr_from_regA $var_app_release_btn
 
-		# 初期パターン配置
-		# init_paint
+		# カートリッジ搭載RAMの有効化
+		lr35902_set_reg regA $GB_MBC_RAM_EN_VAL
+		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
 
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $APP_VARS_BASE
