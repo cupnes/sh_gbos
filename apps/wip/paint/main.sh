@@ -47,6 +47,14 @@ main() {
 	lr35902_push_reg regDE
 	lr35902_push_reg regHL
 
+	# [DEBUG]
+	# set carry flag
+	echo -en '\x37'
+	# complement carry flag
+	echo -en '\x3f'
+	# Rotate A right through Carry flag.
+	echo -en '\x1f'
+
 	# フラグ変数の初期化済みフラグチェック
 	lr35902_copy_to_regA_from_addr $APP_VARS_BASE
 	lr35902_test_bitN_of_reg $flg_bitnum_inited regA
@@ -57,11 +65,16 @@ main() {
 	(
 		# 定常処理
 
-		# Aボタン(右クリック)で終了
+		# リリースされたボタンをregAへ取得
 		lr35902_copy_to_regA_from_addr $var_app_release_btn
+
+		# Aボタン(右クリック): 終了
 		lr35902_test_bitN_of_reg $GBOS_A_KEY_BITNUM regA
 		(
 			# Aボタン(右クリック)のリリースがあった場合
+
+			# TODO 描画されているタイル座標のリストを
+			#      バックアップRAMへ保存
 
 			# DAS: run_exeをクリア
 			lr35902_copy_to_regA_from_addr $var_draw_act_stat
@@ -79,20 +92,20 @@ main() {
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
 		cat main.6.o
 
-		# 更新処理
+		# Bボタン(左クリック): マウスカーソルの座標へ黒タイル配置
+		# lr35902_test_bitN_of_reg $GBOS_B_KEY_BITNUM regA
+		# (
+		# 	# Bボタン(左クリック)のリリースがあった場合
 
-		# var_draw_cycをインクリメントするエントリを積む
-		lr35902_copy_to_regA_from_addr $var_draw_cyc
-		lr35902_inc regA
-		lr35902_copy_to_from regB regA
-		lr35902_set_reg regD $(echo $var_draw_cyc | cut -c1-2)
-		lr35902_set_reg regE $(echo $var_draw_cyc | cut -c3-4)
-		lr35902_call $a_tdq_enq
+		# 	# TODO マウスカーソルの座標を取得
 
-		# var_proc_cycをインクリメント
-		lr35902_copy_to_regA_from_addr $var_proc_cyc
-		lr35902_inc regA
-		lr35902_copy_to_addr_from_regA $var_proc_cyc
+		# 	# TODO 黒タイル配置
+
+		# 	# TODO リリース情報のBボタン(左クリック)のビットをクリア
+		# ) >main.3.o
+		# local sz_3=$(stat -c '%s' main.3.o)
+		# lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
+		# cat main.3.o
 	) >main.2.o
 
 	(
@@ -101,7 +114,7 @@ main() {
 		lr35902_copy_to_addr_from_regA $var_app_release_btn
 
 		# 初期パターン配置
-		init_rnd
+		# init_paint
 
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $APP_VARS_BASE

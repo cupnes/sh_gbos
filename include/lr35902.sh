@@ -1097,6 +1097,42 @@ lr35902_complement_regA() {
 #       rl側をrotate_left_through_carryという名前で実装する
 #       ∵ 振る舞いからしてrl側がCarryを通してシフトしている
 
+# 0x0f (rrca)
+# 動作イメージ:
+#       [carry]
+#         ↑
+# ... → [b0] → [b7] → ...
+# 動作例:
+#   0x55(carry=0) -> 0xaa(carry=1)
+#   0xaa(carry=0) -> 0x55(carry=0)
+#   0x55(carry=1) -> 0xaa(carry=1)
+#   0xaa(carry=1) -> 0x55(carry=0)
+
+# 0x1f (rra)
+# 動作イメージ:
+# ... → [b0] → [carry] → [b7] → ...
+# 動作例:
+#   0x55(carry=0) -> 0x2a(carry=1)
+#   0xaa(carry=0) -> 0x55(carry=0)
+#   0x55(carry=1) -> 0xaa(carry=1)
+#   0xaa(carry=1) -> 0xd5(carry=0)
+
+# 0xcb 0[8-f] (rrc reg)
+# 少なくともBGB(emu)は認識しない
+
+# 0xcb 1[8-f] (rr reg)
+# 動作イメージ:
+# ... → [b0] → [carry] → [b7] → ...
+# 動作例:
+#   0x55(carry=0) -> 0x2a(carry=1)
+#   0xaa(carry=0) -> 0x55(carry=0)
+#   0x55(carry=1) -> 0xaa(carry=1)
+#   0xaa(carry=1) -> 0xd5(carry=0)
+
+# 0xcb 2[0-7] (sla reg)
+# 動作例:
+#   0x55(carry=0) -> 0xaa(carry=0)
+#   0xaa(carry=0) -> 0x54(carry=1)
 lr35902_shift_left_arithmetic() {
 	local reg=$1
 
@@ -1118,6 +1154,15 @@ lr35902_shift_left_arithmetic() {
 	fi
 	echo -e "sla $regname\t;$cyc" >>$ASM_LIST_FILE
 }
+
+# 0xcb 2[8-f] (sra reg)
+# 動作イメージ:
+# [b7(不変)] → [b6] → [b5] → ... → [b1] → [b0] → [carry]
+# 動作例:
+#   0x55(carry=0) -> 0x2a(carry=1)
+#   0xaa(carry=0) -> 0xd5(carry=0)
+#   0x55(carry=1) -> 0x2a(carry=1)
+#   0xaa(carry=1) -> 0xd5(carry=0)
 
 lr35902_func_bitN_of_reg_impl() {
 	local n=$1
