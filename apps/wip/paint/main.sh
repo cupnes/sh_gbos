@@ -210,6 +210,31 @@ main() {
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
 	cat main.3.o
 
+	# スタートボタン: リセット
+	lr35902_test_bitN_of_reg $GBOS_START_KEY_BITNUM regA
+	(
+		# スタートボタンのリリースがあった場合
+
+		# ボタンリリース状態をregCへ取っておく
+		lr35902_copy_to_from regC regA
+
+		# RAM_BKUP_NEXT_ADDR_{TH,BH}を初期化
+		lr35902_set_reg regA a0
+		lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_TH
+		lr35902_set_reg regA 02
+		lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_BH
+
+		# TODO 画面を初期化
+
+		# アプリ用ボタンリリースフラグのスタートボタンをクリア
+		lr35902_copy_to_from regA regC
+		lr35902_res_bitN_of_reg $GBOS_START_KEY_BITNUM regA
+		lr35902_copy_to_addr_from_regA $var_app_release_btn
+	) >main.10.o
+	local sz_10=$(stat -c '%s' main.10.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_10)
+	cat main.10.o
+
 	# セレクトボタン: バックアップをロード
 	## カートリッジRAMのデータを元に画面描画する
 	## バックアップデータのフォーマット:
