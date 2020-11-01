@@ -53,7 +53,7 @@ main() {
 
 	# 初期化処理
 	(
-		# アプリ用リリースボタンフラグをクリア
+		# アプリ用ボタンリリースフラグをクリア
 		lr35902_clear_reg regA
 		lr35902_copy_to_addr_from_regA $var_app_release_btn
 
@@ -72,7 +72,7 @@ main() {
 			lr35902_set_reg regA a0
 			lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_TH
 			lr35902_set_reg regA 02
-			lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_TH
+			lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_BH
 		) >main.9.o
 		local sz_9=$(stat -c '%s' main.9.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_9)
@@ -103,7 +103,7 @@ main() {
 
 	# 定常処理
 
-	# リリースされたボタンをregAへ取得
+	# アプリ用ボタンリリースフラグをregAへ取得
 	lr35902_copy_to_regA_from_addr $var_app_release_btn
 
 	# Aボタン(右クリック): 終了
@@ -201,7 +201,7 @@ main() {
 		lr35902_copy_to_from regA regL
 		lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_BH
 
-		# リリース情報のBボタン(左クリック)のビットをクリア
+		# アプリ用ボタンリリースフラグのBボタン(左クリック)をクリア
 		lr35902_copy_to_from regA regC
 		lr35902_res_bitN_of_reg $GBOS_B_KEY_BITNUM regA
 		lr35902_copy_to_addr_from_regA $var_app_release_btn
@@ -270,6 +270,11 @@ main() {
 		## 条件判定処理先頭までジャンプ
 		local sz_8=$(stat -c '%s' main.8.o)
 		lr35902_rel_jump $(two_comp_d $((sz_8 + 2)))
+
+		# アプリ用ボタンリリースフラグのセレクトボタンをクリア
+		lr35902_copy_to_regA_from_addr $var_app_release_btn
+		lr35902_res_bitN_of_reg $GBOS_SELECT_KEY_BITNUM regA
+		lr35902_copy_to_addr_from_regA $var_app_release_btn
 	) >main.4.o
 	local sz_4=$(stat -c '%s' main.4.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
