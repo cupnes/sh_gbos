@@ -51,189 +51,7 @@ main() {
 	lr35902_push_reg regDE
 	lr35902_push_reg regHL
 
-	# フラグ変数の初期化済みフラグチェック
-	lr35902_copy_to_regA_from_addr $APP_VARS_BASE
-	lr35902_test_bitN_of_reg $flg_bitnum_inited regA
-
-	# フラグがセットされていたら(初期化済みだったら)、
-	# 初期化処理をスキップ
-
-	(
-		# 定常処理
-
-		# リリースされたボタンをregAへ取得
-		lr35902_copy_to_regA_from_addr $var_app_release_btn
-
-		# Aボタン(右クリック): 終了
-		lr35902_test_bitN_of_reg $GBOS_A_KEY_BITNUM regA
-		(
-			# Aボタン(右クリック)のリリースがあった場合
-
-			# DAS: run_exeをクリア
-			lr35902_copy_to_regA_from_addr $var_draw_act_stat
-			lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
-			lr35902_copy_to_addr_from_regA $var_draw_act_stat
-
-			# pop & return
-			lr35902_pop_reg regHL
-			lr35902_pop_reg regDE
-			lr35902_pop_reg regBC
-			lr35902_pop_reg regAF
-			lr35902_return
-		) >main.6.o
-		local sz_6=$(stat -c '%s' main.6.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
-		cat main.6.o
-
-		# Bボタン(左クリック): マウスカーソルの座標へ黒タイル配置
-		lr35902_test_bitN_of_reg $GBOS_B_KEY_BITNUM regA
-		(
-			# Bボタン(左クリック)のリリースがあった場合
-
-			# ボタンリリース状態をregCへ取っておく
-			lr35902_copy_to_from regC regA
-
-			# マウスカーソルの座標を取得
-			## タイル座標Y -> regD
-			### マウスカーソルY座標 -> regA
-			lr35902_copy_to_regA_from_addr $var_mouse_y
-			### regA - 16 -> regA
-			lr35902_set_reg regB 10
-			lr35902_sub_to_regA regB
-			### regAを3ビット右シフト
-			lr35902_set_carry
-			lr35902_comp_carry
-			lr35902_rot_regA_right_th_carry
-			lr35902_set_carry
-			lr35902_comp_carry
-			lr35902_rot_regA_right_th_carry
-			lr35902_set_carry
-			lr35902_comp_carry
-			lr35902_rot_regA_right_th_carry
-			### regA -> regD
-			lr35902_copy_to_from regD regA
-
-			## タイル座標X -> regE
-			### マウスカーソルX座標 -> regA
-			lr35902_copy_to_regA_from_addr $var_mouse_x
-			### regA - 8 -> regA
-			lr35902_set_reg regB 08
-			lr35902_sub_to_regA regB
-			### regAを3ビット右シフト
-			lr35902_set_carry
-			lr35902_comp_carry
-			lr35902_rot_regA_right_th_carry
-			lr35902_set_carry
-			lr35902_comp_carry
-			lr35902_rot_regA_right_th_carry
-			lr35902_set_carry
-			lr35902_comp_carry
-			lr35902_rot_regA_right_th_carry
-			### regA -> regE
-			lr35902_copy_to_from regE regA
-
-			# 黒タイル配置
-			lr35902_call $a_tcoord_to_addr
-			lr35902_copy_to_from regD regH
-			lr35902_copy_to_from regE regL
-			lr35902_set_reg regB $GBOS_TILE_NUM_BLACK
-			lr35902_call $a_enq_tdq
-
-			# バックアップ
-			## WALもどき
-			## RAM_BKUP_NEXT_ADDR_{TH,BH}が指すRAMアドレスを
-			## regHLへ設定
-			lr35902_copy_to_regA_from_addr $RAM_BKUP_NEXT_ADDR_TH
-			lr35902_copy_to_from regH regA
-			lr35902_copy_to_regA_from_addr $RAM_BKUP_NEXT_ADDR_BH
-			lr35902_copy_to_from regL regA
-			## 先程描画したVRAMアドレスをregHLが指す先へ保存
-			## (regHLをインクリメントしながら)
-			lr35902_copy_to_from regA regD	# VRAMアドレス[15:8]
-			lr35902_copyinc_to_ptrHL_from_regA
-			lr35902_copy_to_from regA regE	# VRAMアドレス[7:0]
-			lr35902_copyinc_to_ptrHL_from_regA
-			## regHLをRAM_BKUP_NEXT_ADDR_{TH,BH}へ書き戻す
-			lr35902_copy_to_from regA regH
-			lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_TH
-			lr35902_copy_to_from regA regL
-			lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_BH
-
-			# リリース情報のBボタン(左クリック)のビットをクリア
-			lr35902_copy_to_from regA regC
-			lr35902_res_bitN_of_reg $GBOS_B_KEY_BITNUM regA
-			lr35902_copy_to_addr_from_regA $var_app_release_btn
-		) >main.3.o
-		local sz_3=$(stat -c '%s' main.3.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
-		cat main.3.o
-
-		# セレクトボタン: バックアップをロード
-		## カートリッジRAMのデータを元に画面描画する
-		## バックアップデータのフォーマット:
-		## A000h | RAM_BKUP_NEXT_ADDR_TH | RAM_BKUP_NEXT_ADDR_BH |
-		## A002h | draw_log[0].th        | draw_log[0].bh        |
-		## A004h | draw_log[1].th        | draw_log[1].bh        |
-		## ※ RAM_BKUP_NEXT_ADDR_{TH,BH}は次にログを保存できる場所を指す
-		##    この例の場合、A003hまではデータが既に入っているので
-		##    RAM_BKUP_NEXT_ADDR_TH=A0h,RAM_BKUP_NEXT_ADDR_BH=06hとなる
-		lr35902_test_bitN_of_reg $GBOS_SELECT_KEY_BITNUM regA
-		(
-			lr35902_set_reg regB $GBOS_TILE_NUM_BLACK
-
-			lr35902_set_reg regH a0
-			lr35902_set_reg regL 02
-
-			# 繰り返す対象の処理
-			# (regHLの指す先をtdqへエンキュー)
-			(
-				lr35902_copyinc_to_regA_from_ptrHL
-				lr35902_copy_to_from regD regA
-				lr35902_copyinc_to_regA_from_ptrHL
-				lr35902_copy_to_from regE regA
-				lr35902_call $a_enq_tdq
-			) >main.5.o
-			local sz_5=$(stat -c '%s' main.5.o)
-			## 条件判定処理先頭までジャンプしている命令の分を足す
-			local sz_5_rel_jump=$((sz_5 + 2))
-
-			# regH < RAM_BKUP_NEXT_ADDR_TH の間繰り返す
-			(
-				lr35902_copy_to_regA_from_addr $RAM_BKUP_NEXT_ADDR_TH
-				lr35902_copy_to_from regC regA
-				lr35902_copy_to_from regA regH
-				lr35902_compare_regA_and regC
-				## regH(regA) >= RAM_BKUP_NEXT_ADDR_TH(regC)
-				## だったらジャンプして飛ばす
-				lr35902_rel_jump_with_cond NC $(two_digits_d $sz_5_rel_jump)
-				cat main.5.o
-			) >main.7.o
-			cat main.7.o
-			## 条件判定処理先頭までジャンプ
-			local sz_7=$(stat -c '%s' main.7.o)
-			lr35902_rel_jump $(two_comp_d $((sz_7 + 2)))
-
-			# regL < RAM_BKUP_NEXT_ADDR_BH の間繰り返す
-			(
-				lr35902_copy_to_regA_from_addr $RAM_BKUP_NEXT_ADDR_BH
-				lr35902_copy_to_from regC regA
-				lr35902_copy_to_from regA regL
-				lr35902_compare_regA_and regC
-				## regL(regA) >= RAM_BKUP_NEXT_ADDR_BH(regC)
-				## だったらジャンプして飛ばす
-				lr35902_rel_jump_with_cond NC $(two_digits_d $sz_5_rel_jump)
-				cat main.5.o
-			) >main.8.o
-			cat main.8.o
-			## 条件判定処理先頭までジャンプ
-			local sz_8=$(stat -c '%s' main.8.o)
-			lr35902_rel_jump $(two_comp_d $((sz_8 + 2)))
-		) >main.4.o
-		local sz_4=$(stat -c '%s' main.4.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
-		cat main.4.o
-	) >main.2.o
-
+	# 初期化処理
 	(
 		# アプリ用リリースボタンフラグをクリア
 		lr35902_clear_reg regA
@@ -265,15 +83,197 @@ main() {
 		lr35902_set_bitN_of_reg $flg_bitnum_inited regA
 		lr35902_copy_to_addr_from_regA $APP_VARS_BASE
 
-		# 定常処理をスキップ
-		local sz_2=$(stat -c '%s' main.2.o)
-		lr35902_rel_jump $(two_digits_d $sz_2)
+		# pop & return
+		lr35902_pop_reg regHL
+		lr35902_pop_reg regDE
+		lr35902_pop_reg regBC
+		lr35902_pop_reg regAF
+		lr35902_return
 	) >main.1.o
 
+	# フラグ変数の初期化済みフラグチェック
+	lr35902_copy_to_regA_from_addr $APP_VARS_BASE
+	lr35902_test_bitN_of_reg $flg_bitnum_inited regA
+
+	# フラグがセットされていたら(初期化済みだったら)、
+	# 初期化処理をスキップ
 	local sz_1=$(stat -c '%s' main.1.o)
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
 	cat main.1.o
-	cat main.2.o
+
+	# 定常処理
+
+	# リリースされたボタンをregAへ取得
+	lr35902_copy_to_regA_from_addr $var_app_release_btn
+
+	# Aボタン(右クリック): 終了
+	lr35902_test_bitN_of_reg $GBOS_A_KEY_BITNUM regA
+	(
+		# Aボタン(右クリック)のリリースがあった場合
+
+		# DAS: run_exeをクリア
+		lr35902_copy_to_regA_from_addr $var_draw_act_stat
+		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
+		lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+		# pop & return
+		lr35902_pop_reg regHL
+		lr35902_pop_reg regDE
+		lr35902_pop_reg regBC
+		lr35902_pop_reg regAF
+		lr35902_return
+	) >main.6.o
+	local sz_6=$(stat -c '%s' main.6.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
+	cat main.6.o
+
+	# Bボタン(左クリック): マウスカーソルの座標へ黒タイル配置
+	lr35902_test_bitN_of_reg $GBOS_B_KEY_BITNUM regA
+	(
+		# Bボタン(左クリック)のリリースがあった場合
+
+		# ボタンリリース状態をregCへ取っておく
+		lr35902_copy_to_from regC regA
+
+		# マウスカーソルの座標を取得
+		## タイル座標Y -> regD
+		### マウスカーソルY座標 -> regA
+		lr35902_copy_to_regA_from_addr $var_mouse_y
+		### regA - 16 -> regA
+		lr35902_set_reg regB 10
+		lr35902_sub_to_regA regB
+		### regAを3ビット右シフト
+		lr35902_set_carry
+		lr35902_comp_carry
+		lr35902_rot_regA_right_th_carry
+		lr35902_set_carry
+		lr35902_comp_carry
+		lr35902_rot_regA_right_th_carry
+		lr35902_set_carry
+		lr35902_comp_carry
+		lr35902_rot_regA_right_th_carry
+		### regA -> regD
+		lr35902_copy_to_from regD regA
+
+		## タイル座標X -> regE
+		### マウスカーソルX座標 -> regA
+		lr35902_copy_to_regA_from_addr $var_mouse_x
+		### regA - 8 -> regA
+		lr35902_set_reg regB 08
+		lr35902_sub_to_regA regB
+		### regAを3ビット右シフト
+		lr35902_set_carry
+		lr35902_comp_carry
+		lr35902_rot_regA_right_th_carry
+		lr35902_set_carry
+		lr35902_comp_carry
+		lr35902_rot_regA_right_th_carry
+		lr35902_set_carry
+		lr35902_comp_carry
+		lr35902_rot_regA_right_th_carry
+		### regA -> regE
+		lr35902_copy_to_from regE regA
+
+		# 黒タイル配置
+		lr35902_call $a_tcoord_to_addr
+		lr35902_copy_to_from regD regH
+		lr35902_copy_to_from regE regL
+		lr35902_set_reg regB $GBOS_TILE_NUM_BLACK
+		lr35902_call $a_enq_tdq
+
+		# バックアップ
+		## WALもどき
+		## RAM_BKUP_NEXT_ADDR_{TH,BH}が指すRAMアドレスを
+		## regHLへ設定
+		lr35902_copy_to_regA_from_addr $RAM_BKUP_NEXT_ADDR_TH
+		lr35902_copy_to_from regH regA
+		lr35902_copy_to_regA_from_addr $RAM_BKUP_NEXT_ADDR_BH
+		lr35902_copy_to_from regL regA
+		## 先程描画したVRAMアドレスをregHLが指す先へ保存
+		## (regHLをインクリメントしながら)
+		lr35902_copy_to_from regA regD	# VRAMアドレス[15:8]
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_copy_to_from regA regE	# VRAMアドレス[7:0]
+		lr35902_copyinc_to_ptrHL_from_regA
+		## regHLをRAM_BKUP_NEXT_ADDR_{TH,BH}へ書き戻す
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_TH
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_BH
+
+		# リリース情報のBボタン(左クリック)のビットをクリア
+		lr35902_copy_to_from regA regC
+		lr35902_res_bitN_of_reg $GBOS_B_KEY_BITNUM regA
+		lr35902_copy_to_addr_from_regA $var_app_release_btn
+	) >main.3.o
+	local sz_3=$(stat -c '%s' main.3.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
+	cat main.3.o
+
+	# セレクトボタン: バックアップをロード
+	## カートリッジRAMのデータを元に画面描画する
+	## バックアップデータのフォーマット:
+	## A000h | RAM_BKUP_NEXT_ADDR_TH | RAM_BKUP_NEXT_ADDR_BH |
+	## A002h | draw_log[0].th        | draw_log[0].bh        |
+	## A004h | draw_log[1].th        | draw_log[1].bh        |
+	## ※ RAM_BKUP_NEXT_ADDR_{TH,BH}は次にログを保存できる場所を指す
+	##    この例の場合、A003hまではデータが既に入っているので
+	##    RAM_BKUP_NEXT_ADDR_TH=A0h,RAM_BKUP_NEXT_ADDR_BH=06hとなる
+	lr35902_test_bitN_of_reg $GBOS_SELECT_KEY_BITNUM regA
+	(
+		lr35902_set_reg regB $GBOS_TILE_NUM_BLACK
+
+		lr35902_set_reg regH a0
+		lr35902_set_reg regL 02
+
+		# 繰り返す対象の処理
+		# (regHLの指す先をtdqへエンキュー)
+		(
+			lr35902_copyinc_to_regA_from_ptrHL
+			lr35902_copy_to_from regD regA
+			lr35902_copyinc_to_regA_from_ptrHL
+			lr35902_copy_to_from regE regA
+			lr35902_call $a_enq_tdq
+		) >main.5.o
+		local sz_5=$(stat -c '%s' main.5.o)
+		## 条件判定処理先頭までジャンプしている命令の分を足す
+		local sz_5_rel_jump=$((sz_5 + 2))
+
+		# regH < RAM_BKUP_NEXT_ADDR_TH の間繰り返す
+		(
+			lr35902_copy_to_regA_from_addr $RAM_BKUP_NEXT_ADDR_TH
+			lr35902_copy_to_from regC regA
+			lr35902_copy_to_from regA regH
+			lr35902_compare_regA_and regC
+			## regH(regA) >= RAM_BKUP_NEXT_ADDR_TH(regC)
+			## だったらジャンプして飛ばす
+			lr35902_rel_jump_with_cond NC $(two_digits_d $sz_5_rel_jump)
+			cat main.5.o
+		) >main.7.o
+		cat main.7.o
+		## 条件判定処理先頭までジャンプ
+		local sz_7=$(stat -c '%s' main.7.o)
+		lr35902_rel_jump $(two_comp_d $((sz_7 + 2)))
+
+		# regL < RAM_BKUP_NEXT_ADDR_BH の間繰り返す
+		(
+			lr35902_copy_to_regA_from_addr $RAM_BKUP_NEXT_ADDR_BH
+			lr35902_copy_to_from regC regA
+			lr35902_copy_to_from regA regL
+			lr35902_compare_regA_and regC
+			## regL(regA) >= RAM_BKUP_NEXT_ADDR_BH(regC)
+			## だったらジャンプして飛ばす
+			lr35902_rel_jump_with_cond NC $(two_digits_d $sz_5_rel_jump)
+			cat main.5.o
+		) >main.8.o
+		cat main.8.o
+		## 条件判定処理先頭までジャンプ
+		local sz_8=$(stat -c '%s' main.8.o)
+		lr35902_rel_jump $(two_comp_d $((sz_8 + 2)))
+	) >main.4.o
+	local sz_4=$(stat -c '%s' main.4.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
+	cat main.4.o
 
 	# pop & return
 	lr35902_pop_reg regHL
