@@ -3,7 +3,8 @@
 # set -uex
 set -ue
 
-GB_ROM_BANK_SIZE=16384
+GB_BANK_SIZE=16384	# ROM
+# GB_BANK_SIZE=8192	# RAM
 
 # conv_char_code
 CONV_FROM='[ 0-9A-Za-z]'
@@ -139,7 +140,7 @@ create_rootfs() {
 	) >${DST_ROOTFS_IMG}.o
 	cat ${DST_ROOTFS_IMG}.o
 	local sz=$(stat -c '%s' ${DST_ROOTFS_IMG}.o)
-	local padding=$((GB_ROM_BANK_SIZE - sz))
+	local padding=$((GB_BANK_SIZE - sz))
 	dd if=/dev/zero bs=1 count=$padding 2>/dev/null
 }
 
