@@ -21,7 +21,8 @@ GBOS_ROM_TILE_DATA_START=$GB_ROM_FREE_BASE
 GBOS_TILE_DATA_START=8000
 GBOS_BG_TILEMAP_START=9800
 GBOS_WINDOW_TILEMAP_START=9c00
-GBOS_FS_BASE=4000
+# GBOS_FS_BASE=4000	# 16KB ROM Bank 01
+GBOS_FS_BASE=a000	# 8KB External RAM
 GBOS_FS_FILE_ATTR_SZ=07
 
 GBOS_APP_MEM_BASE=$GB_WRAM1_BASE
@@ -1244,7 +1245,6 @@ f_rstr_tiles_cyc() {
 
 # ディレクトリを表示
 ## TODO 今の所ルートディレクトリ固定
-## TODO 今の所ファイルは1つで固定
 f_rstr_tiles_cyc >src/f_rstr_tiles_cyc.o
 fsz=$(to16 $(stat -c '%s' src/f_rstr_tiles_cyc.o))
 fadr=$(calc16 "${a_rstr_tiles_cyc}+${fsz}")
@@ -1279,7 +1279,6 @@ f_view_dir() {
 
 # ディレクトリを表示する周期関数
 ## TODO 今の所ルートディレクトリのみ
-## TODO 今の所ファイルは1つで固定
 f_view_dir >src/f_view_dir.o
 fsz=$(to16 $(stat -c '%s' src/f_view_dir.o))
 fadr=$(calc16 "${a_view_dir}+${fsz}")
@@ -2520,6 +2519,10 @@ init() {
 	# MBCへROMバンク番号1を設定
 	lr35902_set_reg regA 01
 	lr35902_copy_to_addr_from_regA $GB_MBC_ROM_BANK_ADDR
+
+	# カートリッジ搭載RAMの有効化
+	lr35902_set_reg regA $GB_MBC_RAM_EN_VAL
+	lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
 
 	# スクロールレジスタクリア
 	gb_reset_scroll_pos
