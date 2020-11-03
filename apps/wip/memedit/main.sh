@@ -200,32 +200,63 @@ f_draw_init_tiles() {
 	lr35902_return
 }
 
-# # 指定したアドレスから4バイトダンプ
-# # in : regH - ダンプするアドレス[15:8]
-# #    : regL - ダンプするアドレス[7:0]
-# #    : regD - 描画先アドレス[15:8]
-# #    : regE - 描画先アドレス[7:0]
-# f_dump_addr_and_data_4bytes() {
-# 	# push
-# 	lr35902_push_reg regAF
+# 指定したアドレスから4バイトダンプ
+# in : regH - ダンプするアドレス[15:8]
+#    : regL - ダンプするアドレス[7:0]
+#    : regD - 描画先アドレス[15:8]
+#    : regE - 描画先アドレス[7:0]
+# ※ regEだけインクリメントして1行分を書いていく実装
+#    (regEが繰り上がる事は想定していない)
+f_dump_addr_and_data_4bytes() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regDE
 
-# 	# アドレスをダンプ
-# 	## アドレス[15:8]
-# 	lr35902_copy_to_from regA regH
-# 	lr35902_call $a_byte_to_tile
+	# アドレスをダンプ
+	## アドレス[15:12]
+	lr35902_copy_to_from regA regH
+	lr35902_swap_nibbles regA
+	lr35902_call $a_byte_to_tile
+	lr35902_call $a_enq_tdq
+	## アドレス[11:8]
+	lr35902_copy_to_from regA regH
+	lr35902_call $a_byte_to_tile
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
+	## アドレス[7:4]
+	lr35902_copy_to_from regA regL
+	lr35902_swap_nibbles regA
+	lr35902_call $a_byte_to_tile
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
+	## アドレス[11:8]
+	lr35902_copy_to_from regA regL
+	lr35902_call $a_byte_to_tile
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
 
-# 	# データをダンプ
+	# データをダンプ
 
-# 	# pop & return
-# 	lr35902_pop_reg regAF
-# 	lr35902_return
-# }
+	# pop & return
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regAF
+	lr35902_return
+}
 
 funcs() {
+	local fsz
+
 	# 初期配置のタイルをtdqへ積む
 	a_draw_init_tiles=$APP_FUNCS_BASE
 	echo -e "a_draw_init_tiles=$a_draw_init_tiles" >>$map_file
 	f_draw_init_tiles
+
+	# 指定したアドレスから4バイトダンプ
+	f_draw_init_tiles >f_draw_init_tiles.o
+	fsz=$(to16 $(stat -c '%s' f_draw_init_tiles.o))
+	a_dump_addr_and_data_4bytes=$(four_digits $(calc16 "${a_draw_init_tiles}+${fsz}"))
+	echo -e "a_dump_addr_and_data_4bytes=$a_dump_addr_and_data_4bytes" >>$map_file
+	f_dump_addr_and_data_4bytes
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -249,22 +280,12 @@ main() {
 		# 初期画面描画のエントリをTDQへ積む
 		lr35902_call $a_draw_init_tiles
 
-		# [DEBUG]
+		# 初期状態として0xA000の内容をダンプ
+		lr35902_set_reg regH a0
+		lr35902_set_reg regL de
 		lr35902_set_reg regD 98
-
-		lr35902_set_reg regA 0a
-		lr35902_call $a_byte_to_tile
 		lr35902_set_reg regE 85
-		lr35902_call $a_enq_tdq
-		lr35902_clear_reg regA
-		lr35902_call $a_byte_to_tile
-		lr35902_set_reg regE 86
-		lr35902_call $a_enq_tdq
-		lr35902_set_reg regE 87
-		lr35902_call $a_enq_tdq
-		lr35902_set_reg regE 88
-		lr35902_call $a_enq_tdq
-
+		lr35902_call $a_dump_addr_and_data_4bytes
 
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $APP_VARS_BASE
