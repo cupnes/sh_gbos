@@ -169,6 +169,32 @@ f_draw_init_tiles() {
 	lr35902_call $a_enq_tdq
 
 	# メモリダンプ部
+	lr35902_set_reg regD 98
+
+	lr35902_set_reg regB $(get_alpha_tile_num A)
+	lr35902_set_reg regE 65
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_alpha_tile_num D)
+	lr35902_set_reg regE 66
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regE 67
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_alpha_tile_num R)
+	lr35902_set_reg regE 68
+	lr35902_call $a_enq_tdq
+
+	lr35902_set_reg regB $(get_num_tile_num 00)
+	lr35902_set_reg regE 6B
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_num_tile_num 01)
+	lr35902_set_reg regE 6D
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_num_tile_num 02)
+	lr35902_set_reg regE 6F
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_num_tile_num 03)
+	lr35902_set_reg regE 71
+	lr35902_call $a_enq_tdq
 
 	lr35902_return
 }
