@@ -211,7 +211,8 @@ f_draw_init_tiles() {
 
 # 	# アドレスをダンプ
 # 	## アドレス[15:8]
-# 	lr35902_copy_to_from
+# 	lr35902_copy_to_from regA regH
+# 	lr35902_call $a_byte_to_tile
 
 # 	# データをダンプ
 
@@ -252,11 +253,11 @@ main() {
 		lr35902_set_reg regD 98
 
 		lr35902_set_reg regA 0a
-		lr35902_call $a_byte_to_tiles
+		lr35902_call $a_byte_to_tile
 		lr35902_set_reg regE 85
 		lr35902_call $a_enq_tdq
 		lr35902_clear_reg regA
-		lr35902_call $a_byte_to_tiles
+		lr35902_call $a_byte_to_tile
 		lr35902_set_reg regE 86
 		lr35902_call $a_enq_tdq
 		lr35902_set_reg regE 87

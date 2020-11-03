@@ -2143,9 +2143,9 @@ f_enq_tdq() {
 f_enq_tdq >src/f_enq_tdq.o
 fsz=$(to16 $(stat -c '%s' src/f_enq_tdq.o))
 fadr=$(calc16 "${a_enq_tdq}+${fsz}")
-a_byte_to_tiles=$(four_digits $fadr)
-echo -e "a_byte_to_tiles=$a_byte_to_tiles" >>$MAP_FILE_NAME
-f_byte_to_tiles() {
+a_byte_to_tile=$(four_digits $fadr)
+echo -e "a_byte_to_tile=$a_byte_to_tile" >>$MAP_FILE_NAME
+f_byte_to_tile() {
 	# push
 	lr35902_push_reg regAF
 
@@ -2158,7 +2158,7 @@ f_byte_to_tiles() {
 		# regA < 0x0A (数字で表現) の場合
 
 		lr35902_add_to_regA $GBOS_TILE_NUM_NUM_BASE
-	) >src/f_byte_to_tiles.2.o
+	) >src/f_byte_to_tile.2.o
 	(
 		# regA >= 0x0A (アルファベットで表現) の場合
 
@@ -2166,13 +2166,13 @@ f_byte_to_tiles() {
 		lr35902_add_to_regA $GBOS_TILE_NUM_ALPHA_BASE
 
 		# regA < 0x0A (数字で表現) の場合の処理を飛ばす
-		local sz_2=$(stat -c '%s' src/f_byte_to_tiles.2.o)
+		local sz_2=$(stat -c '%s' src/f_byte_to_tile.2.o)
 		lr35902_rel_jump $(two_digits_d $sz_2)
-	) >src/f_byte_to_tiles.1.o
-	local sz_1=$(stat -c '%s' src/f_byte_to_tiles.1.o)
+	) >src/f_byte_to_tile.1.o
+	local sz_1=$(stat -c '%s' src/f_byte_to_tile.1.o)
 	lr35902_rel_jump_with_cond C $(two_digits_d $sz_1)
-	cat src/f_byte_to_tiles.1.o	# regA >= 0x0A (アルファベットで表現)
-	cat src/f_byte_to_tiles.2.o	# regA < 0x0A (数字で表現)
+	cat src/f_byte_to_tile.1.o	# regA >= 0x0A (アルファベットで表現)
+	cat src/f_byte_to_tile.2.o	# regA < 0x0A (数字で表現)
 	lr35902_copy_to_from regB regA
 
 	# pop & return
@@ -2227,7 +2227,7 @@ global_functions() {
 	f_update_hidden_com_stat
 	f_init_tdq
 	f_enq_tdq
-	f_byte_to_tiles
+	f_byte_to_tile
 }
 
 gbos_vec() {
