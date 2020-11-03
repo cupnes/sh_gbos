@@ -130,10 +130,9 @@ tdq_enq() {
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
 	cat tdq_enqueue.5.o
 
-	# pop & return
+	# pop
 	lr35902_pop_reg regHL
 	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
-	lr35902_return
 }

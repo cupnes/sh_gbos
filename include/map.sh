@@ -27,4 +27,5 @@ a_run_exe=13C8
 a_run_exe_cyc=13FA
 a_update_hidden_com_stat=1400
 a_init_tdq=148A
-a_enq_tdq=149F
+a_enq_tdq=14A0
+a_byte_to_tiles=14E9
