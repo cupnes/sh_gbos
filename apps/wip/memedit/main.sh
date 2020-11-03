@@ -210,6 +210,7 @@ f_draw_init_tiles() {
 f_dump_addr_and_data_4bytes() {
 	# push
 	lr35902_push_reg regAF
+	lr35902_push_reg regBC
 	lr35902_push_reg regDE
 
 	# アドレスをダンプ
@@ -229,16 +230,72 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_call $a_byte_to_tile
 	lr35902_inc regE
 	lr35902_call $a_enq_tdq
-	## アドレス[11:8]
+	## アドレス[3:0]
 	lr35902_copy_to_from regA regL
 	lr35902_call $a_byte_to_tile
 	lr35902_inc regE
 	lr35902_call $a_enq_tdq
 
+	# 空白の分1タイル飛ばす
+	lr35902_inc regE
+
 	# データをダンプ
+	## 1バイト目
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_copy_to_from regC regA
+	### [7:4]
+	lr35902_swap_nibbles regA
+	lr35902_call $a_byte_to_tile
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
+	### [3:0]
+	lr35902_copy_to_from regA regC
+	lr35902_call $a_byte_to_tile
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
+	## 2バイト目
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_copy_to_from regC regA
+	### [7:4]
+	lr35902_swap_nibbles regA
+	lr35902_call $a_byte_to_tile
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
+	### [3:0]
+	lr35902_copy_to_from regA regC
+	lr35902_call $a_byte_to_tile
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
+	## 3バイト目
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_copy_to_from regC regA
+	### [7:4]
+	lr35902_swap_nibbles regA
+	lr35902_call $a_byte_to_tile
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
+	### [3:0]
+	lr35902_copy_to_from regA regC
+	lr35902_call $a_byte_to_tile
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
+	## 4バイト目
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_copy_to_from regC regA
+	### [7:4]
+	lr35902_swap_nibbles regA
+	lr35902_call $a_byte_to_tile
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
+	### [3:0]
+	lr35902_copy_to_from regA regC
+	lr35902_call $a_byte_to_tile
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
 
 	# pop & return
 	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
 	lr35902_return
 }
@@ -282,7 +339,7 @@ main() {
 
 		# 初期状態として0xA000の内容をダンプ
 		lr35902_set_reg regH a0
-		lr35902_set_reg regL de
+		lr35902_set_reg regL 00
 		lr35902_set_reg regD 98
 		lr35902_set_reg regE 85
 		lr35902_call $a_dump_addr_and_data_4bytes
