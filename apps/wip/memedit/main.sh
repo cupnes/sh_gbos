@@ -205,13 +205,14 @@ f_draw_init_tiles() {
 #    : regL - ダンプするアドレス[7:0]
 #    : regD - 描画先アドレス[15:8]
 #    : regE - 描画先アドレス[7:0]
+# out: regHL- +4されて戻る
+#    : regDE- +0x0cされて戻る
 # ※ regEだけインクリメントして1行分を書いていく実装
 #    (regEが繰り上がる事は想定していない)
 f_dump_addr_and_data_4bytes() {
 	# push
 	lr35902_push_reg regAF
 	lr35902_push_reg regBC
-	lr35902_push_reg regDE
 
 	# アドレスをダンプ
 	## アドレス[15:12]
@@ -294,7 +295,6 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_call $a_enq_tdq
 
 	# pop & return
-	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
 	lr35902_return
@@ -338,11 +338,32 @@ main() {
 		lr35902_call $a_draw_init_tiles
 
 		# 初期状態として0xA000の内容をダンプ
+		## 初期値
 		lr35902_set_reg regH a0
 		lr35902_set_reg regL 00
 		lr35902_set_reg regD 98
 		lr35902_set_reg regE 85
-		lr35902_call $a_dump_addr_and_data_4bytes
+		lr35902_set_reg regC 0c	# 12行分
+		## 12行分のループ処理
+		(
+			# 1行ダンプ
+			lr35902_call $a_dump_addr_and_data_4bytes
+
+			# regDE(描画先アドレス)に0x14を加算
+			lr35902_push_reg regHL
+			lr35902_clear_reg regH
+			lr35902_set_reg regL 14
+			lr35902_add_to_regHL regDE
+			lr35902_copy_to_from regD regH
+			lr35902_copy_to_from regE regL
+			lr35902_pop_reg regHL
+
+			# カウンタをデクリメント
+			lr35902_dec regC
+		) >main.10.o
+		cat main.10.o
+		local sz_10=$(stat -c '%s' main.10.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_10 + 2)))
 
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $APP_VARS_BASE
