@@ -23,6 +23,9 @@ GBOS_TDQ_STAT_BITNUM_FULL=1
 
 # tdq初期化
 tdq_init() {
+	# push
+	lr35902_push_reg regAF
+
 	# - tdq.head = tdq.tail = TDQ_FIRST
 	lr35902_set_reg regA $(echo $GBOS_TDQ_FIRST | cut -c3-4)
 	lr35902_copy_to_addr_from_regA $var_tdq_head_bh
@@ -33,6 +36,9 @@ tdq_init() {
 	# - tdq.stat = is_empty
 	lr35902_set_reg regA 01
 	lr35902_copy_to_addr_from_regA $var_tdq_stat
+
+	# pop
+	lr35902_pop_reg regAF
 }
 
 # tdqへエントリを追加する

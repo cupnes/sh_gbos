@@ -206,11 +206,17 @@ f_draw_init_tiles() {
 # #    : regD - 描画先アドレス[15:8]
 # #    : regE - 描画先アドレス[7:0]
 # f_dump_addr_and_data_4bytes() {
+# 	# push
+# 	lr35902_push_reg regAF
+
 # 	# アドレスをダンプ
+# 	## アドレス[15:8]
+# 	lr35902_copy_to_from
 
 # 	# データをダンプ
 
 # 	# pop & return
+# 	lr35902_pop_reg regAF
 # 	lr35902_return
 # }
 
