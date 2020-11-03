@@ -19,9 +19,24 @@ GBOS_TILE_NUM_MINI_BTN=0c
 GBOS_TILE_NUM_MAXI_BTN=0d
 GBOS_TILE_NUM_CSL=0e
 GBOS_TILE_NUM_UP_ARROW=12
+GBOS_TILE_NUM_NUM_BASE=14
+GBOS_TILE_NUM_ALPHA_BASE=1E	# 大文字指定
 GBOS_TYPE_ICON_TILE_BASE=38
 GBOS_NUM_ICON_TILES=04
 
 GBOS_ICON_NUM_EXE=01
 GBOS_ICON_NUM_TXT=02
 GBOS_ICON_NUM_IMG=03
+
+get_num_tile_num() {
+	local n=$1
+	echo "obase=16;ibase=16;$GBOS_TILE_NUM_NUM_BASE + $n" | bc
+}
+
+ASCII_A_HEX=41
+get_alpha_tile_num() {
+	local ch=$1
+	local ascii_num_hex=$(echo -n $ch | hexdump -e '1/1 "%02X"')
+	local ascii_ofs_hex=$(echo "obase=16;ibase=16;$ascii_num_hex - $ASCII_A_HEX" | bc)
+	echo "obase=16;ibase=16;$GBOS_TILE_NUM_ALPHA_BASE + $ascii_ofs_hex" | bc
+}

@@ -35,14 +35,9 @@ vars() {
 vars >/dev/null
 rm -f $map_file
 
-funcs() {
-	:
-}
-# 変数設定のために空実行
-funcs >/dev/null
-rm -f $map_file
-
-draw_init_tiles() {
+# 初期配置のタイルをtdqへ積む
+# ※ この関数内で使うレジスタは事前のpushと事後のpopをしていない
+f_draw_init_tiles() {
 	# 操作パネル部
 	## 外枠
 	### 上部
@@ -119,9 +114,74 @@ draw_init_tiles() {
 	#### TODO LEFT_RIGHT_BARをデフォのタイルセットへ追加
 
 	### パネル部
+	lr35902_set_reg regD 98
+
+	lr35902_set_reg regB $(get_num_tile_num 00)
+	lr35902_set_reg regE a2
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_num_tile_num 01)
+	lr35902_set_reg regE a3
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_num_tile_num 02)
+	lr35902_set_reg regE c2
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_num_tile_num 03)
+	lr35902_set_reg regE c3
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_num_tile_num 04)
+	lr35902_set_reg regE e2
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_num_tile_num 05)
+	lr35902_set_reg regE e3
+	lr35902_call $a_enq_tdq
+
+	lr35902_set_reg regD 99
+
+	lr35902_set_reg regB $(get_num_tile_num 06)
+	lr35902_set_reg regE 02
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_num_tile_num 07)
+	lr35902_set_reg regE 03
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_num_tile_num 08)
+	lr35902_set_reg regE 22
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_num_tile_num 09)
+	lr35902_set_reg regE 23
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_alpha_tile_num A)
+	lr35902_set_reg regE 42
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_alpha_tile_num B)
+	lr35902_set_reg regE 43
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_alpha_tile_num C)
+	lr35902_set_reg regE 62
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_alpha_tile_num D)
+	lr35902_set_reg regE 63
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_alpha_tile_num E)
+	lr35902_set_reg regE 82
+	lr35902_call $a_enq_tdq
+	lr35902_set_reg regB $(get_alpha_tile_num F)
+	lr35902_set_reg regE 83
+	lr35902_call $a_enq_tdq
 
 	# メモリダンプ部
+
+	lr35902_return
 }
+
+funcs() {
+	# 初期配置のタイルをtdqへ積む
+	a_draw_init_tiles=$APP_FUNCS_BASE
+	echo -e "a_draw_init_tiles=$a_draw_init_tiles" >>$map_file
+	f_draw_init_tiles
+}
+# 変数設定のために空実行
+funcs >/dev/null
+rm -f $map_file
 
 main() {
 	local flg_bitnum_inited=0
@@ -139,7 +199,7 @@ main() {
 		lr35902_copy_to_addr_from_regA $var_app_release_btn
 
 		# 初期画面描画のエントリをTDQへ積む
-		draw_init_tiles
+		lr35902_call $a_draw_init_tiles
 
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $APP_VARS_BASE
