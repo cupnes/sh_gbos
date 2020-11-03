@@ -196,14 +196,77 @@ f_draw_init_tiles() {
 	lr35902_set_reg regE 71
 	lr35902_call $a_enq_tdq
 
+	# return
+	lr35902_return
+}
+
+# # 指定したアドレスから4バイトダンプ
+# # in : regH - ダンプするアドレス[15:8]
+# #    : regL - ダンプするアドレス[7:0]
+# #    : regD - 描画先アドレス[15:8]
+# #    : regE - 描画先アドレス[7:0]
+# f_dump_addr_and_data_4bytes() {
+# 	# アドレスをダンプ
+
+# 	# データをダンプ
+
+# 	# pop & return
+# 	lr35902_return
+# }
+
+# TODO カーネル空間へ移す
+# 指定された1バイトの下位4ビットを表す16進の文字に対応するタイル番号を返す
+# in : regA - タイル番号へ変換する1バイト
+# out: regB - タイル番号
+f_byte_to_tiles() {
+	# push
+	lr35902_push_reg regAF
+
+	# 下位4ビットを抽出
+	lr35902_and_to_regA 0f
+
+	# regA < 0x0A ?
+	lr35902_compare_regA_and 0a
+	(
+		# regA < 0x0A (数字で表現) の場合
+
+		lr35902_add_to_regA $GBOS_TILE_NUM_NUM_BASE
+	) >f_byte_to_tiles.2.o
+	(
+		# regA >= 0x0A (アルファベットで表現) の場合
+
+		lr35902_sub_to_regA 0a
+		lr35902_add_to_regA $GBOS_TILE_NUM_ALPHA_BASE
+
+		# regA < 0x0A (数字で表現) の場合の処理を飛ばす
+		local sz_2=$(stat -c '%s' f_byte_to_tiles.2.o)
+		lr35902_rel_jump $(two_digits_d $sz_2)
+	) >f_byte_to_tiles.1.o
+	local sz_1=$(stat -c '%s' f_byte_to_tiles.1.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_1)
+	cat f_byte_to_tiles.1.o	# regA >= 0x0A (アルファベットで表現)
+	cat f_byte_to_tiles.2.o	# regA < 0x0A (数字で表現)
+	lr35902_copy_to_from regB regA
+
+	# pop & return
+	lr35902_pop_reg regAF
 	lr35902_return
 }
 
 funcs() {
+	local fsz
+
 	# 初期配置のタイルをtdqへ積む
 	a_draw_init_tiles=$APP_FUNCS_BASE
 	echo -e "a_draw_init_tiles=$a_draw_init_tiles" >>$map_file
 	f_draw_init_tiles
+
+	# 指定された1バイトの下位4ビットを表す16進の文字に対応するタイル番号を返す
+	f_draw_init_tiles >f_draw_init_tiles.o
+	fsz=$(to16 $(stat -c '%s' f_draw_init_tiles.o))
+	a_byte_to_tiles=$(four_digits $(calc16 "${a_draw_init_tiles}+${fsz}"))
+	echo -e "a_byte_to_tiles=$a_byte_to_tiles" >>$map_file
+	f_byte_to_tiles
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -226,6 +289,23 @@ main() {
 
 		# 初期画面描画のエントリをTDQへ積む
 		lr35902_call $a_draw_init_tiles
+
+		# [DEBUG]
+		lr35902_set_reg regD 98
+
+		lr35902_set_reg regA 0a
+		lr35902_call $a_byte_to_tiles
+		lr35902_set_reg regE 85
+		lr35902_call $a_enq_tdq
+		lr35902_clear_reg regA
+		lr35902_call $a_byte_to_tiles
+		lr35902_set_reg regE 86
+		lr35902_call $a_enq_tdq
+		lr35902_set_reg regE 87
+		lr35902_call $a_enq_tdq
+		lr35902_set_reg regE 88
+		lr35902_call $a_enq_tdq
+
 
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $APP_VARS_BASE
