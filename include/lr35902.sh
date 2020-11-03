@@ -1315,6 +1315,28 @@ lr35902_set_bitN_of_reg() {
 	esac
 }
 
+lr35902_swap_nibbles() {
+	local reg=$1
+
+	local regnum=$(to_regnum_pat0 $reg)
+	if [ "$regnum" = 'error' ]; then
+		echo -n 'Error: no such instruction: ' 1>&2
+		echo "lr35902_swap_nibbles $reg" 1>&2
+		return 1
+	fi
+	local pref=3
+	echo -en "\xcb\x${pref}${regnum}"
+
+	local regname=$(to_regname $reg)
+	local cyc
+	if [ "$regnum" = "$(to_regnum_pat0 ptrHL)" ]; then
+		cyc=16
+	else
+		cyc=8
+	fi
+	echo -e "swap $regname\t;$cyc" >>$ASM_LIST_FILE
+}
+
 lr35902_abs_jump() {
 	local addr=$1
 	echo -en '\xc3'
