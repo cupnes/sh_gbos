@@ -2798,6 +2798,7 @@ view_file() {
 	# ファイルタイプをAへ復帰
 	lr35902_copy_to_from regA regC
 
+	# 対象が実行ファイルの場合、f_run_exe() で実行する
 	lr35902_compare_regA_and $GBOS_ICON_NUM_EXE
 	(
 		# 実行ファイルの場合
@@ -2811,6 +2812,7 @@ view_file() {
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
 	cat src/view_file.5.o
 
+	# 対象がテキストファイルの場合、f_view_txt() で閲覧
 	lr35902_compare_regA_and $GBOS_ICON_NUM_TXT
 	(
 		# テキストファイルの場合
@@ -2824,6 +2826,7 @@ view_file() {
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
 	cat src/view_file.1.o
 
+	# 対象が画像ファイルの場合、f_view_img() で閲覧
 	lr35902_compare_regA_and $GBOS_ICON_NUM_IMG
 	(
 		# 画像ファイルの場合
@@ -2861,6 +2864,38 @@ click_event() {
 	lr35902_pop_reg regAF
 }
 
+# ファイルを編集
+# in : regA - ファイル番号
+## TODO 関数化
+## TODO regA >= ファイル数 の時、直ちにret
+edit_file() {
+	# DEは呼び出し元で使っているので予め退避
+	lr35902_push_reg regDE
+
+	# Aは作業にも使うのでファイル番号はBへコピー
+	lr35902_copy_to_from regB regA
+
+	# HLへファイル先頭アドレスを設定
+	# TODO ファイルサイズも取得するように
+	## ファイルへのオフセットが格納されたアドレスを設定
+	lr35902_inc regHL
+	## ファイルへのオフセット取得
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_copy_to_from regE regA
+	lr35902_copy_to_from regA ptrHL
+	lr35902_copy_to_from regD regA
+	## FSベースアドレスと足してファイルデータ先頭アドレス取得
+	lr35902_set_reg regHL $GBOS_FS_BASE
+	lr35902_add_to_regHL regDE
+
+	# TODO ファイルデータ先頭アドレスとファイルサイズを
+	#      バイナリエディタへ渡して実行
+	#      (ファイルタイプによる分岐は不要)
+
+	# DEを復帰
+	lr35902_pop_reg regDE
+}
+
 # 右クリックイベント処理
 # in : regA - リリースされたボタン(上位4ビット)
 right_click_event() {
@@ -2869,6 +2904,23 @@ right_click_event() {
 
 	# ウィンドウステータスをAへ取得
 	lr35902_copy_to_regA_from_addr $var_win_stat
+
+	# ウィンドウステータスが「ディレクトリ表示中」であるか確認
+	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
+	(
+		# 「ディレクトリ表示中」の場合
+
+		lr35902_clear_reg regA
+		lr35902_call $a_check_click_icon_area_x
+		lr35902_call $a_check_click_icon_area_y
+
+		## TODO regA == 80 (クリックした場所がファイルアイコン外)の時
+		##      edit_fileではなく、ファイル新規作成
+		edit_file
+	) >src/right_click_event.2.o
+	local sz_2=$(stat -c '%s' src/right_click_event.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat src/right_click_event.2.o
 
 	# 画像ファイル表示中か確認
 	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_IMG regA
