@@ -88,6 +88,8 @@ GB_MBC_RAM_EN_VAL=0a
 GB_MBC_ROM_BANK_ADDR=2000
 GB_MBC_ROMRAM_BANK_ADDR=4000
 
+GB_CARTRAM_BASE=a000
+
 # Nintendoロゴデータ
 gb_nintendo_logo() {
 	echo -en '\xce\xed\x66\x66\xcc\x0d\x00\x0b'

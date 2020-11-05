@@ -537,7 +537,7 @@ f_clr_win_old() {
 
 # テキストファイルを表示
 # in : regA  - ファイル番号
-#      regHL - ファイル先頭アドレス
+#      regHL - ファイルサイズ・データ先頭アドレス
 f_clr_win >src/f_clr_win.o
 fsz=$(to16 $(stat -c '%s' src/f_clr_win.o))
 fadr=$(calc16 "${a_clr_win}+${fsz}")
@@ -834,7 +834,7 @@ f_tn_to_addr() {
 }
 
 # 画像ファイルを表示
-# in : regA - 表示するファイル番目(0始まり)
+# in : regA - 表示するファイル番号(0始まり)
 f_tn_to_addr >src/f_tn_to_addr.o
 fsz=$(to16 $(stat -c '%s' src/f_tn_to_addr.o))
 fadr=$(calc16 "${a_tn_to_addr}+${fsz}")
@@ -850,7 +850,7 @@ f_view_img() {
 	lr35902_push_reg regDE
 	lr35902_push_reg regHL
 
-	# ファイル番目をBへコピー
+	# ファイル番号をBへコピー
 	lr35902_copy_to_from regB regA
 
 	# 次に描画するタイル番号を0x30で初期化
@@ -871,7 +871,7 @@ f_view_img() {
 	lr35902_copy_to_from regA regB
 	lr35902_compare_regA_and 00
 	(
-		# 描画するファイル番目が0以外の場合
+		# 描画するファイル番号が0以外の場合
 
 		lr35902_set_reg regDE $(four_digits $GBOS_FS_FILE_ATTR_SZ)
 
@@ -886,7 +886,7 @@ f_view_img() {
 	local sz_2=$(stat -c '%s' src/f_view_img.2.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
 	cat src/f_view_img.2.o
-	## ファイルデータ領域へのオフセット取得
+	## ファイル領域へのオフセット取得
 	lr35902_copyinc_to_regA_from_ptrHL
 	lr35902_copy_to_from regE regA
 	lr35902_copy_to_from regA ptrHL
@@ -1751,8 +1751,7 @@ f_check_click_icon_area_y() {
 }
 
 # 実行ファイル実行開始関数
-# in : regHL - ファイル先頭アドレス
-#              (ファイルサイズ(2バイト)以降の領域の先頭アドレス)
+# in : regHL - ファイルサイズ・データ先頭アドレス
 f_check_click_icon_area_y >src/f_check_click_icon_area_y.o
 fsz=$(to16 $(stat -c '%s' src/f_check_click_icon_area_y.o))
 fadr=$(calc16 "${a_check_click_icon_area_y}+${fsz}")
@@ -2180,6 +2179,81 @@ f_byte_to_tile() {
 	lr35902_return
 }
 
+# ファイルシステム先頭アドレスとファイル番号を指定すると
+# ファイルサイズ・データ先頭アドレスとファイルタイプを返す
+# in : regHL - ファイルシステム先頭アドレス
+#    : regA  - ファイル番号
+# out: regHL - ファイルサイズ・データ先頭アドレス
+#              (そのままf_run_exe()へ渡せる)
+#    : regA  - ファイルタイプ
+f_byte_to_tile >src/f_byte_to_tile.o
+fsz=$(to16 $(stat -c '%s' src/f_byte_to_tile.o))
+fadr=$(calc16 "${a_byte_to_tile}+${fsz}")
+a_get_file_addr_and_type=$(four_digits $fadr)
+echo -e "a_get_file_addr_and_type=$a_get_file_addr_and_type" >>$MAP_FILE_NAME
+f_get_file_addr_and_type() {
+	# push
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regAF	# 戻り値のために最後にpush
+
+	# regAは作業にも使うのでファイル番号はregBへコピー
+	lr35902_copy_to_from regB regA
+
+	# ファイルシステム先頭アドレスは後で使うのでpush
+	lr35902_push_reg regHL
+
+	# ファイルタイプ取得
+	local file_type_1st_ofs=0007
+	lr35902_set_reg regDE $file_type_1st_ofs
+	## ファイル番号0のファイルのファイルタイプのアドレスをregHLへ設定
+	lr35902_add_to_regHL regDE
+	## 取得したいファイル番号の数だけregHLへファイル属性情報サイズを加算
+	lr35902_compare_regA_and 00
+	(
+		# ファイル番号 != 0 の場合
+
+		lr35902_set_reg regDE $(four_digits $GBOS_FS_FILE_ATTR_SZ)
+
+		(
+			lr35902_add_to_regHL regDE
+			lr35902_dec regA
+		) >src/f_get_file_addr_and_type.3.o
+		cat src/f_get_file_addr_and_type.3.o
+		local sz_3=$(stat -c '%s' src/f_get_file_addr_and_type.3.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_3 + 2)))
+	) >src/f_get_file_addr_and_type.4.o
+	local sz_4=$(stat -c '%s' src/f_get_file_addr_and_type.4.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
+	cat src/f_get_file_addr_and_type.4.o
+	## ファイルタイプをregAへ取得
+	lr35902_copy_to_from regA ptrHL
+
+	# regAは作業に使うのでファイルタイプをregCへコピー
+	lr35902_copy_to_from regC regA
+
+	# HLへファイルサイズ・データ先頭アドレスを設定
+	## ファイルへのオフセットが格納されたアドレスを設定
+	lr35902_inc regHL
+	## ファイルへのオフセットをregDEへ取得
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_copy_to_from regE regA
+	lr35902_copy_to_from regA ptrHL
+	lr35902_copy_to_from regD regA
+	## ファイルシステム先頭アドレスをregHLへ復帰
+	lr35902_pop_reg regHL
+	## 取得したオフセットを足してファイルサイズ・データ先頭アドレス取得
+	lr35902_add_to_regHL regDE
+
+	# pop & return
+	lr35902_pop_reg regAF
+	## ファイルタイプをregAへ設定
+	lr35902_copy_to_from regA regC
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2228,6 +2302,7 @@ global_functions() {
 	f_init_tdq
 	f_enq_tdq
 	f_byte_to_tile
+	f_get_file_addr_and_type
 }
 
 gbos_vec() {
@@ -2783,15 +2858,15 @@ view_file() {
 	# Aは作業に使うのでCへコピー
 	lr35902_copy_to_from regC regA
 
-	# HLへファイル先頭アドレスを設定
-	## ファイルへのオフセットが格納されたアドレスを設定
+	# HLへファイルサイズ・データ先頭アドレスを設定
+	## ファイルサイズ・データへのオフセットが格納されたアドレスを設定
 	lr35902_inc regHL
-	## ファイルへのオフセット取得
+	## ファイルサイズ・データへのオフセット取得
 	lr35902_copyinc_to_regA_from_ptrHL
 	lr35902_copy_to_from regE regA
 	lr35902_copy_to_from regA ptrHL
 	lr35902_copy_to_from regD regA
-	## FSベースアドレスと足してファイルデータ先頭アドレス取得
+	## FSベースアドレスと足してファイルサイズ・データ先頭アドレス取得
 	lr35902_set_reg regHL $GBOS_FS_BASE
 	lr35902_add_to_regHL regDE
 
@@ -2872,38 +2947,28 @@ edit_file() {
 	# DEは呼び出し元で使っているので予め退避
 	lr35902_push_reg regDE
 
-	# Aは作業にも使うのでファイル番号はBへコピー
-	lr35902_copy_to_from regB regA
+	# HLへファイルシステム先頭アドレスを設定
+	# TODO 引数等でバンク指定できるようにする
+	## 今は予め指定されたバンク固定
+	## 単にカートリッジRAMの先頭アドレスを設定するだけ
+	lr35902_set_reg regHL $GB_CARTRAM_BASE
 
-	# HLへファイル先頭アドレスを設定
-	## ファイルへのオフセットが格納されたアドレスを設定
-	lr35902_inc regHL
-	## ファイルへのオフセット取得
-	lr35902_copyinc_to_regA_from_ptrHL
-	lr35902_copy_to_from regE regA
-	lr35902_copy_to_from regA ptrHL
-	lr35902_copy_to_from regD regA
-	## FSベースアドレスと足してファイルデータ先頭アドレス取得
-	lr35902_set_reg regHL $GBOS_FS_BASE
-	lr35902_add_to_regHL regDE
+	# 編集対象ファイルのファイルサイズ・データ先頭アドレス取得
+	lr35902_call $a_get_file_addr_and_type
 
-	# バイナリエディタのファイルデータ先頭アドレス取得
-	# TODO バンク番号に関する定数を追加
-	#      (ROMバンク番号を0x0X, RAMバンク番号を0x1Xで表すことにする)
-	# TODO システムファイルを配置するバンク番号の定数を追加
-	#      (ひとまずバンク番号0x01にしとく)
-	# TODO バンク番号とファイル番目を指定すると
-	#      そのファイルデータ先頭アドレスを返す関数を作る
-	#      (ファイル名ではなくバンク番号+ファイル番目で一意に特定することにする)
-	#      (ファイル名は文字列比較の処理が面倒)
+	# 取得したアドレスを実行ファイル用変数1・2へ設定
+	## リトルエンディアン
+	lr35902_copy_to_from regA regL
+	lr35902_copy_to_addr_from_regA $var_exe_1
+	lr35902_copy_to_from regA regH
+	lr35902_copy_to_addr_from_regA $var_exe_1
+
+	# バイナリエディタのファイルサイズ・データ先頭アドレス取得
+	# TODO ROMのバンク番号を明示的に設定
 
 	# TODO f_run_exe()を、実行するexeへ値の受け渡しができるように改修
 	#      専用の大域変数を用意するのが良いな
 	#      それならf_run_exe()は改修しなくて済む
-
-	# 編集対象ファイルのファイルデータ先頭アドレスを
-	# 外部実行バイナリへ受け渡すレジスタへ格納
-	# (そのままで良いならそのまま)
 
 	# バイナリエディタ実行
 	lr35902_call $a_run_exe
