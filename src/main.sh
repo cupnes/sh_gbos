@@ -2965,10 +2965,8 @@ edit_file() {
 
 	# バイナリエディタのファイルサイズ・データ先頭アドレス取得
 	# TODO ROMのバンク番号を明示的に設定
-
-	# TODO f_run_exe()を、実行するexeへ値の受け渡しができるように改修
-	#      専用の大域変数を用意するのが良いな
-	#      それならf_run_exe()は改修しなくて済む
+	lr35902_set_reg regHL $GB_CARTROM_BANK1_BASE
+	lr35902_set_reg regA $GBOS_SYSBANK_FNO_BEDIT
 
 	# バイナリエディタ実行
 	lr35902_call $a_run_exe
