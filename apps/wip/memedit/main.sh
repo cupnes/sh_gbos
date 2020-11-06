@@ -337,13 +337,25 @@ main() {
 		# 初期画面描画のエントリをTDQへ積む
 		lr35902_call $a_draw_init_tiles
 
-		# 初期状態として0xA000の内容をダンプ
-		## 初期値
-		lr35902_set_reg regH a0
-		lr35902_set_reg regL 00
+		# TODO ウィンドウの▲▼を使ってページ移動できるように
+
+		# var_exe_1(下位),var_exe_2(上位)のアドレスをダンプする
+		## var_exe_{1,2}をregHLへロード
+		lr35902_copy_to_regA_from_addr $var_exe_1
+		lr35902_copy_to_from regL regA
+		lr35902_copy_to_regA_from_addr $var_exe_2
+		lr35902_copy_to_from regH regA
+		## サイズをregBCへロード
+		lr35902_copyinc_to_regA_from_ptrHL
+		lr35902_copy_to_from regC regA
+		lr35902_copyinc_to_regA_from_ptrHL
+		lr35902_copy_to_from regB regA
+		## 描画先アドレスの初期値設定
 		lr35902_set_reg regD 98
 		lr35902_set_reg regE 85
-		lr35902_set_reg regC 0c	# 12行分
+		### ただし、今は12行分のデータ出力固定
+		### TODO サイズに応じた分だけダンプするように
+		lr35902_set_reg regC 0c
 		## 12行分のループ処理
 		(
 			# 1行ダンプ

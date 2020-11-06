@@ -29,3 +29,5 @@ a_update_hidden_com_stat=1400
 a_init_tdq=148A
 a_enq_tdq=14A2
 a_byte_to_tile=14EB
+a_get_file_addr_and_type=14FD
+a_right_click_event=151F

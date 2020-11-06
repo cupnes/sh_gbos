@@ -2254,6 +2254,65 @@ f_get_file_addr_and_type() {
 	lr35902_return
 }
 
+# Aボタンリリース(右クリック)時の処理
+# btn_release_handler()から呼ばれる専用の関数
+# src/event_driven.2.oが128バイト以上になってしまったため関数化
+# in : regA - リリースされたボタン(上位4ビット)
+f_get_file_addr_and_type >src/f_get_file_addr_and_type.o
+fsz=$(to16 $(stat -c '%s' src/f_get_file_addr_and_type.o))
+fadr=$(calc16 "${a_get_file_addr_and_type}+${fsz}")
+a_right_click_event=$(four_digits $fadr)
+echo -e "a_right_click_event=$a_right_click_event" >>$MAP_FILE_NAME
+f_right_click_event() {
+	# 呼び出し元へ戻る際に復帰できるようにpush
+	lr35902_push_reg regAF
+
+	# ウィンドウステータスをAへ取得
+	lr35902_copy_to_regA_from_addr $var_win_stat
+
+	# ウィンドウステータスが「ディレクトリ表示中」であるか確認
+	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
+	(
+		# 「ディレクトリ表示中」の場合
+
+		lr35902_clear_reg regA
+		lr35902_call $a_check_click_icon_area_x
+		lr35902_call $a_check_click_icon_area_y
+
+		## TODO regA == 80 (クリックした場所がファイルアイコン外)の時
+		##      edit_fileではなく、ファイル新規作成
+		edit_file
+
+		# pop & return
+		lr35902_pop_reg regAF
+		lr35902_return
+	) >src/right_click_event.2.o
+	local sz_2=$(stat -c '%s' src/right_click_event.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat src/right_click_event.2.o
+
+	# 画像ファイル表示中か確認
+	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_IMG regA
+	(
+		# 画像ファイル表示中の場合
+		lr35902_call $a_rstr_tiles
+	) >src/right_click_event.1.o
+	local sz_1=$(stat -c '%s' src/right_click_event.1.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
+	## 画像ファイル表示中の場合
+	cat src/right_click_event.1.o
+
+	# clr_win設定
+	lr35902_call $a_clr_win
+
+	# view_dir設定
+	lr35902_call $a_view_dir
+
+	# pop & return
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2303,6 +2362,7 @@ global_functions() {
 	f_enq_tdq
 	f_byte_to_tile
 	f_get_file_addr_and_type
+	f_right_click_event
 }
 
 gbos_vec() {
@@ -2961,64 +3021,19 @@ edit_file() {
 	lr35902_copy_to_from regA regL
 	lr35902_copy_to_addr_from_regA $var_exe_1
 	lr35902_copy_to_from regA regH
-	lr35902_copy_to_addr_from_regA $var_exe_1
+	lr35902_copy_to_addr_from_regA $var_exe_2
 
 	# バイナリエディタのファイルサイズ・データ先頭アドレス取得
 	# TODO ROMのバンク番号を明示的に設定
 	lr35902_set_reg regHL $GB_CARTROM_BANK1_BASE
 	lr35902_set_reg regA $GBOS_SYSBANK_FNO_BEDIT
+	lr35902_call $a_get_file_addr_and_type
 
 	# バイナリエディタ実行
 	lr35902_call $a_run_exe
 
 	# DEを復帰
 	lr35902_pop_reg regDE
-}
-
-# 右クリックイベント処理
-# in : regA - リリースされたボタン(上位4ビット)
-right_click_event() {
-	# 呼び出し元へ戻る際に復帰できるようにpush
-	lr35902_push_reg regAF
-
-	# ウィンドウステータスをAへ取得
-	lr35902_copy_to_regA_from_addr $var_win_stat
-
-	# ウィンドウステータスが「ディレクトリ表示中」であるか確認
-	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
-	(
-		# 「ディレクトリ表示中」の場合
-
-		lr35902_clear_reg regA
-		lr35902_call $a_check_click_icon_area_x
-		lr35902_call $a_check_click_icon_area_y
-
-		## TODO regA == 80 (クリックした場所がファイルアイコン外)の時
-		##      edit_fileではなく、ファイル新規作成
-		edit_file
-	) >src/right_click_event.2.o
-	local sz_2=$(stat -c '%s' src/right_click_event.2.o)
-	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
-	cat src/right_click_event.2.o
-
-	# 画像ファイル表示中か確認
-	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_IMG regA
-	(
-		# 画像ファイル表示中の場合
-		lr35902_call $a_rstr_tiles
-	) >src/right_click_event.1.o
-	local sz_1=$(stat -c '%s' src/right_click_event.1.o)
-	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
-	## 画像ファイル表示中の場合
-	cat src/right_click_event.1.o
-
-	# clr_win設定
-	lr35902_call $a_clr_win
-
-	# view_dir設定
-	lr35902_call $a_view_dir
-
-	lr35902_pop_reg regAF
 }
 
 # ボタンリリースに応じた処理
@@ -3038,7 +3053,7 @@ btn_release_handler() {
 	# Aボタンの確認
 	lr35902_test_bitN_of_reg $GBOS_A_KEY_BITNUM regA
 	(
-		right_click_event
+		lr35902_call $a_right_click_event
 	) >src/btn_release_handler.2.o
 	sz=$(stat -c '%s' src/btn_release_handler.2.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
