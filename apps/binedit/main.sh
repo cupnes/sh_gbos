@@ -365,7 +365,13 @@ main() {
 		lr35902_clear_reg regA
 		lr35902_copy_to_addr_from_regA $var_app_release_btn
 
+		# OBJサイズを8x8へ変更する
+		lr35902_copy_to_regA_from_ioport $GB_IO_LCDC
+		lr35902_res_bitN_of_reg $GB_LCDC_BITNUM_OBJ_SIZE regA
+		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
+
 		# 初期画面描画のエントリをTDQへ積む
+		## TODO マウスカーソル非表示・ウィンドウタイトル・□カーソルのOAM変更も積む
 		lr35902_call $a_draw_init_tiles
 
 		# 描画先アドレスの初期値設定
@@ -452,6 +458,13 @@ main() {
 	lr35902_test_bitN_of_reg $GBOS_A_KEY_BITNUM regA
 	(
 		# Aボタン(右クリック)のリリースがあった場合
+
+		# OBJサイズ設定を8x16へ戻す
+		lr35902_copy_to_regA_from_ioport $GB_IO_LCDC
+		lr35902_set_bitN_of_reg $GB_LCDC_BITNUM_OBJ_SIZE regA
+		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
+
+		# TODO マウスカーソル表示・その他使用したOBJを非表示 のOAM変更をtdqへ積む
 
 		# DAS: run_exeをクリア
 		lr35902_copy_to_regA_from_addr $var_draw_act_stat
