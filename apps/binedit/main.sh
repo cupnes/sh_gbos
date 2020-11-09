@@ -229,13 +229,13 @@ f_draw_init_tiles() {
 	lr35902_return
 }
 
-# 指定したアドレスから4バイトダンプ
-# in : regH - ダンプするアドレス[15:8]
-#    : regL - ダンプするアドレス[7:0]
-#    : regD - 描画先アドレス[15:8]
-#    : regE - 描画先アドレス[7:0]
-# out: regHL- +4されて戻る
-#    : regDE- +0x0cされて戻る
+# 指定したアドレスから最大4バイトダンプ
+# データが4バイトに満たない場合、EOFを返す
+# in : regHL - ダンプ開始アドレス
+#    : regDE - 描画先アドレス
+# out: regHL - ダンプしたバイト数分だけインクリメントされて返る
+#    : regDE - 描画した最終アドレスが返る
+#    : regA  - ダンプしたバイト数([0:4])
 # ※ regEだけインクリメントして1行分を書いていく実装
 #    (regEが繰り上がる事は想定していない)
 f_dump_addr_and_data_4bytes() {
@@ -326,6 +326,8 @@ f_dump_addr_and_data_4bytes() {
 	# pop & return
 	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
+	## ひとまず4固定
+	lr35902_set_reg regA 04
 	lr35902_return
 }
 
@@ -366,12 +368,11 @@ main() {
 		# 初期画面描画のエントリをTDQへ積む
 		lr35902_call $a_draw_init_tiles
 
-		# TODO ウィンドウの▲▼を使ってページ移動できるように
-
 		# 描画先アドレスの初期値設定
 		lr35902_set_reg regD 98
 		lr35902_set_reg regE 85
 
+		# 初期表示として、
 		# var_exe_1(下位),var_exe_2(上位)のデータをダンプする
 		## var_exe_{1,2}をregHLへロード
 		lr35902_copy_to_regA_from_addr $var_exe_1
@@ -390,19 +391,34 @@ main() {
 		lr35902_copy_to_addr_from_regA $var_file_size_th
 		lr35902_copy_to_addr_from_regA $var_remain_bytes_th
 
-		## アドレス(先頭からのオフセット)に使うレジスタを初期化
-		### TODO DEは描画先アドレスに使っている
-		lr35902_set_reg regDE 0000
-
-		## 1画面分(48バイト=0x30)を表示し終えたかの判断に使うカウンタを
+		## 1画面分(12行)を表示し終えたかの判断に使うカウンタを
 		## 初期化
-		lr35902_set_reg regC 30
+		lr35902_set_reg regC 0c
 
-		## アドレス(先頭からのオフセット)とデータをダンプ
+		## アドレスとデータをダンプ
 		(
-			# アドレス(先頭からのオフセット)をダンプ
-			
-		)
+			# 1行分ダンプ
+			lr35902_call $a_dump_addr_and_data_4bytes
+
+			# 戻り値をチェックし4未満ならループを脱出
+			lr35902_compare_regA_and 04
+			lr35902_rel_jump_with_cond C $(two_digits_d $((8 + 1 + 2)))
+
+			# 描画先アドレスを次の行頭へ移動(+0x14)(8バイト)
+			lr35902_push_reg regHL		# 1
+			lr35902_set_reg regHL 0014	# 3
+			lr35902_add_to_regHL regDE	# 1
+			lr35902_copy_to_from regD regH	# 1
+			lr35902_copy_to_from regE regL	# 1
+			lr35902_pop_reg regHL		# 1
+
+			# 行数カウンタをデクリメント(1バイト)
+			lr35902_dec regC
+		) >main.2.o
+		cat main.2.o
+		## regCを使った12回分のループ(2バイト)
+		local sz_2=$(stat -c '%s' main.2.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_2 + 2)))
 
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $APP_VARS_BASE
