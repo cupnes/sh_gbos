@@ -63,8 +63,6 @@ GBOS_OBJ_WIDTH=08
 GBOS_OBJ_HEIGHT=10
 GBOS_OBJ_DEF_ATTR=00	# %0000 0000($00)
 
-GBOS_OAM_BASE=fe00
-GBOS_OAM_SZ=04	# 4 bytes
 GBOS_OAM_NUM_CSL=00
 GBOS_OAM_NUM_PCB=27
 
@@ -2571,7 +2569,7 @@ obj_init() {
 	local tile_num=$4
 	local attr=$5
 
-	local oam_addr=$(calc16 "${GBOS_OAM_BASE}+(${oam_num}*${GBOS_OAM_SZ})")
+	local oam_addr=$(calc16 "${GB_OAM_BASE}+(${oam_num}*${GB_OAM_SZ})")
 	lr35902_set_reg regHL $oam_addr
 
 	lr35902_set_reg regA $y
@@ -2590,7 +2588,7 @@ obj_init() {
 # レジスタAをシェル引数で指定されたオブジェクト番号のY座標に設定
 obj_set_y() {
 	local oam_num=$1
-	local oam_addr=$(calc16 "${GBOS_OAM_BASE}+(${oam_num}*${GBOS_OAM_SZ})")
+	local oam_addr=$(calc16 "${GB_OAM_BASE}+(${oam_num}*${GB_OAM_SZ})")
 	lr35902_set_reg regHL $oam_addr
 	lr35902_copy_to_ptrHL_from regA
 }
@@ -2598,7 +2596,7 @@ obj_set_y() {
 # シェル引数で指定されたオブジェクト番号のY座標をレジスタAに取得
 obj_get_y() {
 	local oam_num=$1
-	local oam_addr=$(calc16 "${GBOS_OAM_BASE}+(${oam_num}*${GBOS_OAM_SZ})")
+	local oam_addr=$(calc16 "${GB_OAM_BASE}+(${oam_num}*${GB_OAM_SZ})")
 	lr35902_set_reg regHL $oam_addr
 	lr35902_copy_to_from regA ptrHL
 }
