@@ -227,6 +227,31 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_inc regE
 	lr35902_call $a_enq_tdq
 
+	## 表示位置管理用カウンタを確認
+	lr35902_push_reg regHL
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_th
+	lr35902_copy_to_from regH regA
+	lr35902_clear_reg regA
+	lr35902_or_to_regA regL
+	lr35902_or_to_regA regH
+	(
+		# カウンタが0の場合
+
+		# pop & return
+		lr35902_pop_reg regHL
+		lr35902_pop_reg regBC
+		lr35902_pop_reg regAF
+		## ダンプしたバイト数は0を返す
+		lr35902_clear_reg regA
+		lr35902_return
+	) >f_dump_addr_and_data_4bytes.0.o
+	local sz_0=$(stat -c '%s' f_dump_addr_and_data_4bytes.0.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_0)
+	cat f_dump_addr_and_data_4bytes.0.o
+	lr35902_pop_reg regHL
+
 	# 空白の分1タイル飛ばす
 	lr35902_inc regE
 
@@ -244,8 +269,40 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_call $a_byte_to_tile
 	lr35902_inc regE
 	lr35902_call $a_enq_tdq
+
+	## 表示位置管理用カウンタをデクリメント
+	lr35902_push_reg regHL
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_th
+	lr35902_copy_to_from regH regA
+	lr35902_dec regHL
+	lr35902_copy_to_from regA regL
+	lr35902_copy_to_addr_from_regA $var_remain_bytes_bh
+	lr35902_copy_to_from regA regH
+	lr35902_copy_to_addr_from_regA $var_remain_bytes_th
+	lr35902_clear_reg regA
+	lr35902_or_to_regA regL
+	lr35902_or_to_regA regH
+	(
+		# カウンタが0になった場合
+
+		# pop & return
+		lr35902_pop_reg regHL
+		lr35902_pop_reg regBC
+		lr35902_pop_reg regAF
+		## ダンプしたバイト数は1を返す
+		lr35902_set_reg regA 01
+		lr35902_return
+	) >f_dump_addr_and_data_4bytes.1.o
+	local sz_1=$(stat -c '%s' f_dump_addr_and_data_4bytes.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
+	cat f_dump_addr_and_data_4bytes.1.o
+	lr35902_pop_reg regHL
+
 	## 空白の分1タイル飛ばす
 	lr35902_inc regE
+
 	## 2バイト目
 	lr35902_copyinc_to_regA_from_ptrHL
 	lr35902_copy_to_from regC regA
@@ -259,8 +316,40 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_call $a_byte_to_tile
 	lr35902_inc regE
 	lr35902_call $a_enq_tdq
+
+	## 表示位置管理用カウンタをデクリメント
+	lr35902_push_reg regHL
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_th
+	lr35902_copy_to_from regH regA
+	lr35902_dec regHL
+	lr35902_copy_to_from regA regL
+	lr35902_copy_to_addr_from_regA $var_remain_bytes_bh
+	lr35902_copy_to_from regA regH
+	lr35902_copy_to_addr_from_regA $var_remain_bytes_th
+	lr35902_clear_reg regA
+	lr35902_or_to_regA regL
+	lr35902_or_to_regA regH
+	(
+		# カウンタが0になった場合
+
+		# pop & return
+		lr35902_pop_reg regHL
+		lr35902_pop_reg regBC
+		lr35902_pop_reg regAF
+		## ダンプしたバイト数は2を返す
+		lr35902_set_reg regA 02
+		lr35902_return
+	) >f_dump_addr_and_data_4bytes.2.o
+	local sz_2=$(stat -c '%s' f_dump_addr_and_data_4bytes.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
+	cat f_dump_addr_and_data_4bytes.2.o
+	lr35902_pop_reg regHL
+
 	## 空白の分1タイル飛ばす
 	lr35902_inc regE
+
 	## 3バイト目
 	lr35902_copyinc_to_regA_from_ptrHL
 	lr35902_copy_to_from regC regA
@@ -274,8 +363,40 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_call $a_byte_to_tile
 	lr35902_inc regE
 	lr35902_call $a_enq_tdq
+
+	## 表示位置管理用カウンタをデクリメント
+	lr35902_push_reg regHL
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_th
+	lr35902_copy_to_from regH regA
+	lr35902_dec regHL
+	lr35902_copy_to_from regA regL
+	lr35902_copy_to_addr_from_regA $var_remain_bytes_bh
+	lr35902_copy_to_from regA regH
+	lr35902_copy_to_addr_from_regA $var_remain_bytes_th
+	lr35902_clear_reg regA
+	lr35902_or_to_regA regL
+	lr35902_or_to_regA regH
+	(
+		# カウンタが0になった場合
+
+		# pop & return
+		lr35902_pop_reg regHL
+		lr35902_pop_reg regBC
+		lr35902_pop_reg regAF
+		## ダンプしたバイト数は3を返す
+		lr35902_set_reg regA 03
+		lr35902_return
+	) >f_dump_addr_and_data_4bytes.3.o
+	local sz_3=$(stat -c '%s' f_dump_addr_and_data_4bytes.3.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+	cat f_dump_addr_and_data_4bytes.3.o
+	lr35902_pop_reg regHL
+
 	## 空白の分1タイル飛ばす
 	lr35902_inc regE
+
 	## 4バイト目
 	lr35902_copyinc_to_regA_from_ptrHL
 	lr35902_copy_to_from regC regA
@@ -290,10 +411,23 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_inc regE
 	lr35902_call $a_enq_tdq
 
+	## 表示位置管理用カウンタをデクリメント
+	lr35902_push_reg regHL
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_th
+	lr35902_copy_to_from regH regA
+	lr35902_dec regHL
+	lr35902_copy_to_from regA regL
+	lr35902_copy_to_addr_from_regA $var_remain_bytes_bh
+	lr35902_copy_to_from regA regH
+	lr35902_copy_to_addr_from_regA $var_remain_bytes_th
+	lr35902_pop_reg regHL
+
 	# pop & return
 	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
-	## ひとまず4固定
+	## ダンプしたバイト数は4を返す
 	lr35902_set_reg regA 04
 	lr35902_return
 }
