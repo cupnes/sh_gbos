@@ -147,162 +147,43 @@ f_draw_init_tiles() {
 	lr35902_clear_reg regB
 	lr35902_call $a_enq_tdq
 
-	# 操作パネル部
-	## 外枠
-	### 上部
-	#### TODO UPPER_LOWER_BARをデフォのタイルセットへ追加
-	# lr35902_set_reg regB $GBOS_TILE_NUM_UPPER_LOWER_BAR
-	# lr35902_set_reg regD 98
-
-	# lr35902_set_reg regE 42
-	# lr35902_call $a_enq_tdq
-	# lr35902_set_reg regE 43
-	# lr35902_call $a_enq_tdq
-
-	lr35902_set_reg regB $GBOS_TILE_NUM_UPPER_BAR
-	lr35902_set_reg regD 98
-
-	lr35902_set_reg regE 82
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE 83
-	lr35902_call $a_enq_tdq
-
-	### 右部
-	lr35902_set_reg regB $GBOS_TILE_NUM_LEFT_BAR
-
-	lr35902_set_reg regD 98
-
-	lr35902_set_reg regE 64
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE 84
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE a4
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE c4
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE e4
-	lr35902_call $a_enq_tdq
-
-	lr35902_set_reg regD 99
-
-	lr35902_set_reg regE 04
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE 24
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE 44
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE 64
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE 84
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE a4
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE c4
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE e4
-	lr35902_call $a_enq_tdq
-
-	### 下部
-	lr35902_set_reg regB $GBOS_TILE_NUM_LOWER_BAR
-
-	lr35902_set_reg regE c3
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE c2
-	lr35902_call $a_enq_tdq
-
-	#### TODO UPPER_LOWER_BARをデフォのタイルセットへ追加
-	# lr35902_set_reg regB $GBOS_TILE_NUM_UPPER_LOWER_BAR
-	# lr35902_set_reg regD 9a
-
-	# lr35902_set_reg regE 03
-	# lr35902_call $a_enq_tdq
-	# lr35902_set_reg regE 02
-	# lr35902_call $a_enq_tdq
-
-	### 左部
-	#### TODO LEFT_RIGHT_BARをデフォのタイルセットへ追加
-
-	### パネル部
-	lr35902_set_reg regD 98
-
-	lr35902_set_reg regB $(get_num_tile_num 00)
-	lr35902_set_reg regE a2
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_num_tile_num 01)
-	lr35902_set_reg regE a3
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_num_tile_num 02)
-	lr35902_set_reg regE c2
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_num_tile_num 03)
-	lr35902_set_reg regE c3
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_num_tile_num 04)
-	lr35902_set_reg regE e2
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_num_tile_num 05)
-	lr35902_set_reg regE e3
-	lr35902_call $a_enq_tdq
-
-	lr35902_set_reg regD 99
-
-	lr35902_set_reg regB $(get_num_tile_num 06)
-	lr35902_set_reg regE 02
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_num_tile_num 07)
-	lr35902_set_reg regE 03
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_num_tile_num 08)
-	lr35902_set_reg regE 22
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_num_tile_num 09)
-	lr35902_set_reg regE 23
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_alpha_tile_num A)
-	lr35902_set_reg regE 42
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_alpha_tile_num B)
-	lr35902_set_reg regE 43
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_alpha_tile_num C)
-	lr35902_set_reg regE 62
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_alpha_tile_num D)
-	lr35902_set_reg regE 63
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_alpha_tile_num E)
-	lr35902_set_reg regE 82
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_alpha_tile_num F)
-	lr35902_set_reg regE 83
-	lr35902_call $a_enq_tdq
-
 	# メモリダンプ部
-	lr35902_set_reg regD 98
+	## 「あ」
+	lr35902_set_reg regDE 9862
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_A
+	lr35902_call $a_enq_tdq
+	## 「と」
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TO
+	lr35902_call $a_enq_tdq
+	## 「゛」
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DAKUTEN
+	lr35902_call $a_enq_tdq
+	## 「れ」
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RE
+	lr35902_call $a_enq_tdq
+	## 「す」
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SU
+	lr35902_call $a_enq_tdq
 
-	lr35902_set_reg regB $(get_alpha_tile_num A)
-	lr35902_set_reg regE 65
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_alpha_tile_num D)
-	lr35902_set_reg regE 66
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regE 67
-	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_alpha_tile_num R)
+	## 「0」
 	lr35902_set_reg regE 68
-	lr35902_call $a_enq_tdq
-
 	lr35902_set_reg regB $(get_num_tile_num 00)
-	lr35902_set_reg regE 6B
 	lr35902_call $a_enq_tdq
+	## 「1」
+	lr35902_set_reg regE 6b
 	lr35902_set_reg regB $(get_num_tile_num 01)
-	lr35902_set_reg regE 6D
 	lr35902_call $a_enq_tdq
+	## 「2」
+	lr35902_set_reg regE 6e
 	lr35902_set_reg regB $(get_num_tile_num 02)
-	lr35902_set_reg regE 6F
 	lr35902_call $a_enq_tdq
-	lr35902_set_reg regB $(get_num_tile_num 03)
+	## 「3」
 	lr35902_set_reg regE 71
+	lr35902_set_reg regB $(get_num_tile_num 03)
 	lr35902_call $a_enq_tdq
 
 	# return
