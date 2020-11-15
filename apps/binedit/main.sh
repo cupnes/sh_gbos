@@ -244,6 +244,8 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_call $a_byte_to_tile
 	lr35902_inc regE
 	lr35902_call $a_enq_tdq
+	## 空白の分1タイル飛ばす
+	lr35902_inc regE
 	## 2バイト目
 	lr35902_copyinc_to_regA_from_ptrHL
 	lr35902_copy_to_from regC regA
@@ -257,6 +259,8 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_call $a_byte_to_tile
 	lr35902_inc regE
 	lr35902_call $a_enq_tdq
+	## 空白の分1タイル飛ばす
+	lr35902_inc regE
 	## 3バイト目
 	lr35902_copyinc_to_regA_from_ptrHL
 	lr35902_copy_to_from regC regA
@@ -270,6 +274,8 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_call $a_byte_to_tile
 	lr35902_inc regE
 	lr35902_call $a_enq_tdq
+	## 空白の分1タイル飛ばす
+	lr35902_inc regE
 	## 4バイト目
 	lr35902_copyinc_to_regA_from_ptrHL
 	lr35902_copy_to_from regC regA
@@ -339,7 +345,7 @@ main() {
 
 		# 描画先アドレスの初期値設定
 		lr35902_set_reg regD 98
-		lr35902_set_reg regE 85
+		lr35902_set_reg regE 82
 
 		# 初期表示として、
 		# var_exe_1(下位),var_exe_2(上位)のデータをダンプする
@@ -373,9 +379,9 @@ main() {
 			lr35902_compare_regA_and 04
 			lr35902_rel_jump_with_cond C $(two_digits_d $((8 + 1 + 2)))
 
-			# 描画先アドレスを次の行頭へ移動(+0x14)(8バイト)
+			# 描画先アドレスを次の行頭へ移動(+0x11)(8バイト)
 			lr35902_push_reg regHL		# 1
-			lr35902_set_reg regHL 0014	# 3
+			lr35902_set_reg regHL 0011	# 3
 			lr35902_add_to_regHL regDE	# 1
 			lr35902_copy_to_from regD regH	# 1
 			lr35902_copy_to_from regE regL	# 1
