@@ -18,6 +18,9 @@ APP_MAIN_BASE=$GB_WRAM1_BASE
 APP_VARS_BASE=$(calc16 "$APP_MAIN_BASE+$APP_MAIN_SZ")
 APP_FUNCS_BASE=$(calc16 "$APP_VARS_BASE+$APP_VARS_SZ")
 
+BE_OAM_BASE_CSL=$(calc16 "$GB_OAM_BASE+$GB_OAM_SZ")
+BE_OAM_BASE_WIN_TITLE=$(calc16 "$GB_OAM_BASE+($GB_OAM_SZ*2)")
+
 map_file=map.sh
 rm -f $map_file
 
@@ -67,6 +70,83 @@ rm -f $map_file
 # 初期配置のタイルをtdqへ積む
 # ※ この関数内で使うレジスタは事前のpushと事後のpopをしていない
 f_draw_init_tiles() {
+	# オブジェクト
+	## マウスカーソルを非表示にする
+	lr35902_clear_reg regB
+	lr35902_set_reg regDE $GBOS_OAM_BASE_CSL
+	lr35902_call $a_enq_tdq
+
+	## TODO □カーソルの設定
+
+	## ウィンドウタイトル
+	### 1文字目「ふ」
+	#### Y座標
+	lr35902_set_reg regDE $BE_OAM_BASE_WIN_TITLE
+	lr35902_set_reg regB 18
+	lr35902_call $a_enq_tdq
+	#### X座標
+	lr35902_inc regE
+	lr35902_call $a_enq_tdq
+	#### タイル番号
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_FU
+	lr35902_call $a_enq_tdq
+	#### 属性
+	lr35902_inc regE
+	lr35902_clear_reg regB
+	lr35902_call $a_enq_tdq
+	### 2文字目「あ」
+	#### Y座標
+	lr35902_inc regE
+	lr35902_set_reg regB 18
+	lr35902_call $a_enq_tdq
+	#### X座標
+	lr35902_inc regE
+	lr35902_set_reg regB 20
+	lr35902_call $a_enq_tdq
+	#### タイル番号
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_A
+	lr35902_call $a_enq_tdq
+	#### 属性
+	lr35902_inc regE
+	lr35902_clear_reg regB
+	lr35902_call $a_enq_tdq
+	### 3文字目「い」
+	#### Y座標
+	lr35902_inc regE
+	lr35902_set_reg regB 18
+	lr35902_call $a_enq_tdq
+	#### X座標
+	lr35902_inc regE
+	lr35902_set_reg regB 28
+	lr35902_call $a_enq_tdq
+	#### タイル番号
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_I
+	lr35902_call $a_enq_tdq
+	#### 属性
+	lr35902_inc regE
+	lr35902_clear_reg regB
+	lr35902_call $a_enq_tdq
+	### 4文字目「る」
+	#### Y座標
+	lr35902_inc regE
+	lr35902_set_reg regB 18
+	lr35902_call $a_enq_tdq
+	#### X座標
+	lr35902_inc regE
+	lr35902_set_reg regB 30
+	lr35902_call $a_enq_tdq
+	#### タイル番号
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RU
+	lr35902_call $a_enq_tdq
+	#### 属性
+	lr35902_inc regE
+	lr35902_clear_reg regB
+	lr35902_call $a_enq_tdq
+
 	# 操作パネル部
 	## 外枠
 	### 上部
@@ -370,8 +450,10 @@ main() {
 		lr35902_res_bitN_of_reg $GB_LCDC_BITNUM_OBJ_SIZE regA
 		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
 
+		# TODO カーネル側でマウスカーソルの更新をしないように
+		#      専用の変数を設定
+
 		# 初期画面描画のエントリをTDQへ積む
-		## TODO マウスカーソル非表示・ウィンドウタイトル・□カーソルのOAM変更も積む
 		lr35902_call $a_draw_init_tiles
 
 		# 描画先アドレスの初期値設定
@@ -465,6 +547,9 @@ main() {
 		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
 
 		# TODO マウスカーソル表示・その他使用したOBJを非表示 のOAM変更をtdqへ積む
+
+		# TODO カーネル側でマウスカーソルの更新を再開するように
+		#      専用の変数を設定
 
 		# DAS: run_exeをクリア
 		lr35902_copy_to_regA_from_addr $var_draw_act_stat
