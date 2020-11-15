@@ -62,6 +62,16 @@ vars() {
 	var_remain_bytes_th=$(calc16 "$var_remain_bytes_bh+1")
 	echo -e "var_remain_bytes_th=$var_remain_bytes_th" >>$map_file
 	echo -en '\x00'
+
+	# □カーソル座標(左上原点)
+	## Y座標
+	var_csl_y=$(calc16 "$var_remain_bytes_th+1")
+	echo -e "var_csl_y=$var_csl_y" >>$map_file
+	echo -en '\x20'
+	## X座標
+	var_csl_x=$(calc16 "$var_csl_y+1")
+	echo -e "var_csl_x=$var_csl_x" >>$map_file
+	echo -en '\x38'
 }
 # 変数設定のために空実行
 vars >/dev/null
@@ -76,76 +86,96 @@ f_draw_init_tiles() {
 	lr35902_set_reg regDE $GBOS_OAM_BASE_CSL
 	lr35902_call $a_enq_tdq
 
-	## TODO □カーソルの設定
+	## □カーソルの設定
+	### Y座標
+	lr35902_set_reg regDE $BE_OAM_BASE_CSL
+	lr35902_copy_to_regA_from_addr $var_csl_y
+	lr35902_add_to_regA 10
+	lr35902_copy_to_from regB regA
+	lr35902_call $a_enq_tdq
+	### X座標
+	lr35902_inc regE
+	lr35902_copy_to_regA_from_addr $var_csl_x
+	lr35902_add_to_regA 08
+	lr35902_copy_to_from regB regA
+	lr35902_call $a_enq_tdq
+	### タイル番号
+	lr35902_inc regE
+	lr35902_set_reg regB 06
+	lr35902_call $a_enq_tdq
+	### 属性
+	lr35902_inc regE
+	lr35902_clear_reg regB
+	lr35902_call $a_enq_tdq
 
-	## ウィンドウタイトル
-	### 1文字目「ふ」
-	#### Y座標
-	lr35902_set_reg regDE $BE_OAM_BASE_WIN_TITLE
-	lr35902_set_reg regB 18
-	lr35902_call $a_enq_tdq
-	#### X座標
-	lr35902_inc regE
-	lr35902_call $a_enq_tdq
-	#### タイル番号
-	lr35902_inc regE
-	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_FU
-	lr35902_call $a_enq_tdq
-	#### 属性
-	lr35902_inc regE
-	lr35902_clear_reg regB
-	lr35902_call $a_enq_tdq
-	### 2文字目「あ」
-	#### Y座標
-	lr35902_inc regE
-	lr35902_set_reg regB 18
-	lr35902_call $a_enq_tdq
-	#### X座標
-	lr35902_inc regE
-	lr35902_set_reg regB 20
-	lr35902_call $a_enq_tdq
-	#### タイル番号
-	lr35902_inc regE
-	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_A
-	lr35902_call $a_enq_tdq
-	#### 属性
-	lr35902_inc regE
-	lr35902_clear_reg regB
-	lr35902_call $a_enq_tdq
-	### 3文字目「い」
-	#### Y座標
-	lr35902_inc regE
-	lr35902_set_reg regB 18
-	lr35902_call $a_enq_tdq
-	#### X座標
-	lr35902_inc regE
-	lr35902_set_reg regB 28
-	lr35902_call $a_enq_tdq
-	#### タイル番号
-	lr35902_inc regE
-	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_I
-	lr35902_call $a_enq_tdq
-	#### 属性
-	lr35902_inc regE
-	lr35902_clear_reg regB
-	lr35902_call $a_enq_tdq
-	### 4文字目「る」
-	#### Y座標
-	lr35902_inc regE
-	lr35902_set_reg regB 18
-	lr35902_call $a_enq_tdq
-	#### X座標
-	lr35902_inc regE
-	lr35902_set_reg regB 30
-	lr35902_call $a_enq_tdq
-	#### タイル番号
-	lr35902_inc regE
-	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RU
-	lr35902_call $a_enq_tdq
-	#### 属性
-	lr35902_inc regE
-	lr35902_clear_reg regB
-	lr35902_call $a_enq_tdq
+	# ## ウィンドウタイトル
+	# ### 1文字目「ふ」
+	# #### Y座標
+	# lr35902_set_reg regDE $BE_OAM_BASE_WIN_TITLE
+	# lr35902_set_reg regB 18
+	# lr35902_call $a_enq_tdq
+	# #### X座標
+	# lr35902_inc regE
+	# lr35902_call $a_enq_tdq
+	# #### タイル番号
+	# lr35902_inc regE
+	# lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_FU
+	# lr35902_call $a_enq_tdq
+	# #### 属性
+	# lr35902_inc regE
+	# lr35902_clear_reg regB
+	# lr35902_call $a_enq_tdq
+	# ### 2文字目「あ」
+	# #### Y座標
+	# lr35902_inc regE
+	# lr35902_set_reg regB 18
+	# lr35902_call $a_enq_tdq
+	# #### X座標
+	# lr35902_inc regE
+	# lr35902_set_reg regB 20
+	# lr35902_call $a_enq_tdq
+	# #### タイル番号
+	# lr35902_inc regE
+	# lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_A
+	# lr35902_call $a_enq_tdq
+	# #### 属性
+	# lr35902_inc regE
+	# lr35902_clear_reg regB
+	# lr35902_call $a_enq_tdq
+	# ### 3文字目「い」
+	# #### Y座標
+	# lr35902_inc regE
+	# lr35902_set_reg regB 18
+	# lr35902_call $a_enq_tdq
+	# #### X座標
+	# lr35902_inc regE
+	# lr35902_set_reg regB 28
+	# lr35902_call $a_enq_tdq
+	# #### タイル番号
+	# lr35902_inc regE
+	# lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_I
+	# lr35902_call $a_enq_tdq
+	# #### 属性
+	# lr35902_inc regE
+	# lr35902_clear_reg regB
+	# lr35902_call $a_enq_tdq
+	# ### 4文字目「る」
+	# #### Y座標
+	# lr35902_inc regE
+	# lr35902_set_reg regB 18
+	# lr35902_call $a_enq_tdq
+	# #### X座標
+	# lr35902_inc regE
+	# lr35902_set_reg regB 30
+	# lr35902_call $a_enq_tdq
+	# #### タイル番号
+	# lr35902_inc regE
+	# lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RU
+	# lr35902_call $a_enq_tdq
+	# #### 属性
+	# lr35902_inc regE
+	# lr35902_clear_reg regB
+	# lr35902_call $a_enq_tdq
 
 	# メモリダンプ部
 	## 「あ」
