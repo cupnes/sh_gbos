@@ -19,7 +19,11 @@ APP_VARS_BASE=$(calc16 "$APP_MAIN_BASE+$APP_MAIN_SZ")
 APP_FUNCS_BASE=$(calc16 "$APP_VARS_BASE+$APP_VARS_SZ")
 
 BE_OAM_BASE_CSL=$(calc16 "$GB_OAM_BASE+$GB_OAM_SZ")
+BE_OAM_CSL_X_ADDR=$(calc16 "$BE_OAM_BASE_CSL+1")
 BE_OAM_BASE_WIN_TITLE=$(calc16 "$GB_OAM_BASE+($GB_OAM_SZ*2)")
+
+# 押下判定のしきい値
+BE_KEY_PRESS_TH=05
 
 map_file=map.sh
 rm -f $map_file
@@ -496,6 +500,31 @@ f_draw_restore_tiles() {
 	lr35902_return
 }
 
+# カーソルを一つ前へ進める
+f_forward_cursor() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+
+	# 現在のカーソル位置取得
+	lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+
+	# 1マス進める
+	lr35902_add_to_regA 08
+
+	# カーソル位置更新のエントリをtdqへ積む
+	lr35902_copy_to_from regB regA
+	lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+	lr35902_call $a_enq_tdq
+
+	# pop & return
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 funcs() {
 	local fsz
 
@@ -517,6 +546,13 @@ funcs() {
 	a_draw_restore_tiles=$(four_digits $(calc16 "${a_dump_addr_and_data_4bytes}+${fsz}"))
 	echo -e "a_draw_restore_tiles=$a_draw_restore_tiles" >>$map_file
 	f_draw_restore_tiles
+
+	# カーソルを一つ前へ進める
+	f_draw_restore_tiles >f_draw_restore_tiles.o
+	fsz=$(to16 $(stat -c '%s' f_draw_restore_tiles.o))
+	a_forward_cursor=$(four_digits $(calc16 "${a_draw_restore_tiles}+${fsz}"))
+	echo -e "a_forward_cursor=$a_forward_cursor" >>$map_file
+	f_forward_cursor
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -626,7 +662,7 @@ main() {
 
 	# 定常処理
 
-	# 方向キー入力判定
+	# 方向キーに応じた処理
 	## 現在の十字キー入力状態をregBへ取得
 	lr35902_copy_to_regA_from_addr $var_btn_stat
 	lr35902_and_to_regA $GBOS_DIR_KEY_MASK
@@ -681,6 +717,30 @@ main() {
 
 	## 現在のカウンタ値をregCへ保存
 	lr35902_copy_to_from regC regA
+
+	## カウンタ値のしきい値チェック(押下判定)
+	lr35902_compare_regA_and $BE_KEY_PRESS_TH
+	(
+		# 押下有り
+
+		# →か?
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_RIGHT regB
+		(
+			# →の場合
+
+			# カーソルを一つ進める関数を呼び出す
+			lr35902_call $a_forward_cursor
+		) >main.9.o
+		local sz_9=$(stat -c '%s' main.9.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_9)
+		cat main.9.o
+
+		# カウンタ値をゼロクリア
+		lr35902_clear_reg regC
+	) >main.8.o
+	local sz_8=$(stat -c '%s' main.8.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_8)
+	cat main.8.o
 
 	## カウンタ値更新
 	lr35902_copy_to_from regA regC
