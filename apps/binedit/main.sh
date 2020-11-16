@@ -462,6 +462,30 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_return
 }
 
+# (主にobjを)元に戻すエントリをtdqへ積む
+f_draw_restore_tiles() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+
+	# オブジェクト
+	## □カーソルを非表示にする
+	lr35902_clear_reg regB
+	lr35902_set_reg regDE $BE_OAM_BASE_CSL
+	lr35902_call $a_enq_tdq
+
+	## TODO マウスカーソルを表示する
+
+	## TODO ウィンドウタイトルを非表示にする
+
+	# pop & return
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 funcs() {
 	local fsz
 
@@ -476,6 +500,13 @@ funcs() {
 	a_dump_addr_and_data_4bytes=$(four_digits $(calc16 "${a_draw_init_tiles}+${fsz}"))
 	echo -e "a_dump_addr_and_data_4bytes=$a_dump_addr_and_data_4bytes" >>$map_file
 	f_dump_addr_and_data_4bytes
+
+	# (主にobjを)元に戻すエントリをtdqへ積む
+	f_dump_addr_and_data_4bytes >f_dump_addr_and_data_4bytes.o
+	fsz=$(to16 $(stat -c '%s' f_dump_addr_and_data_4bytes.o))
+	a_draw_restore_tiles=$(four_digits $(calc16 "${a_dump_addr_and_data_4bytes}+${fsz}"))
+	echo -e "a_draw_restore_tiles=$a_draw_restore_tiles" >>$map_file
+	f_draw_restore_tiles
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -592,12 +623,13 @@ main() {
 	(
 		# Aボタン(右クリック)のリリースがあった場合
 
+		# マウスカーソル表示・その他使用したOBJを非表示 のOAM変更をtdqへ積む
+		lr35902_call $a_draw_restore_tiles
+
 		# OBJサイズ設定を8x16へ戻す
 		lr35902_copy_to_regA_from_ioport $GB_IO_LCDC
 		lr35902_set_bitN_of_reg $GB_LCDC_BITNUM_OBJ_SIZE regA
 		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
-
-		# TODO マウスカーソル表示・その他使用したOBJを非表示 のOAM変更をtdqへ積む
 
 		# TODO カーネル側でマウスカーソルの更新を再開するように
 		#      専用の変数を設定
