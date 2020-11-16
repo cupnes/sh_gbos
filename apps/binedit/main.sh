@@ -640,9 +640,29 @@ main() {
 	(
 		# 前回 == 現在 の場合
 
-		# カウンタ値をregAへ取得しインクリメント
-		lr35902_copy_to_regA_from_addr $var_press_counter
-		lr35902_inc regA
+		# いずれかの入力があるか？
+		lr35902_or_to_regA regA
+		(
+			# いずれの入力も無し
+
+			# regAをクリア
+			lr35902_clear_reg regA
+		) >main.5.o
+		(
+			# いずれかの入力有り
+
+			# カウンタ値をregAへ取得しインクリメント
+			lr35902_copy_to_regA_from_addr $var_press_counter
+			lr35902_inc regA
+
+			# いずれの入力も無しの処理を飛ばす
+			local sz_5=$(stat -c '%s' main.5.o)
+			lr35902_rel_jump $(two_digits_d $sz_5)
+		) >main.7.o
+		local sz_7=$(stat -c '%s' main.7.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_7)
+		cat main.7.o	# いずれかの入力有り
+		cat main.5.o	# いずれの入力も無し
 	) >main.3.o
 	(
 		# 前回 != 現在 の場合
@@ -659,7 +679,11 @@ main() {
 	cat main.4.o
 	cat main.3.o
 
+	## 現在のカウンタ値をregCへ保存
+	lr35902_copy_to_from regC regA
+
 	## カウンタ値更新
+	lr35902_copy_to_from regA regC
 	lr35902_copy_to_addr_from_regA $var_press_counter
 
 	## 前回の入力状態更新
