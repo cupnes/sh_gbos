@@ -2787,6 +2787,8 @@ init() {
 	# - tdq.stat = is_empty
 	lr35902_set_reg regA 01
 	lr35902_copy_to_addr_from_regA $var_tdq_stat
+	# - マウス有効化
+	lr35902_copy_to_addr_from_regA $var_mouse_enable
 
 	# タイルミラー領域の初期化
 	init_tmrr
@@ -3299,8 +3301,20 @@ event_driven() {
 	# 十字キー入力の有無確認
 	lr35902_and_to_regA $GBOS_DIR_KEY_MASK
 	(
-		# 十字キー入力があればマウスカーソル座標更新
-		update_mouse_cursor
+		# 十字キー入力有
+
+		# マウス有効/無効確認
+		lr35902_copy_to_regA_from_addr $var_mouse_enable
+		lr35902_or_to_regA regA
+		(
+			# マウス有効
+
+			# マウスカーソル座標更新
+			update_mouse_cursor
+		) >src/event_driven.7.o
+		local sz_7=$(stat -c '%s' src/event_driven.7.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_7)
+		cat src/event_driven.7.o
 	) >src/event_driven.1.o
 	sz=$(stat -c '%s' src/event_driven.1.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)

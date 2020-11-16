@@ -532,8 +532,9 @@ main() {
 		lr35902_res_bitN_of_reg $GB_LCDC_BITNUM_OBJ_SIZE regA
 		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
 
-		# TODO カーネル側でマウスカーソルの更新をしないように
-		#      専用の変数を設定
+		# カーネル側でマウスカーソルの更新をしないように専用の変数を設定
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $var_mouse_enable
 
 		# 初期画面描画のエントリをTDQへ積む
 		lr35902_call $a_draw_init_tiles
@@ -631,8 +632,9 @@ main() {
 		lr35902_set_bitN_of_reg $GB_LCDC_BITNUM_OBJ_SIZE regA
 		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
 
-		# TODO カーネル側でマウスカーソルの更新を再開するように
-		#      専用の変数を設定
+		# カーネル側でマウスカーソルの更新を再開するように専用の変数を設定
+		lr35902_set_reg regA 01
+		lr35902_copy_to_addr_from_regA $var_mouse_enable
 
 		# DAS: run_exeをクリア
 		lr35902_copy_to_regA_from_addr $var_draw_act_stat
