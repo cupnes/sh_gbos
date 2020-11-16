@@ -525,6 +525,31 @@ f_forward_cursor() {
 	lr35902_return
 }
 
+# カーソルを一つ後ろへ進める
+f_backward_cursor() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+
+	# 現在のカーソル位置取得
+	lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+
+	# 1マス戻る
+	lr35902_sub_to_regA 08
+
+	# カーソル位置更新のエントリをtdqへ積む
+	lr35902_copy_to_from regB regA
+	lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+	lr35902_call $a_enq_tdq
+
+	# pop & return
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 funcs() {
 	local fsz
 
@@ -553,6 +578,13 @@ funcs() {
 	a_forward_cursor=$(four_digits $(calc16 "${a_draw_restore_tiles}+${fsz}"))
 	echo -e "a_forward_cursor=$a_forward_cursor" >>$map_file
 	f_forward_cursor
+
+	# カーソルを一つ後ろへ進める
+	f_forward_cursor >f_forward_cursor.o
+	fsz=$(to16 $(stat -c '%s' f_forward_cursor.o))
+	a_backward_cursor=$(four_digits $(calc16 "${a_forward_cursor}+${fsz}"))
+	echo -e "a_backward_cursor=$a_backward_cursor" >>$map_file
+	f_backward_cursor
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -734,6 +766,18 @@ main() {
 		local sz_9=$(stat -c '%s' main.9.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_9)
 		cat main.9.o
+
+		# ←か?
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_LEFT regB
+		(
+			# ←の場合
+
+			# カーソルを一つ戻る関数を呼び出す
+			lr35902_call $a_backward_cursor
+		) >main.10.o
+		local sz_10=$(stat -c '%s' main.10.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_10)
+		cat main.10.o
 
 		# カウンタ値をゼロクリア
 		lr35902_clear_reg regC
