@@ -72,6 +72,16 @@ vars() {
 	var_csl_x=$(calc16 "$var_csl_y+1")
 	echo -e "var_csl_x=$var_csl_x" >>$map_file
 	echo -en '\x38'
+
+	# 方向キー入力判定用
+	## 前回の入力
+	var_prev_dir_input=$(calc16 "$var_csl_x+1")
+	echo -e "var_prev_dir_input=$var_prev_dir_input" >>$map_file
+	echo -en '\x00'
+	## 連続押下カウンタ
+	var_press_counter=$(calc16 "$var_prev_dir_input+1")
+	echo -e "var_press_counter=$var_press_counter" >>$map_file
+	echo -en '\x00'
 }
 # 変数設定のために空実行
 vars >/dev/null
@@ -616,6 +626,46 @@ main() {
 
 	# 定常処理
 
+	# 方向キー入力判定
+	## 現在の十字キー入力状態をregBへ取得
+	lr35902_copy_to_regA_from_addr $var_btn_stat
+	lr35902_and_to_regA $GBOS_DIR_KEY_MASK
+	lr35902_copy_to_from regB regA
+
+	## 前回の十字キー入力状態をregAへ取得
+	lr35902_copy_to_regA_from_addr $var_prev_dir_input
+
+	## 前回と現在の入力状態を比較
+	lr35902_compare_regA_and regB
+	(
+		# 前回 == 現在 の場合
+
+		# カウンタ値をregAへ取得しインクリメント
+		lr35902_copy_to_regA_from_addr $var_press_counter
+		lr35902_inc regA
+	) >main.3.o
+	(
+		# 前回 != 現在 の場合
+
+		# regAをクリア
+		lr35902_clear_reg regA
+
+		# 前回 == 現在 の場合の処理を飛ばす
+		local sz_3=$(stat -c '%s' main.3.o)
+		lr35902_rel_jump $(two_digits_d $sz_3)
+	) >main.4.o
+	local sz_4=$(stat -c '%s' main.4.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
+	cat main.4.o
+	cat main.3.o
+
+	## カウンタ値更新
+	lr35902_copy_to_addr_from_regA $var_press_counter
+
+	## 前回の入力状態更新
+	lr35902_copy_to_from regA regB
+	lr35902_copy_to_addr_from_regA $var_prev_dir_input
+
 	# アプリ用ボタンリリースフラグをregAへ取得
 	lr35902_copy_to_regA_from_addr $var_app_release_btn
 
@@ -651,69 +701,6 @@ main() {
 	local sz_6=$(stat -c '%s' main.6.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
 	cat main.6.o
-
-	# Bボタン(左クリック): マウスカーソルの座標へ黒タイル配置
-	lr35902_test_bitN_of_reg $GBOS_B_KEY_BITNUM regA
-	(
-		# Bボタン(左クリック)のリリースがあった場合
-
-		# ボタンリリース状態をregCへ取っておく
-		lr35902_copy_to_from regC regA
-
-		# マウスカーソルの座標を取得
-		## タイル座標Y -> regD
-		### マウスカーソルY座標 -> regA
-		lr35902_copy_to_regA_from_addr $var_mouse_y
-		### regA - 16 -> regA
-		lr35902_set_reg regB 10
-		lr35902_sub_to_regA regB
-		### regAを3ビット右シフト
-		lr35902_set_carry
-		lr35902_comp_carry
-		lr35902_rot_regA_right_th_carry
-		lr35902_set_carry
-		lr35902_comp_carry
-		lr35902_rot_regA_right_th_carry
-		lr35902_set_carry
-		lr35902_comp_carry
-		lr35902_rot_regA_right_th_carry
-		### regA -> regD
-		lr35902_copy_to_from regD regA
-
-		## タイル座標X -> regE
-		### マウスカーソルX座標 -> regA
-		lr35902_copy_to_regA_from_addr $var_mouse_x
-		### regA - 8 -> regA
-		lr35902_set_reg regB 08
-		lr35902_sub_to_regA regB
-		### regAを3ビット右シフト
-		lr35902_set_carry
-		lr35902_comp_carry
-		lr35902_rot_regA_right_th_carry
-		lr35902_set_carry
-		lr35902_comp_carry
-		lr35902_rot_regA_right_th_carry
-		lr35902_set_carry
-		lr35902_comp_carry
-		lr35902_rot_regA_right_th_carry
-		### regA -> regE
-		lr35902_copy_to_from regE regA
-
-		# 黒タイル配置
-		lr35902_call $a_tcoord_to_addr
-		lr35902_copy_to_from regD regH
-		lr35902_copy_to_from regE regL
-		lr35902_set_reg regB $GBOS_TILE_NUM_BLACK
-		lr35902_call $a_enq_tdq
-
-		# アプリ用ボタンリリースフラグのBボタン(左クリック)をクリア
-		lr35902_copy_to_from regA regC
-		lr35902_res_bitN_of_reg $GBOS_B_KEY_BITNUM regA
-		lr35902_copy_to_addr_from_regA $var_app_release_btn
-	) >main.3.o
-	local sz_3=$(stat -c '%s' main.3.o)
-	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
-	cat main.3.o
 
 	# pop & return
 	lr35902_pop_reg regHL
