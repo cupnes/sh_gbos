@@ -734,7 +734,7 @@ f_backward_cursor() {
 		# 上位側
 
 		# 0バイト目か否か?
-		# lr35902_compare_regA_and 04
+		lr35902_compare_regA_and 04
 		## b2(is_upper)が立っているので
 		## b1-b0が0b00の場合、0x04になる
 		# (
