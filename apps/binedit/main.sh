@@ -25,6 +25,9 @@ BE_OAM_BASE_WIN_TITLE=$(calc16 "$GB_OAM_BASE+($GB_OAM_SZ*2)")
 # 押下判定のしきい値
 BE_KEY_PRESS_TH=05
 
+# カーソル移動補助変数
+BE_CSL_ATTR_BITNUM_IS_UPPER=2
+
 map_file=map.sh
 rm -f $map_file
 
@@ -68,6 +71,8 @@ vars() {
 	echo -en '\x00'
 
 	# □カーソル座標(左上原点)
+	# TODO 今や初期化のときしか使ってない
+	#      初期化のときも使わないようにして消す
 	## Y座標
 	var_csl_y=$(calc16 "$var_remain_bytes_th+1")
 	echo -e "var_csl_y=$var_csl_y" >>$map_file
@@ -86,6 +91,33 @@ vars() {
 	var_press_counter=$(calc16 "$var_prev_dir_input+1")
 	echo -e "var_press_counter=$var_press_counter" >>$map_file
 	echo -en '\x00'
+
+	# カーソル位置のデータアドレス
+	## 下位8ビット
+	var_csl_dadr_bh=$(calc16 "$var_press_counter+1")
+	echo -e "var_csl_dadr_bh=$var_csl_dadr_bh" >>$map_file
+	echo -en '\x00'
+	## 上位8ビット
+	var_csl_dadr_th=$(calc16 "$var_csl_dadr_bh+1")
+	echo -e "var_csl_dadr_th=$var_csl_dadr_th" >>$map_file
+	echo -en '\x00'
+
+	# カーソル位置のタイルアドレス
+	## 下位8ビット
+	var_csl_tadr_bh=$(calc16 "$var_csl_dadr_th+1")
+	echo -e "var_csl_tadr_bh=$var_csl_tadr_bh" >>$map_file
+	echo -en '\x87'
+	## 上位8ビット
+	var_csl_tadr_th=$(calc16 "$var_csl_tadr_bh+1")
+	echo -e "var_csl_tadr_th=$var_csl_tadr_th" >>$map_file
+	echo -en '\x98'
+
+	# カーソル移動の補助変数
+	## b2   : 上位4ビット(=1)/下位4ビット(=0)
+	## b1-b0: 1行の何バイト目か(0〜3)
+	var_csl_attr=$(calc16 "$var_csl_tadr_th+1")
+	echo -e "var_csl_attr=$var_csl_attr" >>$map_file
+	echo -en '\x04'
 }
 # 変数設定のために空実行
 vars >/dev/null
@@ -507,16 +539,139 @@ f_forward_cursor() {
 	lr35902_push_reg regBC
 	lr35902_push_reg regDE
 
-	# 現在のカーソル位置取得
-	lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+	# カーソル移動の補助変数をregCへ取得
+	lr35902_copy_to_regA_from_addr $var_csl_attr
+	lr35902_copy_to_from regC regA
 
-	# 1マス進める
-	lr35902_add_to_regA 08
+	# 現在のカーソル位置は上位側か下位側か
+	lr35902_test_bitN_of_reg $BE_CSL_ATTR_BITNUM_IS_UPPER regC
+	(
+		# 下位側
 
-	# カーソル位置更新のエントリをtdqへ積む
-	lr35902_copy_to_from regB regA
-	lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
-	lr35902_call $a_enq_tdq
+		# 3バイト目か否か?
+		lr35902_compare_regA_and 03
+		(
+			# regA < 3 (0〜2バイト目)
+
+			# □カーソルOAM更新
+			## 現在のカーソルのobjX座標取得
+			lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+			## 2タイル分進める
+			lr35902_add_to_regA 10
+			## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+			lr35902_copy_to_from regB regA
+			lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+			lr35902_call $a_enq_tdq
+
+			# カーソル位置のデータアドレス変数更新
+			## 変数をregDEへ取得
+			lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+			lr35902_copy_to_from regE regA
+			lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+			lr35902_copy_to_from regD regA
+			## regDEをインクリメント
+			lr35902_inc regDE
+			## regDEを変数へ書き戻す
+			lr35902_copy_to_from regA regE
+			lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+			lr35902_copy_to_from regA regD
+			lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+
+			# カーソル位置のタイルアドレス変数更新
+			## 変数をregDEへ取得
+			lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+			lr35902_copy_to_from regE regA
+			lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+			lr35902_copy_to_from regD regA
+			## regDEを2増やす
+			lr35902_inc regDE
+			lr35902_inc regDE
+			## regDEを変数へ書き戻す
+			lr35902_copy_to_from regA regE
+			lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
+			lr35902_copy_to_from regA regD
+			lr35902_copy_to_addr_from_regA $var_csl_tadr_th
+
+			# カーソル移動の補助変数更新
+			## b2(is_upper)は0なので、そのままインクリメント
+			lr35902_inc regC
+			## b2(is_upper)をセット
+			lr35902_set_bitN_of_reg $BE_CSL_ATTR_BITNUM_IS_UPPER regC
+			## 変数へ書き戻す
+			lr35902_copy_to_from regA regC
+			lr35902_copy_to_addr_from_regA $var_csl_attr
+		) >f_forward_cursor.3.o
+		(
+			# regA >= 3 (3バイト目)
+
+			# TODO 次の行の行頭へ移動するようにする
+
+			# □カーソルOAM更新
+			## 何もしない
+
+			# カーソル位置のデータアドレス変数更新
+			## 何もしない
+
+			# カーソル位置のタイルアドレス変数更新
+			## 何もしない
+
+			# カーソル移動の補助変数更新
+			## 何もしない
+
+			# regA < 3 の場合の処理を飛ばす
+			local sz_3=$(stat -c '%s' f_forward_cursor.3.o)
+			lr35902_rel_jump $(two_digits_d $sz_3)
+		) >f_forward_cursor.4.o
+		local sz_4=$(stat -c '%s' f_forward_cursor.4.o)
+		lr35902_rel_jump_with_cond C $(two_digits_d $sz_4)
+		cat f_forward_cursor.4.o	# regA >= 3
+		cat f_forward_cursor.3.o	# regA < 3
+	) >f_forward_cursor.1.o
+	(
+		# 上位側
+
+		# □カーソルOAM更新
+		## 現在のカーソルのobjX座標取得
+		lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+		## 1タイル分進める
+		lr35902_add_to_regA 08
+		## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+		lr35902_copy_to_from regB regA
+		lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+		lr35902_call $a_enq_tdq
+
+		# カーソル位置のデータアドレス変数更新
+		## 何もしない
+
+		# カーソル位置のタイルアドレス変数更新
+		## 変数をregDEへ取得
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+		lr35902_copy_to_from regE regA
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+		lr35902_copy_to_from regD regA
+		## regDEを1増やす
+		lr35902_inc regDE
+		## regDEを変数へ書き戻す
+		lr35902_copy_to_from regA regE
+		lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
+		lr35902_copy_to_from regA regD
+		lr35902_copy_to_addr_from_regA $var_csl_tadr_th
+
+		# カーソル移動の補助変数更新
+		## b2(is_upper)をリセット
+		lr35902_res_bitN_of_reg $BE_CSL_ATTR_BITNUM_IS_UPPER regC
+		## 変数へ書き戻す
+		lr35902_copy_to_from regA regC
+		lr35902_copy_to_addr_from_regA $var_csl_attr
+
+		# 下位側の処理を飛ばす
+		local sz_1=$(stat -c '%s' f_forward_cursor.1.o)
+		lr35902_rel_jump $(two_digits_d $sz_1)
+	) >f_forward_cursor.2.o
+	local sz_2=$(stat -c '%s' f_forward_cursor.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat f_forward_cursor.2.o	# b2(is_upper) == 1 (上位側)
+	cat f_forward_cursor.1.o	# b2(is_upper) == 0 (下位側)
 
 	# pop & return
 	lr35902_pop_reg regDE
@@ -532,18 +687,304 @@ f_backward_cursor() {
 	lr35902_push_reg regBC
 	lr35902_push_reg regDE
 
-	# 現在のカーソル位置取得
-	lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+	# カーソル移動の補助変数をregCへ取得
+	lr35902_copy_to_regA_from_addr $var_csl_attr
+	lr35902_copy_to_from regC regA
 
-	# 1マス戻る
-	lr35902_sub_to_regA 08
+	# 現在のカーソル位置は上位側か下位側か
+	lr35902_test_bitN_of_reg $BE_CSL_ATTR_BITNUM_IS_UPPER regC
+	(
+		# 下位側
 
-	# カーソル位置更新のエントリをtdqへ積む
-	lr35902_copy_to_from regB regA
-	lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
-	lr35902_call $a_enq_tdq
+		# □カーソルOAM更新
+		## 現在のカーソルのobjX座標取得
+		lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+		## 1タイル分戻す
+		lr35902_sub_to_regA 08
+		## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+		lr35902_copy_to_from regB regA
+		lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+		lr35902_call $a_enq_tdq
+
+		# カーソル位置のデータアドレス変数更新
+		## 何もしない
+
+		# カーソル位置のタイルアドレス変数更新
+		## 変数をregDEへ取得
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+		lr35902_copy_to_from regE regA
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+		lr35902_copy_to_from regD regA
+		## regDEを1減らす
+		lr35902_dec regDE
+		## regDEを変数へ書き戻す
+		lr35902_copy_to_from regA regE
+		lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
+		lr35902_copy_to_from regA regD
+		lr35902_copy_to_addr_from_regA $var_csl_tadr_th
+
+		# カーソル移動の補助変数更新
+		## b2(is_upper)をセット
+		lr35902_set_bitN_of_reg $BE_CSL_ATTR_BITNUM_IS_UPPER regC
+		## 変数へ書き戻す
+		lr35902_copy_to_from regA regC
+		lr35902_copy_to_addr_from_regA $var_csl_attr
+	) >f_backward_cursor.1.o
+	(
+		# 上位側
+
+		# 0バイト目か否か?
+		# lr35902_compare_regA_and 04
+		## b2(is_upper)が立っているので
+		## b1-b0が0b00の場合、0x04になる
+		# (
+		# 	# regA == 0x04 (0バイト目)
+
+		# 	# TODO 前の行の行末へ移動するようにする
+
+		# 	# □カーソルOAM更新
+		# 	## 何もしない
+
+		# 	# カーソル位置のデータアドレス変数更新
+		# 	## 何もしない
+
+		# 	# カーソル位置のタイルアドレス変数更新
+		# 	## 何もしない
+
+		# 	# カーソル移動の補助変数更新
+		# 	## 何もしない
+		# ) >f_backward_cursor.3.o
+		(
+			# regA != 0x04 (1〜3バイト目)
+
+			# □カーソルOAM更新
+			## 現在のカーソルのobjX座標取得
+			lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+			## 2タイル分戻す
+			lr35902_sub_to_regA 10
+			## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+			lr35902_copy_to_from regB regA
+			lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+			lr35902_call $a_enq_tdq
+
+			# カーソル位置のデータアドレス変数更新
+			## 変数をregDEへ取得
+			lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+			lr35902_copy_to_from regE regA
+			lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+			lr35902_copy_to_from regD regA
+			## regDEをデクリメント
+			lr35902_dec regDE
+			## regDEを変数へ書き戻す
+			lr35902_copy_to_from regA regE
+			lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+			lr35902_copy_to_from regA regD
+			lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+
+			# カーソル位置のタイルアドレス変数更新
+			## 変数をregDEへ取得
+			lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+			lr35902_copy_to_from regE regA
+			lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+			lr35902_copy_to_from regD regA
+			## regDEを2減らす
+			lr35902_dec regDE
+			lr35902_dec regDE
+			## regDEを変数へ書き戻す
+			lr35902_copy_to_from regA regE
+			lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
+			lr35902_copy_to_from regA regD
+			lr35902_copy_to_addr_from_regA $var_csl_tadr_th
+
+			# カーソル移動の補助変数更新
+			## b2(is_upper)をリセット
+			lr35902_res_bitN_of_reg $BE_CSL_ATTR_BITNUM_IS_UPPER regC
+			## b2(is_upper)は0なので、そのままデクリメント
+			lr35902_dec regC
+			## 変数へ書き戻す
+			lr35902_copy_to_from regA regC
+			lr35902_copy_to_addr_from_regA $var_csl_attr
+
+			# # regA == 0x04 (0バイト目) の処理を飛ばす
+			# local sz_3=$(stat -c '%s' f_backward_cursor.3.o)
+			# lr35902_rel_jump $(two_digits_d $sz_3)
+		) >f_backward_cursor.4.o
+		local sz_4=$(stat -c '%s' f_backward_cursor.4.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
+		cat f_backward_cursor.4.o	# regA != 0x04 (1〜3バイト目)
+		# cat f_backward_cursor.3.o	# regA == 0x04 (0バイト目)
+
+		# 下位側の処理を飛ばす
+		local sz_1=$(stat -c '%s' f_backward_cursor.1.o)
+		lr35902_rel_jump $(two_digits_d $sz_1)
+	) >f_backward_cursor.2.o
+	local sz_2=$(stat -c '%s' f_backward_cursor.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat f_backward_cursor.2.o	# b2(is_upper) == 1 (上位側)
+	cat f_backward_cursor.1.o	# b2(is_upper) == 0 (下位側)
 
 	# pop & return
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
+# カーソル位置の値をインクリメント
+f_inc_cursor() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	# カーソル移動の補助変数をregCへ取得
+	lr35902_copy_to_regA_from_addr $var_csl_attr
+	lr35902_copy_to_from regC regA
+
+	# 現在のカーソル位置は上位側か下位側か
+	lr35902_test_bitN_of_reg $BE_CSL_ATTR_BITNUM_IS_UPPER regC
+	(
+		# 下位側
+
+		# RAM上の値更新
+		## カーソル位置の値取得
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+		lr35902_copy_to_from regL regA
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+		lr35902_copy_to_from regH regA
+		lr35902_copy_to_from regA ptrHL
+		## regBには上位4ビットのみ設定
+		lr35902_and_to_regA f0
+		lr35902_copy_to_from regB regA
+		## regAにはそのまま設定
+		lr35902_copy_to_from regA ptrHL
+		## regAをインクリメント
+		lr35902_inc regA
+		## regAの下位4ビットだけ抽出
+		lr35902_and_to_regA 0f
+		## regB(上位4ビット)と結合
+		lr35902_or_to_regA regB
+		## カーソル位置のRAMへ書き戻す
+		lr35902_copy_to_from ptrHL regA
+
+		# カーソル位置のタイル更新
+		## regAの下位4ビットを抽出
+		lr35902_and_to_regA 0f
+		## 0x0a以上か否かに応じてタイル番号取得
+		lr35902_compare_regA_and 0a
+		(
+			# regA < 0x0a
+
+			# 番号タイルのベース番号を足し合わせる
+			lr35902_add_to_regA $GBOS_TILE_NUM_NUM_BASE
+		) >f_inc_cursor.3.o
+		(
+			# regA >= 0x0a
+
+			# 0x0aを引く
+			lr35902_sub_to_regA 0a
+
+			# アルファベットタイルのベース番号を足し合わせる
+			lr35902_add_to_regA $GBOS_TILE_NUM_ALPHA_BASE
+
+			# regA < 0x0a の処理を飛ばす
+			local sz_3=$(stat -c '%s' f_inc_cursor.3.o)
+			lr35902_rel_jump $(two_digits_d $sz_3)
+		) >f_inc_cursor.4.o
+		local sz_4=$(stat -c '%s' f_inc_cursor.4.o)
+		lr35902_rel_jump_with_cond C $(two_digits_d $sz_4)
+		cat f_inc_cursor.4.o	# regA >= 0x0a の場合
+		cat f_inc_cursor.3.o	# regA < 0x0a の場合
+		## タイル番号をregBに設定
+		lr35902_copy_to_from regB regA
+		## カーソル位置のタイルアドレスをregDEに取得
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+		lr35902_copy_to_from regE regA
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+		lr35902_copy_to_from regD regA
+		## tdqに積む
+		lr35902_call $a_enq_tdq
+	) >f_inc_cursor.1.o
+	(
+		# 上位側
+
+		# RAM上の値更新
+		## カーソル位置の値取得
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+		lr35902_copy_to_from regL regA
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+		lr35902_copy_to_from regH regA
+		lr35902_copy_to_from regA ptrHL
+		## regBに下位4ビットのみ設定
+		lr35902_and_to_regA 0f
+		lr35902_copy_to_from regB regA
+		## regAにはそのまま設定
+		lr35902_copy_to_from regA ptrHL
+		## regAの上位4ビットを下位4ビットへ持ってくる
+		lr35902_swap_nibbles regA
+		## regAをインクリメント
+		lr35902_inc regA
+		## regAの下位4ビットを上位4ビットへ持ってくる
+		lr35902_swap_nibbles regA
+		## regAの上位4ビットのみ抽出
+		lr35902_and_to_regA f0
+		## regB(下位4ビット)と結合
+		lr35902_or_to_regA regB
+		## カーソル位置のRAMへ書き戻す
+		lr35902_copy_to_from ptrHL regA
+
+		# カーソル位置のタイル更新
+		## regAの上位4ビットを下位4ビットへ持ってくる
+		lr35902_swap_nibbles regA
+		## regAの下位4ビットを抽出
+		lr35902_and_to_regA 0f
+		## 0x0a以上か否かに応じてタイル番号取得
+		lr35902_compare_regA_and 0a
+		(
+			# regA < 0x0a
+
+			# 番号タイルのベース番号を足し合わせる
+			lr35902_add_to_regA $GBOS_TILE_NUM_NUM_BASE
+		) >f_inc_cursor.5.o
+		(
+			# regA >= 0x0a
+
+			# 0x0aを引く
+			lr35902_sub_to_regA 0a
+
+			# アルファベットタイルのベース番号を足し合わせる
+			lr35902_add_to_regA $GBOS_TILE_NUM_ALPHA_BASE
+
+			# regA < 0x0a の処理を飛ばす
+			local sz_5=$(stat -c '%s' f_inc_cursor.5.o)
+			lr35902_rel_jump $(two_digits_d $sz_5)
+		) >f_inc_cursor.6.o
+		local sz_6=$(stat -c '%s' f_inc_cursor.6.o)
+		lr35902_rel_jump_with_cond C $(two_digits_d $sz_6)
+		cat f_inc_cursor.6.o	# regA >= 0x0a の場合
+		cat f_inc_cursor.5.o	# regA < 0x0a の場合
+		## タイル番号をregBに設定
+		lr35902_copy_to_from regB regA
+		## カーソル位置のタイルアドレスをregDEに取得
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+		lr35902_copy_to_from regE regA
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+		lr35902_copy_to_from regD regA
+		## tdqに積む
+		lr35902_call $a_enq_tdq
+
+		# 下位側の処理を飛ばす
+		local sz_1=$(stat -c '%s' f_inc_cursor.1.o)
+		lr35902_rel_jump $(two_digits_d $sz_1)
+	) >f_inc_cursor.2.o
+	local sz_2=$(stat -c '%s' f_inc_cursor.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat f_inc_cursor.2.o	# b2(is_upper) == 1 (上位側)
+	cat f_inc_cursor.1.o	# b2(is_upper) == 0 (下位側)
+
+	# pop & return
+	lr35902_pop_reg regHL
 	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
@@ -585,6 +1026,13 @@ funcs() {
 	a_backward_cursor=$(four_digits $(calc16 "${a_forward_cursor}+${fsz}"))
 	echo -e "a_backward_cursor=$a_backward_cursor" >>$map_file
 	f_backward_cursor
+
+	# カーソル位置の値をインクリメント
+	f_backward_cursor >f_backward_cursor.o
+	fsz=$(to16 $(stat -c '%s' f_backward_cursor.o))
+	a_inc_cursor=$(four_digits $(calc16 "${a_backward_cursor}+${fsz}"))
+	echo -e "a_inc_cursor=$a_inc_cursor" >>$map_file
+	f_inc_cursor
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -639,6 +1087,13 @@ main() {
 		lr35902_copy_to_from regB regA
 		lr35902_copy_to_addr_from_regA $var_file_size_th
 		lr35902_copy_to_addr_from_regA $var_remain_bytes_th
+
+		## この時点のptrHLはデータ部分の先頭アドレス
+		## カーソル位置のデータアドレス変数をこのregHLで初期化
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_th
 
 		## 1画面分(12行)を表示し終えたかの判断に使うカウンタを
 		## 初期化
@@ -778,6 +1233,18 @@ main() {
 		local sz_10=$(stat -c '%s' main.10.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_10)
 		cat main.10.o
+
+		# ↑か?
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_UP regB
+		(
+			# ↑の場合
+
+			# カーソル位置の値を一つ増やす関数を呼び出す
+			lr35902_call $a_inc_cursor
+		) >main.11.o
+		local sz_11=$(stat -c '%s' main.11.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_11)
+		cat main.11.o
 
 		# カウンタ値をゼロクリア
 		lr35902_clear_reg regC
