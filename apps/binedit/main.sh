@@ -754,64 +754,70 @@ f_forward_cursor() {
 # カーソル位置上位側0バイト目の処理
 # ※ 使用するレジスタのpush/popはしていない
 f_backward_cursor_th_0() {
-	# TODO 1行目の処理
-
-	# □カーソルOAM更新
-	## 現在のカーソルのobjX座標取得
-	lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
-	## 行末のobjアドレスを設定
-	lr35902_set_reg regA $BE_OBJX_DAREA_LAST
-	## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
-	lr35902_copy_to_from regB regA
-	lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
-	lr35902_call $a_enq_tdq
+	# 現在1行目か否か
 	## 現在のカーソルのobjY座標取得
 	lr35902_copy_to_regA_from_addr $BE_OAM_CSL_Y_ADDR
-	## 1タイル分減らす
-	lr35902_sub_to_regA 08
-	## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
-	lr35902_copy_to_from regB regA
-	lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
-	lr35902_call $a_enq_tdq
+	## 1行目のobjY座標値と比較
+	lr35902_compare_regA_and $BE_OBJY_DAREA_BASE
+	(
+		# □カーソルOAM更新
+		## 1タイル分減らす
+		lr35902_sub_to_regA 08
+		## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+		lr35902_copy_to_from regB regA
+		lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
+		lr35902_call $a_enq_tdq
+		## 現在のカーソルのobjX座標取得
+		lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+		## 行末のobjアドレスを設定
+		lr35902_set_reg regA $BE_OBJX_DAREA_LAST
+		## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+		lr35902_copy_to_from regB regA
+		lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+		lr35902_call $a_enq_tdq
 
-	# カーソル位置のデータアドレス変数更新
-	## 変数をregDEへ取得
-	lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
-	lr35902_copy_to_from regE regA
-	lr35902_copy_to_regA_from_addr $var_csl_dadr_th
-	lr35902_copy_to_from regD regA
-	## regDEをデクリメント
-	lr35902_dec regDE
-	## regDEを変数へ書き戻す
-	lr35902_copy_to_from regA regE
-	lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
-	lr35902_copy_to_from regA regD
-	lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+		# カーソル位置のデータアドレス変数更新
+		## 変数をregDEへ取得
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+		lr35902_copy_to_from regE regA
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+		lr35902_copy_to_from regD regA
+		## regDEをデクリメント
+		lr35902_dec regDE
+		## regDEを変数へ書き戻す
+		lr35902_copy_to_from regA regE
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+		lr35902_copy_to_from regA regD
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_th
 
-	# カーソル位置のタイルアドレス変数更新
-	## 変数をregDEへ取得
-	lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
-	lr35902_copy_to_from regE regA
-	lr35902_copy_to_regA_from_addr $var_csl_tadr_th
-	lr35902_copy_to_from regD regA
-	## regDEを0x16減らす
-	## 0x0016の2の補数0xffeaを足す
-	lr35902_push_reg regHL
-	lr35902_set_reg regHL ffea
-	lr35902_add_to_regHL regDE
-	lr35902_copy_to_from regE regL
-	lr35902_copy_to_from regD regH
-	lr35902_pop_reg regHL
-	## regDEを変数へ書き戻す
-	lr35902_copy_to_from regA regE
-	lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
-	lr35902_copy_to_from regA regD
-	lr35902_copy_to_addr_from_regA $var_csl_tadr_th
+		# カーソル位置のタイルアドレス変数更新
+		## 変数をregDEへ取得
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+		lr35902_copy_to_from regE regA
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+		lr35902_copy_to_from regD regA
+		## regDEを0x16減らす
+		## 0x0016の2の補数0xffeaを足す
+		lr35902_push_reg regHL
+		lr35902_set_reg regHL ffea
+		lr35902_add_to_regHL regDE
+		lr35902_copy_to_from regE regL
+		lr35902_copy_to_from regD regH
+		lr35902_pop_reg regHL
+		## regDEを変数へ書き戻す
+		lr35902_copy_to_from regA regE
+		lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
+		lr35902_copy_to_from regA regD
+		lr35902_copy_to_addr_from_regA $var_csl_tadr_th
 
-	# カーソル移動の補助変数更新
-	## b2に0を、b0-b1に3を設定(0x03)
-	lr35902_set_reg regA 03
-	lr35902_copy_to_addr_from_regA $var_csl_attr
+		# カーソル移動の補助変数更新
+		## b2に0を、b0-b1に3を設定(0x03)
+		lr35902_set_reg regA 03
+		lr35902_copy_to_addr_from_regA $var_csl_attr
+	) >f_backward_cursor_th_0.1.o
+	local sz_1=$(stat -c '%s' f_backward_cursor_th_0.1.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
+	cat f_backward_cursor_th_0.1.o
 
 	# return
 	lr35902_return
