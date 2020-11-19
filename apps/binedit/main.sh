@@ -24,6 +24,7 @@ BE_OAM_CSL_X_ADDR=$(calc16 "$BE_OAM_BASE_CSL+1")
 BE_OAM_BASE_WIN_TITLE=$(calc16 "$GB_OAM_BASE+($GB_OAM_SZ*2)")
 
 BE_OBJX_DAREA_BASE=40
+BE_OBJX_DAREA_LAST=90
 
 # 押下判定のしきい値
 BE_KEY_PRESS_TH=05
@@ -741,6 +742,73 @@ f_forward_cursor() {
 	lr35902_return
 }
 
+# カーソルを一つ後ろへ進める関数
+# カーソル位置上位側0バイト目の処理
+# ※ 使用するレジスタのpush/popはしていない
+f_backward_cursor_th_0() {
+	# TODO 1行目の処理
+
+	# □カーソルOAM更新
+	## 現在のカーソルのobjX座標取得
+	lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+	## 行末のobjアドレスを設定
+	lr35902_set_reg regA $BE_OBJX_DAREA_LAST
+	## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+	lr35902_copy_to_from regB regA
+	lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+	lr35902_call $a_enq_tdq
+	## 現在のカーソルのobjY座標取得
+	lr35902_copy_to_regA_from_addr $BE_OAM_CSL_Y_ADDR
+	## 1タイル分減らす
+	lr35902_sub_to_regA 08
+	## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+	lr35902_copy_to_from regB regA
+	lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
+	lr35902_call $a_enq_tdq
+
+	# カーソル位置のデータアドレス変数更新
+	## 変数をregDEへ取得
+	lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+	lr35902_copy_to_from regE regA
+	lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+	lr35902_copy_to_from regD regA
+	## regDEをデクリメント
+	lr35902_dec regDE
+	## regDEを変数へ書き戻す
+	lr35902_copy_to_from regA regE
+	lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+	lr35902_copy_to_from regA regD
+	lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+
+	# カーソル位置のタイルアドレス変数更新
+	## 変数をregDEへ取得
+	lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+	lr35902_copy_to_from regE regA
+	lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+	lr35902_copy_to_from regD regA
+	## regDEを0x16減らす
+	## 0x0016の2の補数0xffeaを足す
+	lr35902_push_reg regHL
+	lr35902_set_reg regHL ffea
+	lr35902_add_to_regHL regDE
+	lr35902_copy_to_from regE regL
+	lr35902_copy_to_from regD regH
+	lr35902_pop_reg regHL
+	## regDEを変数へ書き戻す
+	lr35902_copy_to_from regA regE
+	lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
+	lr35902_copy_to_from regA regD
+	lr35902_copy_to_addr_from_regA $var_csl_tadr_th
+
+	# カーソル移動の補助変数更新
+	## b2に0を、b0-b1に3を設定(0x03)
+	lr35902_set_reg regA 03
+	lr35902_copy_to_addr_from_regA $var_csl_attr
+
+	# return
+	lr35902_return
+}
+
 # カーソルを一つ後ろへ進める
 f_backward_cursor() {
 	# push
@@ -798,23 +866,15 @@ f_backward_cursor() {
 		lr35902_compare_regA_and 04
 		## b2(is_upper)が立っているので
 		## b1-b0が0b00の場合、0x04になる
-		# (
-		# 	# regA == 0x04 (0バイト目)
+		(
+			# regA == 0x04 (0バイト目)
 
-		# 	# TODO 前の行の行末へ移動するようにする
-
-		# 	# □カーソルOAM更新
-		# 	## 何もしない
-
-		# 	# カーソル位置のデータアドレス変数更新
-		# 	## 何もしない
-
-		# 	# カーソル位置のタイルアドレス変数更新
-		# 	## 何もしない
-
-		# 	# カーソル移動の補助変数更新
-		# 	## 何もしない
-		# ) >f_backward_cursor.3.o
+			# □カーソルOAM更新
+			# カーソル位置のデータアドレス変数更新
+			# カーソル位置のタイルアドレス変数更新
+			# カーソル移動の補助変数更新
+			lr35902_call $a_backward_cursor_th_0
+		) >f_backward_cursor.3.o
 		(
 			# regA != 0x04 (1〜3バイト目)
 
@@ -866,14 +926,14 @@ f_backward_cursor() {
 			lr35902_copy_to_from regA regC
 			lr35902_copy_to_addr_from_regA $var_csl_attr
 
-			# # regA == 0x04 (0バイト目) の処理を飛ばす
-			# local sz_3=$(stat -c '%s' f_backward_cursor.3.o)
-			# lr35902_rel_jump $(two_digits_d $sz_3)
+			# regA == 0x04 (0バイト目) の処理を飛ばす
+			local sz_3=$(stat -c '%s' f_backward_cursor.3.o)
+			lr35902_rel_jump $(two_digits_d $sz_3)
 		) >f_backward_cursor.4.o
 		local sz_4=$(stat -c '%s' f_backward_cursor.4.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
 		cat f_backward_cursor.4.o	# regA != 0x04 (1〜3バイト目)
-		# cat f_backward_cursor.3.o	# regA == 0x04 (0バイト目)
+		cat f_backward_cursor.3.o	# regA == 0x04 (0バイト目)
 
 		# 下位側の処理を飛ばす
 		local sz_1=$(stat -c '%s' f_backward_cursor.1.o)
@@ -1250,10 +1310,18 @@ funcs() {
 	echo -e "a_forward_cursor=$a_forward_cursor" >>$map_file
 	f_forward_cursor
 
-	# カーソルを一つ後ろへ進める
+	# カーソルを一つ後ろへ進める関数
+	# カーソル位置上位側0バイト目の処理
 	f_forward_cursor >f_forward_cursor.o
 	fsz=$(to16 $(stat -c '%s' f_forward_cursor.o))
-	a_backward_cursor=$(four_digits $(calc16 "${a_forward_cursor}+${fsz}"))
+	a_backward_cursor_th_0=$(four_digits $(calc16 "${a_forward_cursor}+${fsz}"))
+	echo -e "a_backward_cursor_th_0=$a_backward_cursor_th_0" >>$map_file
+	f_backward_cursor_th_0
+
+	# カーソルを一つ後ろへ進める
+	f_backward_cursor_th_0 >f_backward_cursor_th_0.o
+	fsz=$(to16 $(stat -c '%s' f_backward_cursor_th_0.o))
+	a_backward_cursor=$(four_digits $(calc16 "${a_backward_cursor_th_0}+${fsz}"))
 	echo -e "a_backward_cursor=$a_backward_cursor" >>$map_file
 	f_backward_cursor
 
