@@ -991,6 +991,167 @@ f_inc_cursor() {
 	lr35902_return
 }
 
+# カーソル位置の値をデクリメント
+f_dec_cursor() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	# カーソル移動の補助変数をregCへ取得
+	lr35902_copy_to_regA_from_addr $var_csl_attr
+	lr35902_copy_to_from regC regA
+
+	# 現在のカーソル位置は上位側か下位側か
+	lr35902_test_bitN_of_reg $BE_CSL_ATTR_BITNUM_IS_UPPER regC
+	(
+		# 下位側
+
+		# RAM上の値更新
+		## カーソル位置の値取得
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+		lr35902_copy_to_from regL regA
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+		lr35902_copy_to_from regH regA
+		lr35902_copy_to_from regA ptrHL
+		## regBには上位4ビットのみ設定
+		lr35902_and_to_regA f0
+		lr35902_copy_to_from regB regA
+		## regAにはそのまま設定
+		lr35902_copy_to_from regA ptrHL
+		## regAをデクリメント
+		lr35902_dec regA
+		## regAの下位4ビットだけ抽出
+		lr35902_and_to_regA 0f
+		## regB(上位4ビット)と結合
+		lr35902_or_to_regA regB
+		## カーソル位置のRAMへ書き戻す
+		lr35902_copy_to_from ptrHL regA
+
+		# カーソル位置のタイル更新
+		## regAの下位4ビットを抽出
+		lr35902_and_to_regA 0f
+		## 0x0a以上か否かに応じてタイル番号取得
+		lr35902_compare_regA_and 0a
+		(
+			# regA < 0x0a
+
+			# 番号タイルのベース番号を足し合わせる
+			lr35902_add_to_regA $GBOS_TILE_NUM_NUM_BASE
+		) >f_dec_cursor.3.o
+		(
+			# regA >= 0x0a
+
+			# 0x0aを引く
+			lr35902_sub_to_regA 0a
+
+			# アルファベットタイルのベース番号を足し合わせる
+			lr35902_add_to_regA $GBOS_TILE_NUM_ALPHA_BASE
+
+			# regA < 0x0a の処理を飛ばす
+			local sz_3=$(stat -c '%s' f_dec_cursor.3.o)
+			lr35902_rel_jump $(two_digits_d $sz_3)
+		) >f_dec_cursor.4.o
+		local sz_4=$(stat -c '%s' f_dec_cursor.4.o)
+		lr35902_rel_jump_with_cond C $(two_digits_d $sz_4)
+		cat f_dec_cursor.4.o	# regA >= 0x0a の場合
+		cat f_dec_cursor.3.o	# regA < 0x0a の場合
+		## タイル番号をregBに設定
+		lr35902_copy_to_from regB regA
+		## カーソル位置のタイルアドレスをregDEに取得
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+		lr35902_copy_to_from regE regA
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+		lr35902_copy_to_from regD regA
+		## tdqに積む
+		lr35902_call $a_enq_tdq
+	) >f_dec_cursor.1.o
+	(
+		# 上位側
+
+		# RAM上の値更新
+		## カーソル位置の値取得
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+		lr35902_copy_to_from regL regA
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+		lr35902_copy_to_from regH regA
+		lr35902_copy_to_from regA ptrHL
+		## regBに下位4ビットのみ設定
+		lr35902_and_to_regA 0f
+		lr35902_copy_to_from regB regA
+		## regAにはそのまま設定
+		lr35902_copy_to_from regA ptrHL
+		## regAの上位4ビットを下位4ビットへ持ってくる
+		lr35902_swap_nibbles regA
+		## regAをデクリメント
+		lr35902_dec regA
+		## regAの下位4ビットを上位4ビットへ持ってくる
+		lr35902_swap_nibbles regA
+		## regAの上位4ビットのみ抽出
+		lr35902_and_to_regA f0
+		## regB(下位4ビット)と結合
+		lr35902_or_to_regA regB
+		## カーソル位置のRAMへ書き戻す
+		lr35902_copy_to_from ptrHL regA
+
+		# カーソル位置のタイル更新
+		## regAの上位4ビットを下位4ビットへ持ってくる
+		lr35902_swap_nibbles regA
+		## regAの下位4ビットを抽出
+		lr35902_and_to_regA 0f
+		## 0x0a以上か否かに応じてタイル番号取得
+		lr35902_compare_regA_and 0a
+		(
+			# regA < 0x0a
+
+			# 番号タイルのベース番号を足し合わせる
+			lr35902_add_to_regA $GBOS_TILE_NUM_NUM_BASE
+		) >f_dec_cursor.5.o
+		(
+			# regA >= 0x0a
+
+			# 0x0aを引く
+			lr35902_sub_to_regA 0a
+
+			# アルファベットタイルのベース番号を足し合わせる
+			lr35902_add_to_regA $GBOS_TILE_NUM_ALPHA_BASE
+
+			# regA < 0x0a の処理を飛ばす
+			local sz_5=$(stat -c '%s' f_dec_cursor.5.o)
+			lr35902_rel_jump $(two_digits_d $sz_5)
+		) >f_dec_cursor.6.o
+		local sz_6=$(stat -c '%s' f_dec_cursor.6.o)
+		lr35902_rel_jump_with_cond C $(two_digits_d $sz_6)
+		cat f_dec_cursor.6.o	# regA >= 0x0a の場合
+		cat f_dec_cursor.5.o	# regA < 0x0a の場合
+		## タイル番号をregBに設定
+		lr35902_copy_to_from regB regA
+		## カーソル位置のタイルアドレスをregDEに取得
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+		lr35902_copy_to_from regE regA
+		lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+		lr35902_copy_to_from regD regA
+		## tdqに積む
+		lr35902_call $a_enq_tdq
+
+		# 下位側の処理を飛ばす
+		local sz_1=$(stat -c '%s' f_dec_cursor.1.o)
+		lr35902_rel_jump $(two_digits_d $sz_1)
+	) >f_dec_cursor.2.o
+	local sz_2=$(stat -c '%s' f_dec_cursor.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat f_dec_cursor.2.o	# b2(is_upper) == 1 (上位側)
+	cat f_dec_cursor.1.o	# b2(is_upper) == 0 (下位側)
+
+	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 funcs() {
 	local fsz
 
@@ -1033,6 +1194,13 @@ funcs() {
 	a_inc_cursor=$(four_digits $(calc16 "${a_backward_cursor}+${fsz}"))
 	echo -e "a_inc_cursor=$a_inc_cursor" >>$map_file
 	f_inc_cursor
+
+	# カーソル位置の値をデクリメント
+	f_inc_cursor >f_inc_cursor.o
+	fsz=$(to16 $(stat -c '%s' f_inc_cursor.o))
+	a_dec_cursor=$(four_digits $(calc16 "${a_inc_cursor}+${fsz}"))
+	echo -e "a_dec_cursor=$a_dec_cursor" >>$map_file
+	f_dec_cursor
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -1245,6 +1413,18 @@ main() {
 		local sz_11=$(stat -c '%s' main.11.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_11)
 		cat main.11.o
+
+		# ↓か?
+		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_DOWN regB
+		(
+			# ↓の場合
+
+			# カーソル位置の値を一つ減らす関数を呼び出す
+			lr35902_call $a_dec_cursor
+		) >main.12.o
+		local sz_12=$(stat -c '%s' main.12.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_12)
+		cat main.12.o
 
 		# カウンタ値をゼロクリア
 		lr35902_clear_reg regC
