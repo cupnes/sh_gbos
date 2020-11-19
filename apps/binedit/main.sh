@@ -548,6 +548,8 @@ f_forward_cursor_bh_3() {
 	## 12行目のobjY座標値と比較
 	lr35902_compare_regA_and $BE_OBJY_DAREA_LAST
 	(
+		# 12行目未満の場合
+
 		# □カーソルOAM更新
 		## 1タイル分増やす
 		lr35902_add_to_regA 08
@@ -603,6 +605,7 @@ f_forward_cursor_bh_3() {
 		lr35902_copy_to_addr_from_regA $var_csl_attr
 	) >f_forward_cursor_bh_3.1.o
 	local sz_1=$(stat -c '%s' f_forward_cursor_bh_3.1.o)
+	## 現在12行目以上のカーソル位置だったら処理を飛ばす
 	lr35902_rel_jump_with_cond NC $(two_digits_d $sz_1)
 	cat f_forward_cursor_bh_3.1.o
 
@@ -760,6 +763,8 @@ f_backward_cursor_th_0() {
 	## 1行目のobjY座標値と比較
 	lr35902_compare_regA_and $BE_OBJY_DAREA_BASE
 	(
+		# 1行目ではない場合
+
 		# □カーソルOAM更新
 		## 1タイル分減らす
 		lr35902_sub_to_regA 08
@@ -816,6 +821,7 @@ f_backward_cursor_th_0() {
 		lr35902_copy_to_addr_from_regA $var_csl_attr
 	) >f_backward_cursor_th_0.1.o
 	local sz_1=$(stat -c '%s' f_backward_cursor_th_0.1.o)
+	## 現在1行目のカーソル位置だったら処理を飛ばす
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
 	cat f_backward_cursor_th_0.1.o
 
