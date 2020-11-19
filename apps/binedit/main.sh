@@ -19,8 +19,11 @@ APP_VARS_BASE=$(calc16 "$APP_MAIN_BASE+$APP_MAIN_SZ")
 APP_FUNCS_BASE=$(calc16 "$APP_VARS_BASE+$APP_VARS_SZ")
 
 BE_OAM_BASE_CSL=$(calc16 "$GB_OAM_BASE+$GB_OAM_SZ")
+BE_OAM_CSL_Y_ADDR=$(calc16 "$BE_OAM_BASE_CSL")
 BE_OAM_CSL_X_ADDR=$(calc16 "$BE_OAM_BASE_CSL+1")
 BE_OAM_BASE_WIN_TITLE=$(calc16 "$GB_OAM_BASE+($GB_OAM_SZ*2)")
+
+BE_OBJX_DAREA_BASE=40
 
 # 押下判定のしきい値
 BE_KEY_PRESS_TH=05
@@ -604,19 +607,67 @@ f_forward_cursor() {
 		(
 			# regA >= 3 (3バイト目)
 
-			# TODO 次の行の行頭へ移動するようにする
+			# TODO 関数化
+
+			# TODO 12行目の処理
 
 			# □カーソルOAM更新
-			## 何もしない
+			## 現在のカーソルのobjX座標取得
+			lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+			## 行頭のobjアドレスを設定
+			lr35902_set_reg regA $BE_OBJX_DAREA_BASE
+			## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+			lr35902_copy_to_from regB regA
+			lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+			lr35902_call $a_enq_tdq
+			## 現在のカーソルのobjY座標取得
+			lr35902_copy_to_regA_from_addr $BE_OAM_CSL_Y_ADDR
+			## 1タイル分増やす
+			lr35902_add_to_regA 08
+			## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+			lr35902_copy_to_from regB regA
+			lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
+			lr35902_call $a_enq_tdq
 
 			# カーソル位置のデータアドレス変数更新
-			## 何もしない
+			## 変数をregDEへ取得
+			lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+			lr35902_copy_to_from regE regA
+			lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+			lr35902_copy_to_from regD regA
+			## regDEをインクリメント
+			lr35902_inc regDE
+			## regDEを変数へ書き戻す
+			lr35902_copy_to_from regA regE
+			lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+			lr35902_copy_to_from regA regD
+			lr35902_copy_to_addr_from_regA $var_csl_dadr_th
 
 			# カーソル位置のタイルアドレス変数更新
-			## 何もしない
+			## 変数をregDEへ取得
+			lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+			lr35902_copy_to_from regE regA
+			lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+			lr35902_copy_to_from regD regA
+			## regDEを0x16増やす
+			lr35902_push_reg regHL
+			lr35902_set_reg regHL 0016
+			lr35902_add_to_regHL regDE
+			lr35902_copy_to_from regE regL
+			lr35902_copy_to_from regD regH
+			lr35902_pop_reg regHL
+			## regDEを変数へ書き戻す
+			lr35902_copy_to_from regA regE
+			lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
+			lr35902_copy_to_from regA regD
+			lr35902_copy_to_addr_from_regA $var_csl_tadr_th
 
 			# カーソル移動の補助変数更新
-			## 何もしない
+			## b2に1を、b0-b1に3を設定(0x07)
+			lr35902_set_reg regC 07
+			## 変数へ書き戻す
+			lr35902_copy_to_from regA regC
+			lr35902_copy_to_addr_from_regA $var_csl_attr
 
 			# regA < 3 の場合の処理を飛ばす
 			local sz_3=$(stat -c '%s' f_forward_cursor.3.o)
