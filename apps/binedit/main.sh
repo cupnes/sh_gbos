@@ -535,6 +535,72 @@ f_draw_restore_tiles() {
 	lr35902_return
 }
 
+# カーソルを一つ前へ進める関数
+# カーソル位置下位側3バイト目の処理
+# ※ 使用するレジスタのpush/popはしていない
+f_forward_cursor_bh_3() {
+	# TODO 12行目の処理
+
+	# □カーソルOAM更新
+	## 現在のカーソルのobjX座標取得
+	lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+	## 行頭のobjアドレスを設定
+	lr35902_set_reg regA $BE_OBJX_DAREA_BASE
+	## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+	lr35902_copy_to_from regB regA
+	lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+	lr35902_call $a_enq_tdq
+	## 現在のカーソルのobjY座標取得
+	lr35902_copy_to_regA_from_addr $BE_OAM_CSL_Y_ADDR
+	## 1タイル分増やす
+	lr35902_add_to_regA 08
+	## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+	lr35902_copy_to_from regB regA
+	lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
+	lr35902_call $a_enq_tdq
+
+	# カーソル位置のデータアドレス変数更新
+	## 変数をregDEへ取得
+	lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+	lr35902_copy_to_from regE regA
+	lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+	lr35902_copy_to_from regD regA
+	## regDEをインクリメント
+	lr35902_inc regDE
+	## regDEを変数へ書き戻す
+	lr35902_copy_to_from regA regE
+	lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+	lr35902_copy_to_from regA regD
+	lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+
+	# カーソル位置のタイルアドレス変数更新
+	## 変数をregDEへ取得
+	lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+	lr35902_copy_to_from regE regA
+	lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+	lr35902_copy_to_from regD regA
+	## regDEを0x16増やす
+	lr35902_push_reg regHL
+	lr35902_set_reg regHL 0016
+	lr35902_add_to_regHL regDE
+	lr35902_copy_to_from regE regL
+	lr35902_copy_to_from regD regH
+	lr35902_pop_reg regHL
+	## regDEを変数へ書き戻す
+	lr35902_copy_to_from regA regE
+	lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
+	lr35902_copy_to_from regA regD
+	lr35902_copy_to_addr_from_regA $var_csl_tadr_th
+
+	# カーソル移動の補助変数更新
+	## b2に1を、b0-b1に0を設定(0x04)
+	lr35902_set_reg regA 04
+	lr35902_copy_to_addr_from_regA $var_csl_attr
+
+	# return
+	lr35902_return
+}
+
 # カーソルを一つ前へ進める
 f_forward_cursor() {
 	# push
@@ -607,67 +673,11 @@ f_forward_cursor() {
 		(
 			# regA >= 3 (3バイト目)
 
-			# TODO 関数化
-
-			# TODO 12行目の処理
-
 			# □カーソルOAM更新
-			## 現在のカーソルのobjX座標取得
-			lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
-			## 行頭のobjアドレスを設定
-			lr35902_set_reg regA $BE_OBJX_DAREA_BASE
-			## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
-			lr35902_copy_to_from regB regA
-			lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
-			lr35902_call $a_enq_tdq
-			## 現在のカーソルのobjY座標取得
-			lr35902_copy_to_regA_from_addr $BE_OAM_CSL_Y_ADDR
-			## 1タイル分増やす
-			lr35902_add_to_regA 08
-			## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
-			lr35902_copy_to_from regB regA
-			lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
-			lr35902_call $a_enq_tdq
-
 			# カーソル位置のデータアドレス変数更新
-			## 変数をregDEへ取得
-			lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
-			lr35902_copy_to_from regE regA
-			lr35902_copy_to_regA_from_addr $var_csl_dadr_th
-			lr35902_copy_to_from regD regA
-			## regDEをインクリメント
-			lr35902_inc regDE
-			## regDEを変数へ書き戻す
-			lr35902_copy_to_from regA regE
-			lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
-			lr35902_copy_to_from regA regD
-			lr35902_copy_to_addr_from_regA $var_csl_dadr_th
-
 			# カーソル位置のタイルアドレス変数更新
-			## 変数をregDEへ取得
-			lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
-			lr35902_copy_to_from regE regA
-			lr35902_copy_to_regA_from_addr $var_csl_tadr_th
-			lr35902_copy_to_from regD regA
-			## regDEを0x16増やす
-			lr35902_push_reg regHL
-			lr35902_set_reg regHL 0016
-			lr35902_add_to_regHL regDE
-			lr35902_copy_to_from regE regL
-			lr35902_copy_to_from regD regH
-			lr35902_pop_reg regHL
-			## regDEを変数へ書き戻す
-			lr35902_copy_to_from regA regE
-			lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
-			lr35902_copy_to_from regA regD
-			lr35902_copy_to_addr_from_regA $var_csl_tadr_th
-
 			# カーソル移動の補助変数更新
-			## b2に1を、b0-b1に3を設定(0x07)
-			lr35902_set_reg regC 07
-			## 変数へ書き戻す
-			lr35902_copy_to_from regA regC
-			lr35902_copy_to_addr_from_regA $var_csl_attr
+			lr35902_call $a_forward_cursor_bh_3
 
 			# regA < 3 の場合の処理を飛ばす
 			local sz_3=$(stat -c '%s' f_forward_cursor.3.o)
@@ -1225,10 +1235,18 @@ funcs() {
 	echo -e "a_draw_restore_tiles=$a_draw_restore_tiles" >>$map_file
 	f_draw_restore_tiles
 
-	# カーソルを一つ前へ進める
+	# カーソルを一つ前へ進める関数
+	# カーソル位置下位側3バイト目の処理
 	f_draw_restore_tiles >f_draw_restore_tiles.o
 	fsz=$(to16 $(stat -c '%s' f_draw_restore_tiles.o))
-	a_forward_cursor=$(four_digits $(calc16 "${a_draw_restore_tiles}+${fsz}"))
+	a_forward_cursor_bh_3=$(four_digits $(calc16 "${a_draw_restore_tiles}+${fsz}"))
+	echo -e "a_forward_cursor_bh_3=$a_forward_cursor_bh_3" >>$map_file
+	f_forward_cursor_bh_3
+
+	# カーソルを一つ前へ進める
+	f_forward_cursor_bh_3 >f_forward_cursor_bh_3.o
+	fsz=$(to16 $(stat -c '%s' f_forward_cursor_bh_3.o))
+	a_forward_cursor=$(four_digits $(calc16 "${a_forward_cursor_bh_3}+${fsz}"))
 	echo -e "a_forward_cursor=$a_forward_cursor" >>$map_file
 	f_forward_cursor
 
