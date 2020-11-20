@@ -124,6 +124,19 @@ vars() {
 	var_csl_attr=$(calc16 "$var_csl_tadr_th+1")
 	echo -e "var_csl_attr=$var_csl_attr" >>$map_file
 	echo -en '\x04'
+
+	# データ最終アドレスを保持する変数
+	## 現在のカーソル位置がこのアドレスと等しく
+	## かつ、下位4ビットである場合、
+	## それ以上→に移動しない
+	## 下位8ビット
+	var_dadr_last_bh=$(calc16 "$var_csl_attr+1")
+	echo -e "var_dadr_last_bh=$var_dadr_last_bh" >>$map_file
+	echo -en '\x00'
+	## 上位8ビット
+	var_dadr_last_th=$(calc16 "$var_dadr_last_bh+1")
+	echo -e "var_dadr_last_th=$var_dadr_last_th" >>$map_file
+	echo -en '\x00'
 }
 # 変数設定のために空実行
 vars >/dev/null
@@ -542,6 +555,33 @@ f_draw_restore_tiles() {
 # カーソル位置下位側3バイト目の処理
 # ※ 使用するレジスタのpush/popはしていない
 f_forward_cursor_bh_3() {
+	# 現在データ最終バイトか否か
+	## 「現在のカーソルのデータアドレス」と「データ最終アドレス取得」を比較
+	## XORをとって0になるか否かを確認
+	### 下位8ビットのXORをregEへ取得
+	lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+	lr35902_copy_to_from regE regA
+	lr35902_copy_to_regA_from_addr $var_dadr_last_bh
+	lr35902_xor_to_regA regE
+	lr35902_copy_to_from regE regA
+	### 上位8ビットのXORをregAへ取得
+	lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+	lr35902_copy_to_from regD regA
+	lr35902_copy_to_regA_from_addr $var_dadr_last_th
+	lr35902_xor_to_regA regD
+	### regEとregAのORをregAへ取得
+	lr35902_or_to_regA regE
+	## 結果が0か否か
+	(
+		# 現在のカーソル位置がデータ最終アドレスである場合
+
+		# 何もせずreturn
+		lr35902_return
+	) >f_forward_cursor_bh_3.2.o
+	local sz_2=$(stat -c '%s' f_forward_cursor_bh_3.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
+	cat f_forward_cursor_bh_3.2.o
+
 	# 現在12行目か否か
 	## 現在のカーソルのobjY座標取得
 	lr35902_copy_to_regA_from_addr $BE_OAM_CSL_Y_ADDR
@@ -634,53 +674,77 @@ f_forward_cursor() {
 		(
 			# regA < 3 (0〜2バイト目)
 
-			# □カーソルOAM更新
-			## 現在のカーソルのobjX座標取得
-			lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
-			## 2タイル分進める
-			lr35902_add_to_regA 10
-			## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
-			lr35902_copy_to_from regB regA
-			lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
-			lr35902_call $a_enq_tdq
-
-			# カーソル位置のデータアドレス変数更新
-			## 変数をregDEへ取得
+			# 現在のカーソル位置がデータ最終アドレスだったら何もしない
+			## 「現在のカーソルのデータアドレス」と「データ最終アドレス取得」を比較
+			## XORをとって0になるか否かを確認
+			### 下位8ビットのXORをregEへ取得
 			lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
 			lr35902_copy_to_from regE regA
+			lr35902_copy_to_regA_from_addr $var_dadr_last_bh
+			lr35902_xor_to_regA regE
+			lr35902_copy_to_from regE regA
+			### 上位8ビットのXORをregAへ取得
 			lr35902_copy_to_regA_from_addr $var_csl_dadr_th
 			lr35902_copy_to_from regD regA
-			## regDEをインクリメント
-			lr35902_inc regDE
-			## regDEを変数へ書き戻す
-			lr35902_copy_to_from regA regE
-			lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
-			lr35902_copy_to_from regA regD
-			lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+			lr35902_copy_to_regA_from_addr $var_dadr_last_th
+			lr35902_xor_to_regA regD
+			### regEとregAのORをregAへ取得
+			lr35902_or_to_regA regE
+			## 結果が0か否か
+			(
+				# 現在のカーソル位置がデータ最終アドレスでない場合
 
-			# カーソル位置のタイルアドレス変数更新
-			## 変数をregDEへ取得
-			lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
-			lr35902_copy_to_from regE regA
-			lr35902_copy_to_regA_from_addr $var_csl_tadr_th
-			lr35902_copy_to_from regD regA
-			## regDEを2増やす
-			lr35902_inc regDE
-			lr35902_inc regDE
-			## regDEを変数へ書き戻す
-			lr35902_copy_to_from regA regE
-			lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
-			lr35902_copy_to_from regA regD
-			lr35902_copy_to_addr_from_regA $var_csl_tadr_th
+				# □カーソルOAM更新
+				## 現在のカーソルのobjX座標取得
+				lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+				## 2タイル分進める
+				lr35902_add_to_regA 10
+				## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+				lr35902_copy_to_from regB regA
+				lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+				lr35902_call $a_enq_tdq
 
-			# カーソル移動の補助変数更新
-			## b2(is_upper)は0なので、そのままインクリメント
-			lr35902_inc regC
-			## b2(is_upper)をセット
-			lr35902_set_bitN_of_reg $BE_CSL_ATTR_BITNUM_IS_UPPER regC
-			## 変数へ書き戻す
-			lr35902_copy_to_from regA regC
-			lr35902_copy_to_addr_from_regA $var_csl_attr
+				# カーソル位置のデータアドレス変数更新
+				## 変数をregDEへ取得
+				lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+				lr35902_copy_to_from regE regA
+				lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+				lr35902_copy_to_from regD regA
+				## regDEをインクリメント
+				lr35902_inc regDE
+				## regDEを変数へ書き戻す
+				lr35902_copy_to_from regA regE
+				lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+				lr35902_copy_to_from regA regD
+				lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+
+				# カーソル位置のタイルアドレス変数更新
+				## 変数をregDEへ取得
+				lr35902_copy_to_regA_from_addr $var_csl_tadr_bh
+				lr35902_copy_to_from regE regA
+				lr35902_copy_to_regA_from_addr $var_csl_tadr_th
+				lr35902_copy_to_from regD regA
+				## regDEを2増やす
+				lr35902_inc regDE
+				lr35902_inc regDE
+				## regDEを変数へ書き戻す
+				lr35902_copy_to_from regA regE
+				lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
+				lr35902_copy_to_from regA regD
+				lr35902_copy_to_addr_from_regA $var_csl_tadr_th
+
+				# カーソル移動の補助変数更新
+				## b2(is_upper)は0なので、そのままインクリメント
+				lr35902_inc regC
+				## b2(is_upper)をセット
+				lr35902_set_bitN_of_reg $BE_CSL_ATTR_BITNUM_IS_UPPER regC
+				## 変数へ書き戻す
+				lr35902_copy_to_from regA regC
+				lr35902_copy_to_addr_from_regA $var_csl_attr
+			) >f_forward_cursor.5.o
+			local sz_5=$(stat -c '%s' f_forward_cursor.5.o)
+			lr35902_rel_jump_with_cond Z $(two_digits_d $sz_5)
+			cat f_forward_cursor.5.o
 		) >f_forward_cursor.3.o
 		(
 			# regA >= 3 (3バイト目)
@@ -1413,12 +1477,27 @@ main() {
 		lr35902_copy_to_addr_from_regA $var_file_size_th
 		lr35902_copy_to_addr_from_regA $var_remain_bytes_th
 
-		## この時点のptrHLはデータ部分の先頭アドレス
+		## この時点のregHLはデータ部分の先頭アドレス
 		## カーソル位置のデータアドレス変数をこのregHLで初期化
 		lr35902_copy_to_from regA regL
 		lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
 		lr35902_copy_to_from regA regH
 		lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+
+		## この時点のregHL(データ先頭アドレス)に
+		## データサイズ - 1 を足して、
+		## データ最終アドレスを得る
+		lr35902_push_reg regHL
+		lr35902_add_to_regHL regBC
+		### -1の2の補数(0xffff)をregHLへ足す
+		lr35902_set_reg regBC ffff
+		lr35902_add_to_regHL regBC
+		## それを変数へ保存
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_dadr_last_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_dadr_last_th
+		lr35902_pop_reg regHL
 
 		## 1画面分(12行)を表示し終えたかの判断に使うカウンタを
 		## 初期化
