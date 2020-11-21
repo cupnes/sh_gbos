@@ -574,7 +574,27 @@ f_dump_addr_and_data() {
 	local sz_1=$(stat -c '%s' f_dump_addr_and_data.1.o)
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
 
+	# 最後の f_dump_addr_and_data_4bytes の戻り値(regA)をregBへ保存
+	lr35902_copy_to_from regB regA
+
+	# 初期化済みフラグがセットされているかどうかを確認
+	lr35902_copy_to_regA_from_addr $var_general_flgs
+	lr35902_test_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
+	(
+		# セットされていなければこの時点でpop & return
+		lr35902_pop_reg regHL
+		lr35902_pop_reg regDE
+		lr35902_pop_reg regBC
+		lr35902_pop_reg regAF
+		lr35902_return
+	) >f_dump_addr_and_data.2.o
+	local sz_2=$(stat -c '%s' f_dump_addr_and_data.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
+	cat f_dump_addr_and_data.2.o
+
 	# TODO 画面途中で描画が終わった時、残りを空白文字でクリア
+	## 描画した最終行が後何バイト分残っているかはregBから分かる
+	## 描画領域が後何行残っていたかはregCから分かる
 
 	# pop & return
 	lr35902_pop_reg regHL
