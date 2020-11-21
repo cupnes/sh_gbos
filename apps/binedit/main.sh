@@ -30,6 +30,9 @@ BE_OBJY_DAREA_LAST=88	# 12行目のobjY座標
 BE_TADR_AAREA_BASE=9882	# アドレス領域最初の1文字のタイルアドレス
 BE_TADR_DAREA_BASE=9887	# データ領域1バイト目上位のタイルアドレス
 
+# 汎用フラグ変数
+BE_GFLG_BITNUM_INITED=0	# 初期化済みフラグのビット番号
+
 # 押下判定のしきい値
 BE_KEY_PRESS_TH=05
 
@@ -1546,8 +1549,6 @@ funcs >/dev/null
 rm -f $map_file
 
 main() {
-	local flg_bitnum_inited=0
-
 	# push
 	lr35902_push_reg regAF
 	lr35902_push_reg regBC
@@ -1617,9 +1618,9 @@ main() {
 		lr35902_call $a_dump_addr_and_data
 
 		# 初期化済みフラグをセット
-		lr35902_copy_to_regA_from_addr $APP_VARS_BASE
-		lr35902_set_bitN_of_reg $flg_bitnum_inited regA
-		lr35902_copy_to_addr_from_regA $APP_VARS_BASE
+		lr35902_copy_to_regA_from_addr $var_general_flgs
+		lr35902_set_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
+		lr35902_copy_to_addr_from_regA $var_general_flgs
 
 		# pop & return
 		lr35902_pop_reg regHL
@@ -1630,8 +1631,8 @@ main() {
 	) >main.1.o
 
 	# フラグ変数の初期化済みフラグチェック
-	lr35902_copy_to_regA_from_addr $APP_VARS_BASE
-	lr35902_test_bitN_of_reg $flg_bitnum_inited regA
+	lr35902_copy_to_regA_from_addr $var_general_flgs
+	lr35902_test_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
 
 	# フラグがセットされていたら(初期化済みだったら)、
 	# 初期化処理をスキップ
