@@ -25,8 +25,10 @@ BE_OAM_BASE_WIN_TITLE=$(calc16 "$GB_OAM_BASE+($GB_OAM_SZ*2)")
 
 BE_OBJX_DAREA_BASE=40
 BE_OBJX_DAREA_LAST=90
-BE_OBJY_DAREA_BASE=30	# 0行目のobjY座標
+BE_OBJY_DAREA_BASE=30	# 1行目のobjY座標
 BE_OBJY_DAREA_LAST=88	# 12行目のobjY座標
+BE_TADR_AAREA_BASE=9882	# アドレス領域最初の1文字のタイルアドレス
+BE_TADR_DAREA_BASE=9887	# データ領域1バイト目上位のタイルアドレス
 
 # 押下判定のしきい値
 BE_KEY_PRESS_TH=05
@@ -112,11 +114,11 @@ vars() {
 	## 下位8ビット
 	var_csl_tadr_bh=$(calc16 "$var_csl_dadr_th+1")
 	echo -e "var_csl_tadr_bh=$var_csl_tadr_bh" >>$map_file
-	echo -en '\x87'
+	echo -en "\x$(echo $BE_TADR_DAREA_BASE | cut -c3-4)"
 	## 上位8ビット
 	var_csl_tadr_th=$(calc16 "$var_csl_tadr_bh+1")
 	echo -e "var_csl_tadr_th=$var_csl_tadr_th" >>$map_file
-	echo -en '\x98'
+	echo -en "\x$(echo $BE_TADR_DAREA_BASE | cut -c1-2)"
 
 	# カーソル移動の補助変数
 	## b2   : 上位4ビット(=1)/下位4ビット(=0)
@@ -527,6 +529,58 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_return
 }
 
+# 指定されたアドレスから1画面分ダンプ
+# in : regHL - ダンプするデータ開始アドレス
+f_dump_addr_and_data() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	# 描画先アドレスの初期値設定
+	lr35902_set_reg regD $(echo $BE_TADR_AAREA_BASE | cut -c1-2)
+	lr35902_set_reg regE $(echo $BE_TADR_AAREA_BASE | cut -c3-4)
+
+	# 1画面分(12行)を表示し終えたかの判断に使うカウンタを
+	# 初期化
+	lr35902_set_reg regC 0c
+
+	# アドレスとデータをダンプ
+	(
+		# 1行分ダンプ
+		lr35902_call $a_dump_addr_and_data_4bytes
+
+		# 戻り値をチェックし4未満ならループを脱出
+		lr35902_compare_regA_and 04
+		lr35902_rel_jump_with_cond C $(two_digits_d $((8 + 1 + 2)))
+
+		# 描画先アドレスを次の行頭へ移動(+0x11)(8バイト)
+		lr35902_push_reg regHL		# 1
+		lr35902_set_reg regHL 0011	# 3
+		lr35902_add_to_regHL regDE	# 1
+		lr35902_copy_to_from regD regH	# 1
+		lr35902_copy_to_from regE regL	# 1
+		lr35902_pop_reg regHL		# 1
+
+		# 行数カウンタをデクリメント(1バイト)
+		lr35902_dec regC
+	) >f_dump_addr_and_data.1.o
+	cat f_dump_addr_and_data.1.o
+	## regCを使った12回分のループ(2バイト)
+	local sz_1=$(stat -c '%s' f_dump_addr_and_data.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+
+	# TODO 画面途中で描画が終わった時、残りを空白文字でクリア
+
+	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # (主にobjを)元に戻すエントリをtdqへ積む
 f_draw_restore_tiles() {
 	# push
@@ -588,12 +642,65 @@ f_forward_cursor_bh_3() {
 	## 12行目のobjY座標値と比較
 	lr35902_compare_regA_and $BE_OBJY_DAREA_LAST
 	(
+		# 12行目以上の場合
+
+		# □カーソルOAM更新
+		## 1行目を設定
+		lr35902_set_reg regA $BE_OBJY_DAREA_BASE
+		## □カーソルのOAMのY座標を更新するエントリをtdqへ積む
+		lr35902_copy_to_from regB regA
+		lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
+		lr35902_call $a_enq_tdq
+		## 現在のカーソルのobjX座標取得
+		lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+		## 行頭のobjアドレスを設定
+		lr35902_set_reg regA $BE_OBJX_DAREA_BASE
+		## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+		lr35902_copy_to_from regB regA
+		lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+		lr35902_call $a_enq_tdq
+
+		# カーソル位置のデータアドレス変数更新
+		## 変数をregDEへ取得
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+		lr35902_copy_to_from regE regA
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+		lr35902_copy_to_from regD regA
+		## regDEをインクリメント
+		lr35902_inc regDE
+		## regDEを変数へ書き戻す
+		lr35902_copy_to_from regA regE
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+		lr35902_copy_to_from regA regD
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+
+		# カーソル位置のタイルアドレス変数更新
+		## $BE_TADR_DAREA_BASEを設定する
+		lr35902_set_reg regA $(echo $BE_TADR_DAREA_BASE | cut -c3-4)
+		lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
+		lr35902_set_reg regA $(echo $BE_TADR_DAREA_BASE | cut -c1-2)
+		lr35902_copy_to_addr_from_regA $var_csl_tadr_th
+
+		# カーソル移動の補助変数更新
+		## b2に1を、b0-b1に0を設定(0x04)
+		lr35902_set_reg regA 04
+		lr35902_copy_to_addr_from_regA $var_csl_attr
+
+		# 画面描画
+		## 描画開始データアドレスをregHLへ設定
+		## ※ この時点で描画開始データアドレスはregDEに設定されている
+		lr35902_copy_to_from regL regE
+		lr35902_copy_to_from regH regD
+		## 指定されたアドレスから1画面分ダンプ
+		lr35902_call $a_dump_addr_and_data
+	) >f_forward_cursor_bh_3.3.o
+	(
 		# 12行目未満の場合
 
 		# □カーソルOAM更新
 		## 1タイル分増やす
 		lr35902_add_to_regA 08
-		## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+		## □カーソルのOAMのY座標を更新するエントリをtdqへ積む
 		lr35902_copy_to_from regB regA
 		lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
 		lr35902_call $a_enq_tdq
@@ -643,11 +750,15 @@ f_forward_cursor_bh_3() {
 		## b2に1を、b0-b1に0を設定(0x04)
 		lr35902_set_reg regA 04
 		lr35902_copy_to_addr_from_regA $var_csl_attr
+
+		# 12行目以上の場合の処理を飛ばす
+		local sz_3=$(stat -c '%s' f_forward_cursor_bh_3.3.o)
+		lr35902_rel_jump $(two_digits_d $sz_3)
 	) >f_forward_cursor_bh_3.1.o
 	local sz_1=$(stat -c '%s' f_forward_cursor_bh_3.1.o)
-	## 現在12行目以上のカーソル位置だったら処理を飛ばす
 	lr35902_rel_jump_with_cond NC $(two_digits_d $sz_1)
-	cat f_forward_cursor_bh_3.1.o
+	cat f_forward_cursor_bh_3.1.o	# regA < objY_darea_last
+	cat f_forward_cursor_bh_3.3.o	# regA >= objY_darea_last
 
 	# return
 	lr35902_return
@@ -832,7 +943,7 @@ f_backward_cursor_th_0() {
 		# □カーソルOAM更新
 		## 1タイル分減らす
 		lr35902_sub_to_regA 08
-		## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
+		## □カーソルのOAMのY座標を更新するエントリをtdqへ積む
 		lr35902_copy_to_from regB regA
 		lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
 		lr35902_call $a_enq_tdq
@@ -1372,10 +1483,17 @@ funcs() {
 	echo -e "a_dump_addr_and_data_4bytes=$a_dump_addr_and_data_4bytes" >>$map_file
 	f_dump_addr_and_data_4bytes
 
-	# (主にobjを)元に戻すエントリをtdqへ積む
+	# 指定されたアドレスから1画面分ダンプ
 	f_dump_addr_and_data_4bytes >f_dump_addr_and_data_4bytes.o
 	fsz=$(to16 $(stat -c '%s' f_dump_addr_and_data_4bytes.o))
-	a_draw_restore_tiles=$(four_digits $(calc16 "${a_dump_addr_and_data_4bytes}+${fsz}"))
+	a_dump_addr_and_data=$(four_digits $(calc16 "${a_dump_addr_and_data_4bytes}+${fsz}"))
+	echo -e "a_dump_addr_and_data=$a_dump_addr_and_data" >>$map_file
+	f_dump_addr_and_data
+
+	# (主にobjを)元に戻すエントリをtdqへ積む
+	f_dump_addr_and_data >f_dump_addr_and_data.o
+	fsz=$(to16 $(stat -c '%s' f_dump_addr_and_data.o))
+	a_draw_restore_tiles=$(four_digits $(calc16 "${a_dump_addr_and_data}+${fsz}"))
 	echo -e "a_draw_restore_tiles=$a_draw_restore_tiles" >>$map_file
 	f_draw_restore_tiles
 
@@ -1454,10 +1572,6 @@ main() {
 		# 初期画面描画のエントリをTDQへ積む
 		lr35902_call $a_draw_init_tiles
 
-		# 描画先アドレスの初期値設定
-		lr35902_set_reg regD 98
-		lr35902_set_reg regE 82
-
 		# 初期表示として、
 		# var_exe_1(下位),var_exe_2(上位)のデータをダンプする
 		## var_exe_{1,2}をregHLへロード
@@ -1499,34 +1613,8 @@ main() {
 		lr35902_copy_to_addr_from_regA $var_dadr_last_th
 		lr35902_pop_reg regHL
 
-		## 1画面分(12行)を表示し終えたかの判断に使うカウンタを
-		## 初期化
-		lr35902_set_reg regC 0c
-
-		## アドレスとデータをダンプ
-		(
-			# 1行分ダンプ
-			lr35902_call $a_dump_addr_and_data_4bytes
-
-			# 戻り値をチェックし4未満ならループを脱出
-			lr35902_compare_regA_and 04
-			lr35902_rel_jump_with_cond C $(two_digits_d $((8 + 1 + 2)))
-
-			# 描画先アドレスを次の行頭へ移動(+0x11)(8バイト)
-			lr35902_push_reg regHL		# 1
-			lr35902_set_reg regHL 0011	# 3
-			lr35902_add_to_regHL regDE	# 1
-			lr35902_copy_to_from regD regH	# 1
-			lr35902_copy_to_from regE regL	# 1
-			lr35902_pop_reg regHL		# 1
-
-			# 行数カウンタをデクリメント(1バイト)
-			lr35902_dec regC
-		) >main.2.o
-		cat main.2.o
-		## regCを使った12回分のループ(2バイト)
-		local sz_2=$(stat -c '%s' main.2.o)
-		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_2 + 2)))
+		# 1画面分ダンプ
+		lr35902_call $a_dump_addr_and_data
 
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $APP_VARS_BASE
