@@ -554,9 +554,12 @@ f_dump_addr_and_data() {
 		# 1行分ダンプ
 		lr35902_call $a_dump_addr_and_data_4bytes
 
+		# 行数カウンタをデクリメント
+		lr35902_dec regC
+
 		# 戻り値をチェックし4未満ならループを脱出
 		lr35902_compare_regA_and 04
-		lr35902_rel_jump_with_cond C $(two_digits_d $((8 + 1 + 2)))
+		lr35902_rel_jump_with_cond C $(two_digits_d $((8 + 2)))
 
 		# 描画先アドレスを次の行頭へ移動(+0x11)(8バイト)
 		lr35902_push_reg regHL		# 1
@@ -565,9 +568,6 @@ f_dump_addr_and_data() {
 		lr35902_copy_to_from regD regH	# 1
 		lr35902_copy_to_from regE regL	# 1
 		lr35902_pop_reg regHL		# 1
-
-		# 行数カウンタをデクリメント(1バイト)
-		lr35902_dec regC
 	) >f_dump_addr_and_data.1.o
 	cat f_dump_addr_and_data.1.o
 	## regCを使った12回分のループ(2バイト)
@@ -594,6 +594,8 @@ f_dump_addr_and_data() {
 	cat f_dump_addr_and_data.2.o
 
 	# TODO regHとregCを使ってダンプしたバイト数を取得
+
+	# TODO ダンプしたバイト数が(* 4 12)48ならこの時点でpop&return
 
 	# TODO 画面途中で描画が終わった時、残りを空白文字でクリア
 	## 現在の行の残りを空白文字でクリア
@@ -636,7 +638,61 @@ f_dump_addr_and_data() {
 	lr35902_rel_jump_with_cond C $(two_digits_d $((sz_4 + 2)))	# 2
 	cat f_dump_addr_and_data.4.o	# sz_4
 	lr35902_rel_jump $(two_comp_d $((2 + 2 + sz_4 + 2)))	# 2
-	## 描画領域が後何行残っていたかはregCから分かる
+
+	## TODO regC == 0ならこの時点でpop&return
+
+	## regC行分をクリア
+	## ※ この時点でregBには$GBOS_TILE_NUM_SPCが設定されていること
+	lr35902_copy_to_from regA regC
+	### 残り行数が1以上の間繰り返す
+	lr35902_compare_regA_and 01	# 2
+	(
+		# 1行分のクリア処理
+
+		# クリアする行の行頭へ移動
+		# (regDEに0x0011を足す)
+		lr35902_set_reg regHL 0011
+		lr35902_add_to_regHL regDE
+		lr35902_copy_to_from regE regL
+		lr35902_copy_to_from regD regH
+
+		# アドレス領域をクリア
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+
+		# 空白の分1タイル飛ばす
+		lr35902_inc regE
+
+		# データ領域をクリア
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+	) >f_dump_addr_and_data.5.o
+	local sz_5=$(stat -c '%s' f_dump_addr_and_data.5.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $((sz_5 + 2)))	# 2
+	cat f_dump_addr_and_data.5.o	# sz_5
+	lr35902_rel_jump $(two_comp_d $((2 + 2 + sz_5 + 2)))	# 2
 
 	# pop & return
 	# TODO regBC辺りを使って「ダンプしたバイト数」を返す
