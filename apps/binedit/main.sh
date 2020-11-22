@@ -574,14 +574,15 @@ f_dump_addr_and_data() {
 	local sz_1=$(stat -c '%s' f_dump_addr_and_data.1.o)
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
 
-	# 最後の f_dump_addr_and_data_4bytes の戻り値(regA)をregBへ保存
-	lr35902_copy_to_from regB regA
+	# 最後の f_dump_addr_and_data_4bytes の戻り値(regA)をregHへ保存
+	lr35902_copy_to_from regH regA
 
 	# 初期化済みフラグがセットされているかどうかを確認
 	lr35902_copy_to_regA_from_addr $var_general_flgs
 	lr35902_test_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
 	(
 		# セットされていなければこの時点でpop & return
+		# ※ 1ページ目に関しては、ダンプしたバイト数は返さない
 		lr35902_pop_reg regHL
 		lr35902_pop_reg regDE
 		lr35902_pop_reg regBC
@@ -592,11 +593,53 @@ f_dump_addr_and_data() {
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
 	cat f_dump_addr_and_data.2.o
 
+	# TODO regHとregCを使ってダンプしたバイト数を取得
+
 	# TODO 画面途中で描画が終わった時、残りを空白文字でクリア
-	## 描画した最終行が後何バイト分残っているかはregBから分かる
+	## 現在の行の残りを空白文字でクリア
+	### 残りバイト数(4 - regH)を取得
+	lr35902_set_reg regA 04
+	lr35902_sub_to_regA regH
+	### 残りバイト数だけクリア処理を実施
+	lr35902_set_reg regB $GBOS_TILE_NUM_SPC
+	lr35902_compare_regA_and 04
+	(
+		# 残りバイト数が4バイト分ある場合
+		# 1バイト目は1タイル目のスキップは無しで2文字分のクリアを実施
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+
+		# 残りバイト数(regA)をデクリメント
+		lr35902_dec regA
+	) >f_dump_addr_and_data.3.o
+	local sz_3=$(stat -c '%s' f_dump_addr_and_data.3.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+	cat f_dump_addr_and_data.3.o
+	#### 残りバイト数(regA)が1以上の間繰り返す
+	lr35902_compare_regA_and 01	# 2
+	(
+		# 空白の分1タイル飛ばす
+		lr35902_inc regE
+
+		# 2文字分のクリアを実施
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+
+		# 残りバイト数(regA)をデクリメント
+		lr35902_dec regA
+	) >f_dump_addr_and_data.4.o
+	local sz_4=$(stat -c '%s' f_dump_addr_and_data.4.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $((sz_4 + 2)))	# 2
+	cat f_dump_addr_and_data.4.o	# sz_4
+	lr35902_rel_jump $(two_comp_d $((2 + 2 + sz_4 + 2)))	# 2
 	## 描画領域が後何行残っていたかはregCから分かる
 
 	# pop & return
+	# TODO regBC辺りを使って「ダンプしたバイト数」を返す
 	lr35902_pop_reg regHL
 	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
