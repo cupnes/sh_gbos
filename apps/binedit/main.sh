@@ -1728,7 +1728,7 @@ f_proc_dir_keys() {
 
 			# regAをクリア
 			lr35902_clear_reg regA
-		) >main.5.o
+		) >f_proc_dir_keys.1.o
 		(
 			# いずれかの入力有り
 
@@ -1737,14 +1737,14 @@ f_proc_dir_keys() {
 			lr35902_inc regA
 
 			# いずれの入力も無しの処理を飛ばす
-			local sz_5=$(stat -c '%s' main.5.o)
-			lr35902_rel_jump $(two_digits_d $sz_5)
-		) >main.7.o
-		local sz_7=$(stat -c '%s' main.7.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_7)
-		cat main.7.o	# いずれかの入力有り
-		cat main.5.o	# いずれの入力も無し
-	) >main.3.o
+			local sz_1=$(stat -c '%s' f_proc_dir_keys.1.o)
+			lr35902_rel_jump $(two_digits_d $sz_1)
+		) >f_proc_dir_keys.2.o
+		local sz_2=$(stat -c '%s' f_proc_dir_keys.2.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+		cat f_proc_dir_keys.2.o	# いずれかの入力有り
+		cat f_proc_dir_keys.1.o	# いずれの入力も無し
+	) >f_proc_dir_keys.3.o
 	(
 		# 前回 != 現在 の場合
 
@@ -1752,13 +1752,13 @@ f_proc_dir_keys() {
 		lr35902_clear_reg regA
 
 		# 前回 == 現在 の場合の処理を飛ばす
-		local sz_3=$(stat -c '%s' main.3.o)
+		local sz_3=$(stat -c '%s' f_proc_dir_keys.3.o)
 		lr35902_rel_jump $(two_digits_d $sz_3)
-	) >main.4.o
-	local sz_4=$(stat -c '%s' main.4.o)
+	) >f_proc_dir_keys.4.o
+	local sz_4=$(stat -c '%s' f_proc_dir_keys.4.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
-	cat main.4.o
-	cat main.3.o
+	cat f_proc_dir_keys.4.o
+	cat f_proc_dir_keys.3.o
 
 	## 現在のカウンタ値をregCへ保存
 	lr35902_copy_to_from regC regA
@@ -1775,10 +1775,10 @@ f_proc_dir_keys() {
 
 			# カーソルを一つ進める関数を呼び出す
 			lr35902_call $a_forward_cursor
-		) >main.9.o
-		local sz_9=$(stat -c '%s' main.9.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_9)
-		cat main.9.o
+		) >f_proc_dir_keys.5.o
+		local sz_5=$(stat -c '%s' f_proc_dir_keys.5.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_5)
+		cat f_proc_dir_keys.5.o
 
 		# ←か?
 		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_LEFT regB
@@ -1787,10 +1787,10 @@ f_proc_dir_keys() {
 
 			# カーソルを一つ戻る関数を呼び出す
 			lr35902_call $a_backward_cursor
-		) >main.10.o
-		local sz_10=$(stat -c '%s' main.10.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_10)
-		cat main.10.o
+		) >f_proc_dir_keys.6.o
+		local sz_6=$(stat -c '%s' f_proc_dir_keys.6.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
+		cat f_proc_dir_keys.6.o
 
 		# ↑か?
 		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_UP regB
@@ -1799,10 +1799,10 @@ f_proc_dir_keys() {
 
 			# カーソル位置の値を一つ増やす関数を呼び出す
 			lr35902_call $a_inc_cursor
-		) >main.11.o
-		local sz_11=$(stat -c '%s' main.11.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_11)
-		cat main.11.o
+		) >f_proc_dir_keys.7.o
+		local sz_7=$(stat -c '%s' f_proc_dir_keys.7.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_7)
+		cat f_proc_dir_keys.7.o
 
 		# ↓か?
 		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_DOWN regB
@@ -1811,17 +1811,17 @@ f_proc_dir_keys() {
 
 			# カーソル位置の値を一つ減らす関数を呼び出す
 			lr35902_call $a_dec_cursor
-		) >main.12.o
-		local sz_12=$(stat -c '%s' main.12.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_12)
-		cat main.12.o
+		) >f_proc_dir_keys.8.o
+		local sz_8=$(stat -c '%s' f_proc_dir_keys.8.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_8)
+		cat f_proc_dir_keys.8.o
 
 		# カウンタ値をゼロクリア
 		lr35902_clear_reg regC
-	) >main.8.o
-	local sz_8=$(stat -c '%s' main.8.o)
-	lr35902_rel_jump_with_cond C $(two_digits_d $sz_8)
-	cat main.8.o
+	) >f_proc_dir_keys.9.o
+	local sz_9=$(stat -c '%s' f_proc_dir_keys.9.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_9)
+	cat f_proc_dir_keys.9.o
 
 	## カウンタ値更新
 	lr35902_copy_to_from regA regC
