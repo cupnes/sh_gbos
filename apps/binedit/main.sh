@@ -2021,6 +2021,10 @@ main() {
 		lr35902_clear_reg regA
 		lr35902_copy_to_addr_from_regA $var_mouse_enable
 
+		# 画面更新中フラグをセット
+		lr35902_set_reg regA 01
+		lr35902_copy_to_addr_from_regA $var_drawing_flag
+
 		# 初期画面描画のエントリをTDQへ積む
 		lr35902_call $a_draw_init_tiles
 
@@ -2067,6 +2071,11 @@ main() {
 
 		# 1画面分ダンプ
 		lr35902_call $a_dump_addr_and_data
+
+		# 画面更新中フラグをリセットするエントリをtdqへ積む
+		lr35902_clear_reg regB
+		lr35902_set_reg regDE $var_drawing_flag
+		lr35902_call $a_enq_tdq
 
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $var_general_flgs
