@@ -1708,6 +1708,55 @@ f_dec_cursor() {
 #    何もせずreturnする
 # ※ 使用するレジスタのpush/popをしていない
 f_proc_dir_keys() {
+	# カーソル期待値が設定済みか否か?
+	lr35902_copy_to_regA_from_addr $var_general_flgs
+	lr35902_test_bitN_of_reg $BE_GFLG_BITNUM_CSL_EXPECTED regA
+	(
+		# カーソル期待値設定済み
+
+		# 取得した汎用フラグ変数をregCへ保存
+		lr35902_copy_to_from regC regA
+
+		# OAMの値がカーソル期待値と等しいか否か?
+		## Y座標
+		lr35902_copy_to_regA_from_addr $var_csl_y
+		lr35902_copy_to_from regB regA
+		lr35902_copy_to_regA_from_addr $BE_OAM_CSL_Y_ADDR
+		lr35902_compare_regA_and regB
+		(
+			# 等しくない場合
+
+			# return
+			lr35902_return
+		) >f_proc_dir_keys.11.o
+		local sz_11=$(stat -c '%s' f_proc_dir_keys.11.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_11)
+		cat f_proc_dir_keys.11.o
+
+		## X座標
+		lr35902_copy_to_regA_from_addr $var_csl_x
+		lr35902_copy_to_from regB regA
+		lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
+		lr35902_compare_regA_and regB
+		(
+			# 等しくない場合
+
+			# return
+			lr35902_return
+		) >f_proc_dir_keys.12.o
+		local sz_12=$(stat -c '%s' f_proc_dir_keys.12.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_12)
+		cat f_proc_dir_keys.12.o
+
+		# カーソル期待値をリセット
+		lr35902_copy_to_from regA regC
+		lr35902_res_bitN_of_reg $BE_GFLG_BITNUM_CSL_EXPECTED regA
+		lr35902_copy_to_addr_from_regA $var_general_flgs
+	) >f_proc_dir_keys.10.o
+	local sz_10=$(stat -c '%s' f_proc_dir_keys.10.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_10)
+	cat f_proc_dir_keys.10.o
+
 	# 現在の十字キー入力状態をregBへ取得
 	lr35902_copy_to_regA_from_addr $var_btn_stat
 	lr35902_and_to_regA $GBOS_DIR_KEY_MASK
