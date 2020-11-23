@@ -142,6 +142,12 @@ vars() {
 	var_dadr_last_th=$(calc16 "$var_dadr_last_bh+1")
 	echo -e "var_dadr_last_th=$var_dadr_last_th" >>$map_file
 	echo -en '\x00'
+
+	# 現在の画面にダンプしたバイト数
+	# ※ 2ページ目以降ではf_dump_addr_and_data()により設定される
+	var_dumped_bytes_this_page=$(calc16 "$var_dadr_last_th+1")
+	echo -e "var_dumped_bytes_this_page=$var_dumped_bytes_this_page" >>$map_file
+	echo -en '\x00'
 }
 # 変数設定のために空実行
 vars >/dev/null
@@ -534,7 +540,7 @@ f_dump_addr_and_data_4bytes() {
 
 # 指定されたアドレスから1画面分ダンプ
 # in : regHL - ダンプするデータ開始アドレス
-# out: regA  - ダンプしたバイト数
+# out: var_dumped_bytes_this_page
 f_dump_addr_and_data() {
 	# push
 	lr35902_push_reg regAF
@@ -610,6 +616,9 @@ f_dump_addr_and_data() {
 	lr35902_shift_left_arithmetic regA
 	lr35902_sub_to_regA 04
 	lr35902_add_to_regA regH
+
+	# 現在の画面のバイト数を変数へ設定
+	lr35902_copy_to_addr_from_regA $var_dumped_bytes_this_page
 
 	# TODO ダンプしたバイト数が(* 4 12)48ならこの時点でpop&return
 
