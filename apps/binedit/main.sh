@@ -150,6 +150,14 @@ vars() {
 	var_dumped_bytes_this_page=$(calc16 "$var_dadr_last_th+1")
 	echo -e "var_dumped_bytes_this_page=$var_dumped_bytes_this_page" >>$map_file
 	echo -en '\x00'
+
+	# 画面更新中フラグ
+	# ページ移動時、予めこの変数に1をセットした上で、
+	# この変数へ0をセットするエントリをtdqに積む
+	# 方向キーに応じた処理では、この変数が1の間は何もしない
+	var_drawing_flag=$(calc16 "$var_dumped_bytes_this_page+1")
+	echo -e "var_drawing_flag=$var_drawing_flag" >>$map_file
+	echo -en '\x00'
 }
 # 変数設定のために空実行
 vars >/dev/null
@@ -791,25 +799,19 @@ f_forward_cursor_bh_3() {
 	(
 		# 12行目以上の場合
 
+		# 画面更新中フラグをセット
+		lr35902_set_reg regA 01
+		lr35902_copy_to_addr_from_regA $var_drawing_flag
+
 		# □カーソルOAM更新
 		## □カーソルのOAMのY座標を1行目へ更新するエントリをtdqへ積む
 		lr35902_set_reg regB $BE_OBJY_DAREA_BASE
 		lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
 		lr35902_call $a_enq_tdq
-		### カーソル期待値も設定
-		lr35902_copy_to_from regA regB
-		lr35902_copy_to_addr_from_regA $var_csl_y
 		## □カーソルのOAMのX座標を行頭へ更新するエントリをtdqへ積む
 		lr35902_set_reg regB $BE_OBJX_DAREA_BASE
 		lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
 		lr35902_call $a_enq_tdq
-		### カーソル期待値も設定
-		lr35902_copy_to_from regA regB
-		lr35902_copy_to_addr_from_regA $var_csl_x
-		## カーソル期待値のビットをセット
-		lr35902_copy_to_regA_from_addr $var_general_flgs
-		lr35902_set_bitN_of_reg $BE_GFLG_BITNUM_CSL_EXPECTED regA
-		lr35902_copy_to_addr_from_regA $var_general_flgs
 
 		# カーソル位置のデータアドレス変数更新
 		## 変数をregDEへ取得
@@ -844,6 +846,11 @@ f_forward_cursor_bh_3() {
 		lr35902_copy_to_from regH regD
 		## 指定されたアドレスから1画面分ダンプ
 		lr35902_call $a_dump_addr_and_data
+
+		# 画面更新中フラグをリセットするエントリをtdqへ積む
+		lr35902_clear_reg regB
+		lr35902_set_reg regDE $var_drawing_flag
+		lr35902_call $a_enq_tdq
 	) >f_forward_cursor_bh_3.3.o
 	(
 		# 12行目未満の場合
@@ -1112,25 +1119,19 @@ f_backward_cursor_th_0() {
 		# 現在のページのバイト数(regA)をregCへ保存
 		lr35902_copy_to_from regC regA
 
+		# 画面更新中フラグをセット
+		lr35902_set_reg regA 01
+		lr35902_copy_to_addr_from_regA $var_drawing_flag
+
 		# □カーソルOAM更新
 		## □カーソルのOAMのY座標を12行目へ更新するエントリをtdqへ積む
 		lr35902_set_reg regB $BE_OBJY_DAREA_LAST
 		lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
 		lr35902_call $a_enq_tdq
-		### カーソル期待値も設定
-		lr35902_copy_to_from regA regB
-		lr35902_copy_to_addr_from_regA $var_csl_y
 		## □カーソルのOAMのX座標を行末へ更新するエントリをtdqへ積む
 		lr35902_set_reg regB $BE_OBJX_DAREA_LAST
 		lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
 		lr35902_call $a_enq_tdq
-		### カーソル期待値も設定
-		lr35902_copy_to_from regA regB
-		lr35902_copy_to_addr_from_regA $var_csl_x
-		## カーソル期待値のビットをセット
-		lr35902_copy_to_regA_from_addr $var_general_flgs
-		lr35902_set_bitN_of_reg $BE_GFLG_BITNUM_CSL_EXPECTED regA
-		lr35902_copy_to_addr_from_regA $var_general_flgs
 
 		# カーソル位置のデータアドレス変数更新
 		## 変数をregDEへ取得
@@ -1187,6 +1188,11 @@ f_backward_cursor_th_0() {
 		lr35902_add_to_regHL regBC
 		## 指定されたアドレスから1画面分ダンプ
 		lr35902_call $a_dump_addr_and_data
+
+		# 画面更新中フラグをリセットするエントリをtdqへ積む
+		lr35902_clear_reg regB
+		lr35902_set_reg regDE $var_drawing_flag
+		lr35902_call $a_enq_tdq
 	) >f_backward_cursor_th_0.2.o
 	(
 		# 1行目ではない場合
@@ -1728,53 +1734,17 @@ f_dec_cursor() {
 #    何もせずreturnする
 # ※ 使用するレジスタのpush/popをしていない
 f_proc_dir_keys() {
-	# カーソル期待値が設定済みか否か?
-	lr35902_copy_to_regA_from_addr $var_general_flgs
-	lr35902_test_bitN_of_reg $BE_GFLG_BITNUM_CSL_EXPECTED regA
+	# 画面更新中フラグがセットされているか否か?
+	lr35902_copy_to_regA_from_addr $var_drawing_flag
+	lr35902_compare_regA_and 01
 	(
-		# カーソル期待値設定済み
+		# 画面更新中フラグがセットされている
 
-		# 取得した汎用フラグ変数をregCへ保存
-		lr35902_copy_to_from regC regA
-
-		# OAMの値がカーソル期待値と等しいか否か?
-		## Y座標
-		lr35902_copy_to_regA_from_addr $var_csl_y
-		lr35902_copy_to_from regB regA
-		lr35902_copy_to_regA_from_addr $BE_OAM_CSL_Y_ADDR
-		lr35902_compare_regA_and regB
-		(
-			# 等しくない場合
-
-			# return
-			lr35902_return
-		) >f_proc_dir_keys.11.o
-		local sz_11=$(stat -c '%s' f_proc_dir_keys.11.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_11)
-		cat f_proc_dir_keys.11.o
-
-		## X座標
-		lr35902_copy_to_regA_from_addr $var_csl_x
-		lr35902_copy_to_from regB regA
-		lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
-		lr35902_compare_regA_and regB
-		(
-			# 等しくない場合
-
-			# return
-			lr35902_return
-		) >f_proc_dir_keys.12.o
-		local sz_12=$(stat -c '%s' f_proc_dir_keys.12.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_12)
-		cat f_proc_dir_keys.12.o
-
-		# カーソル期待値をリセット
-		lr35902_copy_to_from regA regC
-		lr35902_res_bitN_of_reg $BE_GFLG_BITNUM_CSL_EXPECTED regA
-		lr35902_copy_to_addr_from_regA $var_general_flgs
+		# return
+		lr35902_return
 	) >f_proc_dir_keys.10.o
 	local sz_10=$(stat -c '%s' f_proc_dir_keys.10.o)
-	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_10)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_10)
 	cat f_proc_dir_keys.10.o
 
 	# 現在の十字キー入力状態をregBへ取得
