@@ -554,12 +554,15 @@ f_dump_addr_and_data() {
 		# 1行分ダンプ
 		lr35902_call $a_dump_addr_and_data_4bytes
 
+		# regA(戻り値)をregBへ保存
+		lr35902_copy_to_from regB regA
+
 		# 行数カウンタをデクリメント
 		lr35902_dec regC
 
 		# 戻り値をチェックし4未満ならループを脱出
 		lr35902_compare_regA_and 04
-		lr35902_rel_jump_with_cond C $(two_digits_d $((8 + 1 + 2 + 2)))
+		lr35902_rel_jump_with_cond C $(two_digits_d $((8 + 2)))
 
 		# 描画先アドレスを次の行頭へ移動(+0x11)(8バイト)
 		lr35902_push_reg regHL		# 1
@@ -569,9 +572,6 @@ f_dump_addr_and_data() {
 		lr35902_copy_to_from regE regL	# 1
 		lr35902_pop_reg regHL		# 1
 
-		# regA(戻り値)をregHへ保存(1バイト)
-		lr35902_copy_to_from regH regA	# 1
-
 		# regCが0か否か確認(2バイト)
 		lr35902_copy_to_from regA regC	# 1
 		lr35902_or_to_regA regA		# 1
@@ -580,6 +580,9 @@ f_dump_addr_and_data() {
 	## regCを使った12回分のループ(2バイト)
 	local sz_1=$(stat -c '%s' f_dump_addr_and_data.1.o)
 	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+
+	# f_dump_addr_and_data_4bytes()の最後の戻り値(regB)をregHへ保存
+	lr35902_copy_to_from regH regB
 
 	# 初期化済みフラグがセットされているかどうかを確認
 	lr35902_copy_to_regA_from_addr $var_general_flgs
