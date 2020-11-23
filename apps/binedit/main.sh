@@ -82,9 +82,8 @@ vars() {
 	echo -e "var_remain_bytes_th=$var_remain_bytes_th" >>$map_file
 	echo -en '\x00'
 
-	# □カーソル座標(左上原点)
-	# TODO 今や初期化のときしか使ってない
-	#      初期化のときも使わないようにして消す
+	# □カーソル座標期待値
+	# OAMの更新が完了したかどうかの確認に使う
 	## Y座標
 	var_csl_y=$(calc16 "$var_remain_bytes_th+1")
 	echo -e "var_csl_y=$var_csl_y" >>$map_file
@@ -164,17 +163,13 @@ f_draw_init_tiles() {
 	lr35902_call $a_enq_tdq
 
 	## □カーソルの設定
-	### Y座標
-	lr35902_set_reg regDE $BE_OAM_BASE_CSL
-	lr35902_copy_to_regA_from_addr $var_csl_y
-	lr35902_add_to_regA 10
-	lr35902_copy_to_from regB regA
+	## Y座標
+	lr35902_set_reg regB $BE_OBJY_DAREA_BASE
+	lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
 	lr35902_call $a_enq_tdq
-	### X座標
-	lr35902_inc regE
-	lr35902_copy_to_regA_from_addr $var_csl_x
-	lr35902_add_to_regA 08
-	lr35902_copy_to_from regB regA
+	## X座標
+	lr35902_set_reg regB $BE_OBJX_DAREA_BASE
+	lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
 	lr35902_call $a_enq_tdq
 	### タイル番号
 	lr35902_inc regE
