@@ -11,9 +11,9 @@ set -uex
 . include/tdq.sh
 
 # アプリのメモリマップ
-APP_MAIN_SZ=0500
+APP_MAIN_SZ=0200
 APP_VARS_SZ=0200
-APP_FUNCS_SZ=0500
+APP_FUNCS_SZ=0800
 APP_MAIN_BASE=$GB_WRAM1_BASE
 APP_VARS_BASE=$(calc16 "$APP_MAIN_BASE+$APP_MAIN_SZ")
 APP_FUNCS_BASE=$(calc16 "$APP_VARS_BASE+$APP_VARS_SZ")
@@ -29,6 +29,7 @@ BE_OBJY_DAREA_BASE=30	# 1行目のobjY座標
 BE_OBJY_DAREA_LAST=88	# 12行目のobjY座標
 BE_TADR_AAREA_BASE=9882	# アドレス領域最初の1文字のタイルアドレス
 BE_TADR_DAREA_BASE=9887	# データ領域1バイト目上位のタイルアドレス
+BE_TADR_DAREA_LAST=99f1	# データ領域48バイト目下位のタイルアドレス
 
 # 汎用フラグ変数
 BE_GFLG_BITNUM_INITED=0	# 初期化済みフラグのビット番号
@@ -622,7 +623,7 @@ f_dump_addr_and_data() {
 
 	# TODO ダンプしたバイト数が(* 4 12)48ならこの時点でpop&return
 
-	# TODO 画面途中で描画が終わった時、残りを空白文字でクリア
+	# 画面途中で描画が終わった時、残りを空白文字でクリア
 	## 現在の行の残りを空白文字でクリア
 	### 残りバイト数(4 - regH)を取得
 	lr35902_set_reg regA 04
@@ -723,7 +724,6 @@ f_dump_addr_and_data() {
 	lr35902_rel_jump $(two_comp_d $((2 + 2 + sz_5 + 2)))	# 2
 
 	# pop & return
-	# TODO regBC辺りを使って「ダンプしたバイト数」を返す
 	lr35902_pop_reg regHL
 	lr35902_pop_reg regDE
 	lr35902_pop_reg regBC
@@ -1082,6 +1082,92 @@ f_backward_cursor_th_0() {
 	## 1行目のobjY座標値と比較
 	lr35902_compare_regA_and $BE_OBJY_DAREA_BASE
 	(
+		# 1行目の場合
+
+		# 現在のページのバイト数取得
+		lr35902_copy_to_regA_from_addr $var_dumped_bytes_this_page
+
+		# 現在1ページ目か否か?
+		# ※ 1ページ目ならvar_dumped_bytes_this_pageは00
+		lr35902_compare_regA_and 00
+		(
+			# 1ページ目の場合
+
+			# return
+			lr35902_return
+		) >f_backward_cursor_th_0.3.o
+		local sz_3=$(stat -c '%s' f_backward_cursor_th_0.3.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+		cat f_backward_cursor_th_0.3.o
+
+		# 1ページ目でない場合
+
+		# 現在のページのバイト数(regA)をregCへ保存
+		lr35902_copy_to_from regC regA
+
+		# □カーソルOAM更新
+		## □カーソルのOAMのY座標を12行目へ更新するエントリをtdqへ積む
+		lr35902_set_reg regB $BE_OBJY_DAREA_LAST
+		lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
+		lr35902_call $a_enq_tdq
+		## □カーソルのOAMのX座標を行末へ更新するエントリをtdqへ積む
+		lr35902_set_reg regB $BE_OBJX_DAREA_LAST
+		lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
+		lr35902_call $a_enq_tdq
+
+		# カーソル位置のデータアドレス変数更新
+		## 変数をregDEへ取得
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_bh
+		lr35902_copy_to_from regE regA
+		lr35902_copy_to_regA_from_addr $var_csl_dadr_th
+		lr35902_copy_to_from regD regA
+		## regDEをデクリメント
+		lr35902_dec regDE
+		## regDEを変数へ書き戻す
+		lr35902_copy_to_from regA regE
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+		lr35902_copy_to_from regA regD
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+
+		# カーソル位置のタイルアドレス変数更新
+		## $BE_TADR_DAREA_LASTを設定する
+		lr35902_set_reg regA $(echo $BE_TADR_DAREA_LAST | cut -c3-4)
+		lr35902_copy_to_addr_from_regA $var_csl_tadr_bh
+		lr35902_set_reg regA $(echo $BE_TADR_DAREA_LAST | cut -c1-2)
+		lr35902_copy_to_addr_from_regA $var_csl_tadr_th
+
+		# カーソル移動の補助変数更新
+		## b2に0を、b0-b1に3を設定(0x03)
+		lr35902_set_reg regA 03
+		lr35902_copy_to_addr_from_regA $var_csl_attr
+
+		# 画面描画
+		## 表示位置管理用カウンタに現在のページのバイト数(regC)を足す
+		lr35902_copy_to_regA_from_addr $var_remain_bytes_bh
+		lr35902_copy_to_from regL regA
+		lr35902_copy_to_regA_from_addr $var_remain_bytes_th
+		lr35902_copy_to_from regH regA
+		lr35902_clear_reg regB
+		lr35902_add_to_regHL regBC
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_remain_bytes_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_remain_bytes_th
+		## 描画開始データアドレスをregHLへ設定
+		## ※ この時点でregDEは、
+		##    前ページ(これから描画するページ)の最終バイトを指している
+		##    なので、この時点のregDEから47(0x2f)を引いた値が
+		##    描画開始データアドレス
+		##    16ビットの引き算命令は無いので
+		##    0x002fの2の補数0xffd1を足す
+		lr35902_copy_to_from regL regE
+		lr35902_copy_to_from regH regD
+		lr35902_set_reg regBC ffd1
+		lr35902_add_to_regHL regBC
+		## 指定されたアドレスから1画面分ダンプ
+		lr35902_call $a_dump_addr_and_data
+	) >f_backward_cursor_th_0.2.o
+	(
 		# 1行目ではない場合
 
 		# □カーソルOAM更新
@@ -1138,11 +1224,15 @@ f_backward_cursor_th_0() {
 		## b2に0を、b0-b1に3を設定(0x03)
 		lr35902_set_reg regA 03
 		lr35902_copy_to_addr_from_regA $var_csl_attr
+
+		# 1行目の場合の処理を飛ばす
+		local sz_2=$(stat -c '%s' f_backward_cursor_th_0.2.o)
+		lr35902_rel_jump $(two_digits_d $sz_2)
 	) >f_backward_cursor_th_0.1.o
 	local sz_1=$(stat -c '%s' f_backward_cursor_th_0.1.o)
-	## 現在1行目のカーソル位置だったら処理を飛ばす
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
-	cat f_backward_cursor_th_0.1.o
+	cat f_backward_cursor_th_0.1.o	# 1行目ではない場合
+	cat f_backward_cursor_th_0.2.o	# 1行目の場合
 
 	# return
 	lr35902_return
