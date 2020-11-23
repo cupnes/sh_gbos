@@ -796,10 +796,20 @@ f_forward_cursor_bh_3() {
 		lr35902_set_reg regB $BE_OBJY_DAREA_BASE
 		lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
 		lr35902_call $a_enq_tdq
+		### カーソル期待値も設定
+		lr35902_copy_to_from regA regB
+		lr35902_copy_to_addr_from_regA $var_csl_y
 		## □カーソルのOAMのX座標を行頭へ更新するエントリをtdqへ積む
 		lr35902_set_reg regB $BE_OBJX_DAREA_BASE
 		lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
 		lr35902_call $a_enq_tdq
+		### カーソル期待値も設定
+		lr35902_copy_to_from regA regB
+		lr35902_copy_to_addr_from_regA $var_csl_x
+		## カーソル期待値のビットをセット
+		lr35902_copy_to_regA_from_addr $var_general_flgs
+		lr35902_set_bitN_of_reg $BE_GFLG_BITNUM_CSL_EXPECTED regA
+		lr35902_copy_to_addr_from_regA $var_general_flgs
 
 		# カーソル位置のデータアドレス変数更新
 		## 変数をregDEへ取得
