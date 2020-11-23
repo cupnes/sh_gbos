@@ -20,6 +20,7 @@ GBOS_TDQ_ENTRY_SIZE=0a
 GBOS_TDQ_MAX_DRAW_TILES=04
 GBOS_TDQ_STAT_BITNUM_EMPTY=0
 GBOS_TDQ_STAT_BITNUM_FULL=1
+GBOS_TDQ_STAT_BITNUM_OVERFLOW=2
 
 # tdq初期化
 tdq_init() {
@@ -55,6 +56,16 @@ tdq_enq() {
 	lr35902_copy_to_regA_from_addr $var_tdq_stat
 	lr35902_test_bitN_of_reg $GBOS_TDQ_STAT_BITNUM_FULL regA
 	(
+		# tdqがfullになっている場合
+		# ここでリクエストされたエントリは追加できない
+
+		# tdq_statのオーバーフローフラグをセットする
+		lr35902_set_bitN_of_reg $GBOS_TDQ_STAT_BITNUM_OVERFLOW regA
+		lr35902_copy_to_addr_from_regA $var_tdq_stat
+	) >tdq_enqueue.6.o
+	(
+		# tdqがfullになっていない場合
+
 		# Aへロードしたtdq.statをCへコピー
 		lr35902_copy_to_from regC regA
 
@@ -131,10 +142,15 @@ tdq_enq() {
 		# tdq.stat = C
 		lr35902_copy_to_from regA regC
 		lr35902_copy_to_addr_from_regA $var_tdq_stat
+
+		# tdq_stat[full] != 0 の場合の処理を飛ばす
+		local sz_6=$(stat -c '%s' tdq_enqueue.6.o)
+		lr35902_rel_jump $(two_digits_d $sz_6)
 	) >tdq_enqueue.5.o
 	local sz_5=$(stat -c '%s' tdq_enqueue.5.o)
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
-	cat tdq_enqueue.5.o
+	cat tdq_enqueue.5.o	# tdq_stat[full] == 0
+	cat tdq_enqueue.6.o	# tdq_stat[full] != 0
 
 	# pop
 	lr35902_pop_reg regHL
