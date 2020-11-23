@@ -1142,12 +1142,16 @@ f_backward_cursor_th_0() {
 		lr35902_copy_to_addr_from_regA $var_csl_attr
 
 		# 画面描画
-		## 表示位置管理用カウンタに現在のページのバイト数(regC)を足す
+		## 表示位置管理用カウンタに
+		## 現在のページのバイト数(regC)と
+		## 前ページのバイト数(48(0x30))を足す
 		lr35902_copy_to_regA_from_addr $var_remain_bytes_bh
 		lr35902_copy_to_from regL regA
 		lr35902_copy_to_regA_from_addr $var_remain_bytes_th
 		lr35902_copy_to_from regH regA
 		lr35902_clear_reg regB
+		lr35902_add_to_regHL regBC
+		lr35902_set_reg regBC 0030
 		lr35902_add_to_regHL regBC
 		lr35902_copy_to_from regA regL
 		lr35902_copy_to_addr_from_regA $var_remain_bytes_bh
