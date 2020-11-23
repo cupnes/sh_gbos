@@ -1844,6 +1844,17 @@ f_proc_dir_keys() {
 
 			# カーソルを一つ進める関数を呼び出す
 			lr35902_call $a_forward_cursor
+
+			# カウンタ値をゼロクリア
+			lr35902_clear_reg regA
+			lr35902_copy_to_addr_from_regA $var_press_counter
+
+			# 前回の入力状態更新
+			lr35902_copy_to_from regA regB
+			lr35902_copy_to_addr_from_regA $var_prev_dir_input
+
+			# return
+			lr35902_return
 		) >f_proc_dir_keys.5.o
 		local sz_5=$(stat -c '%s' f_proc_dir_keys.5.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_5)
@@ -1856,6 +1867,17 @@ f_proc_dir_keys() {
 
 			# カーソルを一つ戻る関数を呼び出す
 			lr35902_call $a_backward_cursor
+
+			# カウンタ値をゼロクリア
+			lr35902_clear_reg regA
+			lr35902_copy_to_addr_from_regA $var_press_counter
+
+			# 前回の入力状態更新
+			lr35902_copy_to_from regA regB
+			lr35902_copy_to_addr_from_regA $var_prev_dir_input
+
+			# return
+			lr35902_return
 		) >f_proc_dir_keys.6.o
 		local sz_6=$(stat -c '%s' f_proc_dir_keys.6.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
@@ -1868,6 +1890,17 @@ f_proc_dir_keys() {
 
 			# カーソル位置の値を一つ増やす関数を呼び出す
 			lr35902_call $a_inc_cursor
+
+			# カウンタ値をゼロクリア
+			lr35902_clear_reg regA
+			lr35902_copy_to_addr_from_regA $var_press_counter
+
+			# 前回の入力状態更新
+			lr35902_copy_to_from regA regB
+			lr35902_copy_to_addr_from_regA $var_prev_dir_input
+
+			# return
+			lr35902_return
 		) >f_proc_dir_keys.7.o
 		local sz_7=$(stat -c '%s' f_proc_dir_keys.7.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_7)
@@ -1880,13 +1913,21 @@ f_proc_dir_keys() {
 
 			# カーソル位置の値を一つ減らす関数を呼び出す
 			lr35902_call $a_dec_cursor
+
+			# カウンタ値をゼロクリア
+			lr35902_clear_reg regA
+			lr35902_copy_to_addr_from_regA $var_press_counter
+
+			# 前回の入力状態更新
+			lr35902_copy_to_from regA regB
+			lr35902_copy_to_addr_from_regA $var_prev_dir_input
+
+			# return
+			lr35902_return
 		) >f_proc_dir_keys.8.o
 		local sz_8=$(stat -c '%s' f_proc_dir_keys.8.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_8)
 		cat f_proc_dir_keys.8.o
-
-		# カウンタ値をゼロクリア
-		lr35902_clear_reg regC
 	) >f_proc_dir_keys.9.o
 	local sz_9=$(stat -c '%s' f_proc_dir_keys.9.o)
 	lr35902_rel_jump_with_cond C $(two_digits_d $sz_9)
