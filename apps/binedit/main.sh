@@ -534,6 +534,7 @@ f_dump_addr_and_data_4bytes() {
 
 # 指定されたアドレスから1画面分ダンプ
 # in : regHL - ダンプするデータ開始アドレス
+# out: regA  - ダンプしたバイト数
 f_dump_addr_and_data() {
 	# push
 	lr35902_push_reg regAF
@@ -600,7 +601,15 @@ f_dump_addr_and_data() {
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
 	cat f_dump_addr_and_data.2.o
 
-	# TODO regHとregCを使ってダンプしたバイト数を取得
+	# regHとregCを使ってダンプしたバイト数を取得
+	# ダンプしたバイト数 = (12 - regC) * 4 - (4 - regH)
+	#                    = (12 - regC) * 4 - 4 + regH
+	lr35902_set_reg regA 0c
+	lr35902_sub_to_regA regC
+	lr35902_shift_left_arithmetic regA
+	lr35902_shift_left_arithmetic regA
+	lr35902_sub_to_regA 04
+	lr35902_add_to_regA regH
 
 	# TODO ダンプしたバイト数が(* 4 12)48ならこの時点でpop&return
 

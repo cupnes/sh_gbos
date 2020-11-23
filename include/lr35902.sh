@@ -1144,9 +1144,13 @@ lr35902_rot_regA_right_th_carry() {
 #   0xaa(carry=1) -> 0xd5(carry=0)
 
 # 0xcb 2[0-7] (sla reg)
+# 動作イメージ:
+# [carry] ← [b7] ← ... ← [b0]
 # 動作例:
 #   0x55(carry=0) -> 0xaa(carry=0)
 #   0xaa(carry=0) -> 0x54(carry=1)
+#   0x55(carry=1) -> 0xaa(carry=0)
+#   0xaa(carry=1) -> 0x54(carry=1)
 lr35902_shift_left_arithmetic() {
 	local reg=$1
 
