@@ -1708,15 +1708,15 @@ f_dec_cursor() {
 #    何もせずreturnする
 # ※ 使用するレジスタのpush/popをしていない
 f_proc_dir_keys() {
-	## 現在の十字キー入力状態をregBへ取得
+	# 現在の十字キー入力状態をregBへ取得
 	lr35902_copy_to_regA_from_addr $var_btn_stat
 	lr35902_and_to_regA $GBOS_DIR_KEY_MASK
 	lr35902_copy_to_from regB regA
 
-	## 前回の十字キー入力状態をregAへ取得
+	# 前回の十字キー入力状態をregAへ取得
 	lr35902_copy_to_regA_from_addr $var_prev_dir_input
 
-	## 前回と現在の入力状態を比較
+	# 前回と現在の入力状態を比較
 	lr35902_compare_regA_and regB
 	(
 		# 前回 == 現在 の場合
@@ -1760,10 +1760,10 @@ f_proc_dir_keys() {
 	cat f_proc_dir_keys.4.o
 	cat f_proc_dir_keys.3.o
 
-	## 現在のカウンタ値をregCへ保存
+	# 現在のカウンタ値をregCへ保存
 	lr35902_copy_to_from regC regA
 
-	## カウンタ値のしきい値チェック(押下判定)
+	# カウンタ値のしきい値チェック(押下判定)
 	lr35902_compare_regA_and $BE_KEY_PRESS_TH
 	(
 		# 押下有り
@@ -1823,11 +1823,11 @@ f_proc_dir_keys() {
 	lr35902_rel_jump_with_cond C $(two_digits_d $sz_9)
 	cat f_proc_dir_keys.9.o
 
-	## カウンタ値更新
+	# カウンタ値更新
 	lr35902_copy_to_from regA regC
 	lr35902_copy_to_addr_from_regA $var_press_counter
 
-	## 前回の入力状態更新
+	# 前回の入力状態更新
 	lr35902_copy_to_from regA regB
 	lr35902_copy_to_addr_from_regA $var_prev_dir_input
 
