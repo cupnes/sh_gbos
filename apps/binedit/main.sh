@@ -562,7 +562,7 @@ f_dump_addr_and_data() {
 
 		# 戻り値をチェックし4未満ならループを脱出
 		lr35902_compare_regA_and 04
-		lr35902_rel_jump_with_cond C $(two_digits_d $((8 + 2)))
+		lr35902_rel_jump_with_cond C $(two_digits_d $((8 + 2 + 2)))
 
 		# 描画先アドレスを次の行頭へ移動(+0x11)(8バイト)
 		lr35902_push_reg regHL		# 1
@@ -695,6 +695,9 @@ f_dump_addr_and_data() {
 		lr35902_call $a_enq_tdq
 		lr35902_inc regE
 		lr35902_call $a_enq_tdq
+
+		# 残り行数(regA)をデクリメント
+		lr35902_dec regA
 	) >f_dump_addr_and_data.5.o
 	local sz_5=$(stat -c '%s' f_dump_addr_and_data.5.o)
 	lr35902_rel_jump_with_cond C $(two_digits_d $((sz_5 + 2)))	# 2
@@ -774,18 +777,12 @@ f_forward_cursor_bh_3() {
 		# 12行目以上の場合
 
 		# □カーソルOAM更新
-		## 1行目を設定
-		lr35902_set_reg regA $BE_OBJY_DAREA_BASE
-		## □カーソルのOAMのY座標を更新するエントリをtdqへ積む
-		lr35902_copy_to_from regB regA
+		## □カーソルのOAMのY座標を1行目へ更新するエントリをtdqへ積む
+		lr35902_set_reg regB $BE_OBJY_DAREA_BASE
 		lr35902_set_reg regDE $BE_OAM_CSL_Y_ADDR
 		lr35902_call $a_enq_tdq
-		## 現在のカーソルのobjX座標取得
-		lr35902_copy_to_regA_from_addr $BE_OAM_CSL_X_ADDR
-		## 行頭のobjアドレスを設定
-		lr35902_set_reg regA $BE_OBJX_DAREA_BASE
-		## □カーソルのOAMのX座標を更新するエントリをtdqへ積む
-		lr35902_copy_to_from regB regA
+		## □カーソルのOAMのX座標を行頭へ更新するエントリをtdqへ積む
+		lr35902_set_reg regB $BE_OBJX_DAREA_BASE
 		lr35902_set_reg regDE $BE_OAM_CSL_X_ADDR
 		lr35902_call $a_enq_tdq
 
