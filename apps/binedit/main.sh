@@ -33,6 +33,8 @@ BE_TADR_DAREA_LAST=99f1	# データ領域48バイト目下位のタイルアド�
 
 # 汎用フラグ変数
 BE_GFLG_BITNUM_INITED=0	# 初期化済みフラグのビット番号
+BE_GFLG_BITNUM_CSL_EXPECTED=7	# DEBUG カーソル期待値が設定済み
+## カーソル期待値が部分的に適用されている間はこのフラグで判断する
 
 # 押下判定のしきい値
 BE_KEY_PRESS_TH=05
@@ -1701,178 +1703,11 @@ f_dec_cursor() {
 	lr35902_return
 }
 
-funcs() {
-	local fsz
-
-	# 初期配置のタイルをtdqへ積む
-	a_draw_init_tiles=$APP_FUNCS_BASE
-	echo -e "a_draw_init_tiles=$a_draw_init_tiles" >>$map_file
-	f_draw_init_tiles
-
-	# 指定したアドレスから4バイトダンプ
-	f_draw_init_tiles >f_draw_init_tiles.o
-	fsz=$(to16 $(stat -c '%s' f_draw_init_tiles.o))
-	a_dump_addr_and_data_4bytes=$(four_digits $(calc16 "${a_draw_init_tiles}+${fsz}"))
-	echo -e "a_dump_addr_and_data_4bytes=$a_dump_addr_and_data_4bytes" >>$map_file
-	f_dump_addr_and_data_4bytes
-
-	# 指定されたアドレスから1画面分ダンプ
-	f_dump_addr_and_data_4bytes >f_dump_addr_and_data_4bytes.o
-	fsz=$(to16 $(stat -c '%s' f_dump_addr_and_data_4bytes.o))
-	a_dump_addr_and_data=$(four_digits $(calc16 "${a_dump_addr_and_data_4bytes}+${fsz}"))
-	echo -e "a_dump_addr_and_data=$a_dump_addr_and_data" >>$map_file
-	f_dump_addr_and_data
-
-	# (主にobjを)元に戻すエントリをtdqへ積む
-	f_dump_addr_and_data >f_dump_addr_and_data.o
-	fsz=$(to16 $(stat -c '%s' f_dump_addr_and_data.o))
-	a_draw_restore_tiles=$(four_digits $(calc16 "${a_dump_addr_and_data}+${fsz}"))
-	echo -e "a_draw_restore_tiles=$a_draw_restore_tiles" >>$map_file
-	f_draw_restore_tiles
-
-	# カーソルを一つ前へ進める関数
-	# カーソル位置下位側3バイト目の処理
-	f_draw_restore_tiles >f_draw_restore_tiles.o
-	fsz=$(to16 $(stat -c '%s' f_draw_restore_tiles.o))
-	a_forward_cursor_bh_3=$(four_digits $(calc16 "${a_draw_restore_tiles}+${fsz}"))
-	echo -e "a_forward_cursor_bh_3=$a_forward_cursor_bh_3" >>$map_file
-	f_forward_cursor_bh_3
-
-	# カーソルを一つ前へ進める
-	f_forward_cursor_bh_3 >f_forward_cursor_bh_3.o
-	fsz=$(to16 $(stat -c '%s' f_forward_cursor_bh_3.o))
-	a_forward_cursor=$(four_digits $(calc16 "${a_forward_cursor_bh_3}+${fsz}"))
-	echo -e "a_forward_cursor=$a_forward_cursor" >>$map_file
-	f_forward_cursor
-
-	# カーソルを一つ後ろへ進める関数
-	# カーソル位置上位側0バイト目の処理
-	f_forward_cursor >f_forward_cursor.o
-	fsz=$(to16 $(stat -c '%s' f_forward_cursor.o))
-	a_backward_cursor_th_0=$(four_digits $(calc16 "${a_forward_cursor}+${fsz}"))
-	echo -e "a_backward_cursor_th_0=$a_backward_cursor_th_0" >>$map_file
-	f_backward_cursor_th_0
-
-	# カーソルを一つ後ろへ進める
-	f_backward_cursor_th_0 >f_backward_cursor_th_0.o
-	fsz=$(to16 $(stat -c '%s' f_backward_cursor_th_0.o))
-	a_backward_cursor=$(four_digits $(calc16 "${a_backward_cursor_th_0}+${fsz}"))
-	echo -e "a_backward_cursor=$a_backward_cursor" >>$map_file
-	f_backward_cursor
-
-	# カーソル位置の値をインクリメント
-	f_backward_cursor >f_backward_cursor.o
-	fsz=$(to16 $(stat -c '%s' f_backward_cursor.o))
-	a_inc_cursor=$(four_digits $(calc16 "${a_backward_cursor}+${fsz}"))
-	echo -e "a_inc_cursor=$a_inc_cursor" >>$map_file
-	f_inc_cursor
-
-	# カーソル位置の値をデクリメント
-	f_inc_cursor >f_inc_cursor.o
-	fsz=$(to16 $(stat -c '%s' f_inc_cursor.o))
-	a_dec_cursor=$(four_digits $(calc16 "${a_inc_cursor}+${fsz}"))
-	echo -e "a_dec_cursor=$a_dec_cursor" >>$map_file
-	f_dec_cursor
-}
-# 変数設定のために空実行
-funcs >/dev/null
-rm -f $map_file
-
-main() {
-	# push
-	lr35902_push_reg regAF
-	lr35902_push_reg regBC
-	lr35902_push_reg regDE
-	lr35902_push_reg regHL
-
-	# 初期化処理
-	(
-		# アプリ用ボタンリリースフラグをクリア
-		lr35902_clear_reg regA
-		lr35902_copy_to_addr_from_regA $var_app_release_btn
-
-		# OBJサイズを8x8へ変更する
-		lr35902_copy_to_regA_from_ioport $GB_IO_LCDC
-		lr35902_res_bitN_of_reg $GB_LCDC_BITNUM_OBJ_SIZE regA
-		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
-
-		# カーネル側でマウスカーソルの更新をしないように専用の変数を設定
-		lr35902_clear_reg regA
-		lr35902_copy_to_addr_from_regA $var_mouse_enable
-
-		# 初期画面描画のエントリをTDQへ積む
-		lr35902_call $a_draw_init_tiles
-
-		# 初期表示として、
-		# var_exe_1(下位),var_exe_2(上位)のデータをダンプする
-		## var_exe_{1,2}をregHLへロード
-		lr35902_copy_to_regA_from_addr $var_exe_1
-		lr35902_copy_to_from regL regA
-		lr35902_copy_to_regA_from_addr $var_exe_2
-		lr35902_copy_to_from regH regA
-
-		## サイズをregBCへロード
-		## 併せて変数へ保存
-		lr35902_copyinc_to_regA_from_ptrHL
-		lr35902_copy_to_from regC regA
-		lr35902_copy_to_addr_from_regA $var_file_size_bh
-		lr35902_copy_to_addr_from_regA $var_remain_bytes_bh
-		lr35902_copyinc_to_regA_from_ptrHL
-		lr35902_copy_to_from regB regA
-		lr35902_copy_to_addr_from_regA $var_file_size_th
-		lr35902_copy_to_addr_from_regA $var_remain_bytes_th
-
-		## この時点のregHLはデータ部分の先頭アドレス
-		## カーソル位置のデータアドレス変数をこのregHLで初期化
-		lr35902_copy_to_from regA regL
-		lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
-		lr35902_copy_to_from regA regH
-		lr35902_copy_to_addr_from_regA $var_csl_dadr_th
-
-		## この時点のregHL(データ先頭アドレス)に
-		## データサイズ - 1 を足して、
-		## データ最終アドレスを得る
-		lr35902_push_reg regHL
-		lr35902_add_to_regHL regBC
-		### -1の2の補数(0xffff)をregHLへ足す
-		lr35902_set_reg regBC ffff
-		lr35902_add_to_regHL regBC
-		## それを変数へ保存
-		lr35902_copy_to_from regA regL
-		lr35902_copy_to_addr_from_regA $var_dadr_last_bh
-		lr35902_copy_to_from regA regH
-		lr35902_copy_to_addr_from_regA $var_dadr_last_th
-		lr35902_pop_reg regHL
-
-		# 1画面分ダンプ
-		lr35902_call $a_dump_addr_and_data
-
-		# 初期化済みフラグをセット
-		lr35902_copy_to_regA_from_addr $var_general_flgs
-		lr35902_set_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
-		lr35902_copy_to_addr_from_regA $var_general_flgs
-
-		# pop & return
-		lr35902_pop_reg regHL
-		lr35902_pop_reg regDE
-		lr35902_pop_reg regBC
-		lr35902_pop_reg regAF
-		lr35902_return
-	) >main.1.o
-
-	# フラグ変数の初期化済みフラグチェック
-	lr35902_copy_to_regA_from_addr $var_general_flgs
-	lr35902_test_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
-
-	# フラグがセットされていたら(初期化済みだったら)、
-	# 初期化処理をスキップ
-	local sz_1=$(stat -c '%s' main.1.o)
-	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
-	cat main.1.o
-
-	# 定常処理
-
-	# 方向キーに応じた処理
+# 方向キーに応じた処理
+# ※ カーソル期待値が設定済みで、OAMの値が期待値でない場合、
+#    何もせずreturnする
+# ※ 使用するレジスタのpush/popをしていない
+f_proc_dir_keys() {
 	## 現在の十字キー入力状態をregBへ取得
 	lr35902_copy_to_regA_from_addr $var_btn_stat
 	lr35902_and_to_regA $GBOS_DIR_KEY_MASK
@@ -1995,6 +1830,192 @@ main() {
 	## 前回の入力状態更新
 	lr35902_copy_to_from regA regB
 	lr35902_copy_to_addr_from_regA $var_prev_dir_input
+
+	# return
+	lr35902_return
+}
+
+funcs() {
+	local fsz
+
+	# 初期配置のタイルをtdqへ積む
+	a_draw_init_tiles=$APP_FUNCS_BASE
+	echo -e "a_draw_init_tiles=$a_draw_init_tiles" >>$map_file
+	f_draw_init_tiles
+
+	# 指定したアドレスから4バイトダンプ
+	f_draw_init_tiles >f_draw_init_tiles.o
+	fsz=$(to16 $(stat -c '%s' f_draw_init_tiles.o))
+	a_dump_addr_and_data_4bytes=$(four_digits $(calc16 "${a_draw_init_tiles}+${fsz}"))
+	echo -e "a_dump_addr_and_data_4bytes=$a_dump_addr_and_data_4bytes" >>$map_file
+	f_dump_addr_and_data_4bytes
+
+	# 指定されたアドレスから1画面分ダンプ
+	f_dump_addr_and_data_4bytes >f_dump_addr_and_data_4bytes.o
+	fsz=$(to16 $(stat -c '%s' f_dump_addr_and_data_4bytes.o))
+	a_dump_addr_and_data=$(four_digits $(calc16 "${a_dump_addr_and_data_4bytes}+${fsz}"))
+	echo -e "a_dump_addr_and_data=$a_dump_addr_and_data" >>$map_file
+	f_dump_addr_and_data
+
+	# (主にobjを)元に戻すエントリをtdqへ積む
+	f_dump_addr_and_data >f_dump_addr_and_data.o
+	fsz=$(to16 $(stat -c '%s' f_dump_addr_and_data.o))
+	a_draw_restore_tiles=$(four_digits $(calc16 "${a_dump_addr_and_data}+${fsz}"))
+	echo -e "a_draw_restore_tiles=$a_draw_restore_tiles" >>$map_file
+	f_draw_restore_tiles
+
+	# カーソルを一つ前へ進める関数
+	# カーソル位置下位側3バイト目の処理
+	f_draw_restore_tiles >f_draw_restore_tiles.o
+	fsz=$(to16 $(stat -c '%s' f_draw_restore_tiles.o))
+	a_forward_cursor_bh_3=$(four_digits $(calc16 "${a_draw_restore_tiles}+${fsz}"))
+	echo -e "a_forward_cursor_bh_3=$a_forward_cursor_bh_3" >>$map_file
+	f_forward_cursor_bh_3
+
+	# カーソルを一つ前へ進める
+	f_forward_cursor_bh_3 >f_forward_cursor_bh_3.o
+	fsz=$(to16 $(stat -c '%s' f_forward_cursor_bh_3.o))
+	a_forward_cursor=$(four_digits $(calc16 "${a_forward_cursor_bh_3}+${fsz}"))
+	echo -e "a_forward_cursor=$a_forward_cursor" >>$map_file
+	f_forward_cursor
+
+	# カーソルを一つ後ろへ進める関数
+	# カーソル位置上位側0バイト目の処理
+	f_forward_cursor >f_forward_cursor.o
+	fsz=$(to16 $(stat -c '%s' f_forward_cursor.o))
+	a_backward_cursor_th_0=$(four_digits $(calc16 "${a_forward_cursor}+${fsz}"))
+	echo -e "a_backward_cursor_th_0=$a_backward_cursor_th_0" >>$map_file
+	f_backward_cursor_th_0
+
+	# カーソルを一つ後ろへ進める
+	f_backward_cursor_th_0 >f_backward_cursor_th_0.o
+	fsz=$(to16 $(stat -c '%s' f_backward_cursor_th_0.o))
+	a_backward_cursor=$(four_digits $(calc16 "${a_backward_cursor_th_0}+${fsz}"))
+	echo -e "a_backward_cursor=$a_backward_cursor" >>$map_file
+	f_backward_cursor
+
+	# カーソル位置の値をインクリメント
+	f_backward_cursor >f_backward_cursor.o
+	fsz=$(to16 $(stat -c '%s' f_backward_cursor.o))
+	a_inc_cursor=$(four_digits $(calc16 "${a_backward_cursor}+${fsz}"))
+	echo -e "a_inc_cursor=$a_inc_cursor" >>$map_file
+	f_inc_cursor
+
+	# カーソル位置の値をデクリメント
+	f_inc_cursor >f_inc_cursor.o
+	fsz=$(to16 $(stat -c '%s' f_inc_cursor.o))
+	a_dec_cursor=$(four_digits $(calc16 "${a_inc_cursor}+${fsz}"))
+	echo -e "a_dec_cursor=$a_dec_cursor" >>$map_file
+	f_dec_cursor
+
+	# 方向キーに応じた処理
+	f_dec_cursor >f_dec_cursor.o
+	fsz=$(to16 $(stat -c '%s' f_dec_cursor.o))
+	a_proc_dir_keys=$(four_digits $(calc16 "${a_dec_cursor}+${fsz}"))
+	echo -e "a_proc_dir_keys=$a_proc_dir_keys" >>$map_file
+	f_proc_dir_keys
+}
+# 変数設定のために空実行
+funcs >/dev/null
+rm -f $map_file
+
+main() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	# 初期化処理
+	(
+		# アプリ用ボタンリリースフラグをクリア
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $var_app_release_btn
+
+		# OBJサイズを8x8へ変更する
+		lr35902_copy_to_regA_from_ioport $GB_IO_LCDC
+		lr35902_res_bitN_of_reg $GB_LCDC_BITNUM_OBJ_SIZE regA
+		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
+
+		# カーネル側でマウスカーソルの更新をしないように専用の変数を設定
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $var_mouse_enable
+
+		# 初期画面描画のエントリをTDQへ積む
+		lr35902_call $a_draw_init_tiles
+
+		# 初期表示として、
+		# var_exe_1(下位),var_exe_2(上位)のデータをダンプする
+		## var_exe_{1,2}をregHLへロード
+		lr35902_copy_to_regA_from_addr $var_exe_1
+		lr35902_copy_to_from regL regA
+		lr35902_copy_to_regA_from_addr $var_exe_2
+		lr35902_copy_to_from regH regA
+
+		## サイズをregBCへロード
+		## 併せて変数へ保存
+		lr35902_copyinc_to_regA_from_ptrHL
+		lr35902_copy_to_from regC regA
+		lr35902_copy_to_addr_from_regA $var_file_size_bh
+		lr35902_copy_to_addr_from_regA $var_remain_bytes_bh
+		lr35902_copyinc_to_regA_from_ptrHL
+		lr35902_copy_to_from regB regA
+		lr35902_copy_to_addr_from_regA $var_file_size_th
+		lr35902_copy_to_addr_from_regA $var_remain_bytes_th
+
+		## この時点のregHLはデータ部分の先頭アドレス
+		## カーソル位置のデータアドレス変数をこのregHLで初期化
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+
+		## この時点のregHL(データ先頭アドレス)に
+		## データサイズ - 1 を足して、
+		## データ最終アドレスを得る
+		lr35902_push_reg regHL
+		lr35902_add_to_regHL regBC
+		### -1の2の補数(0xffff)をregHLへ足す
+		lr35902_set_reg regBC ffff
+		lr35902_add_to_regHL regBC
+		## それを変数へ保存
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_dadr_last_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_dadr_last_th
+		lr35902_pop_reg regHL
+
+		# 1画面分ダンプ
+		lr35902_call $a_dump_addr_and_data
+
+		# 初期化済みフラグをセット
+		lr35902_copy_to_regA_from_addr $var_general_flgs
+		lr35902_set_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
+		lr35902_copy_to_addr_from_regA $var_general_flgs
+
+		# pop & return
+		lr35902_pop_reg regHL
+		lr35902_pop_reg regDE
+		lr35902_pop_reg regBC
+		lr35902_pop_reg regAF
+		lr35902_return
+	) >main.1.o
+
+	# フラグ変数の初期化済みフラグチェック
+	lr35902_copy_to_regA_from_addr $var_general_flgs
+	lr35902_test_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
+
+	# フラグがセットされていたら(初期化済みだったら)、
+	# 初期化処理をスキップ
+	local sz_1=$(stat -c '%s' main.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
+	cat main.1.o
+
+	# 定常処理
+
+	# 方向キーに応じた処理
+	# ※ 使用するレジスタのpush/popは無し
+	lr35902_call $a_proc_dir_keys
 
 	# アプリ用ボタンリリースフラグをregAへ取得
 	lr35902_copy_to_regA_from_addr $var_app_release_btn
