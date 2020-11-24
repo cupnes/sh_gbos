@@ -21,8 +21,9 @@ GBOS_ROM_TILE_DATA_START=$GB_ROM_FREE_BASE
 GBOS_TILE_DATA_START=8000
 GBOS_BG_TILEMAP_START=9800
 GBOS_WINDOW_TILEMAP_START=9c00
-# GBOS_FS_BASE=4000	# 16KB ROM Bank 01
-GBOS_FS_BASE=a000	# 8KB External RAM
+GBOS_FS_BASE_ROM=4000	# 16KB ROM Bank 01
+GBOS_FS_BASE_RAM=a000	# 8KB External RAM
+GBOS_FS_BASE=$GBOS_FS_BASE_RAM
 GBOS_FS_FILE_ATTR_SZ=07
 
 GBOS_APP_MEM_BASE=$GB_WRAM1_BASE
@@ -3012,6 +3013,21 @@ edit_file() {
 	lr35902_pop_reg regDE
 }
 
+# ROM領域を表示
+select_rom() {
+	# push
+	lr35902_push_reg regAF
+
+	# ファイルシステム先頭アドレス変数へROMのアドレスを設定
+	lr35902_set_reg regA $(echo $GBOS_FS_BASE_ROM | cut -c3-4)
+	lr35902_copy_to_addr_from_regA $var_fs_base_bh
+	lr35902_set_reg regA $(echo $GBOS_FS_BASE_ROM | cut -c1-2)
+	lr35902_copy_to_addr_from_regA $var_fs_base_th
+
+	# pop
+	lr35902_pop_reg regAF
+}
+
 # ボタンリリースに応じた処理
 # in : regA - リリースされたボタン(上位4ビット)
 btn_release_handler() {
@@ -3034,6 +3050,15 @@ btn_release_handler() {
 	sz=$(stat -c '%s' src/btn_release_handler.2.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
 	cat src/btn_release_handler.2.o
+
+	# セレクトボタンの確認
+	lr35902_test_bitN_of_reg $GBOS_SELECT_KEY_BITNUM regA
+	(
+		select_rom
+	) >src/btn_release_handler.3.o
+	sz=$(stat -c '%s' src/btn_release_handler.3.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
+	cat src/btn_release_handler.3.o
 }
 
 # タイル描画キュー処理
