@@ -842,8 +842,12 @@ f_view_img() {
 
 	# 次に描画するタイルデータアドレスを設定
 	local file_ofs_1st_ofs=0008
-	local file_ofs_1st_addr=$(calc16 "${GBOS_FS_BASE}+${file_ofs_1st_ofs}")
-	lr35902_set_reg regHL $file_ofs_1st_addr
+	lr35902_copy_to_regA_from_addr $var_fs_base_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_fs_base_th
+	lr35902_copy_to_from regH regA
+	lr35902_set_reg regDE $file_ofs_1st_ofs
+	lr35902_add_to_regHL regDE
 	lr35902_copy_to_from regA regB
 	lr35902_compare_regA_and 00
 	(
@@ -871,7 +875,10 @@ f_view_img() {
 	lr35902_inc regDE
 	lr35902_inc regDE
 	## FSベースアドレスと足してファイルデータ先頭アドレス取得
-	lr35902_set_reg regHL $GBOS_FS_BASE
+	lr35902_copy_to_regA_from_addr $var_fs_base_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_fs_base_th
+	lr35902_copy_to_from regH regA
 	lr35902_add_to_regHL regDE
 	## ファイルデータ領域のアドレスを変数へ設定
 	lr35902_copy_to_from regA regL
@@ -1387,25 +1394,29 @@ f_view_dir_cyc() {
 	set_icon_wx_to_regE_calc_from_regA
 
 	# アイコン番号をAへ設定
+	## DEを使うのでpush
+	lr35902_push_reg regDE
 	## TODO ルートディレクトリ固定なので
 	##      1つ目のファイルのファイルタイプへのオフセットは0x0007固定
 	local file_type_ofs=0007
-	local file_type_addr=$(calc16 "${GBOS_FS_BASE}+${file_type_ofs}")
+	## 1つ目のファイルタイプアドレスをHLへ格納
+	lr35902_copy_to_regA_from_addr $var_fs_base_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_fs_base_th
+	lr35902_copy_to_from regH regA
+	lr35902_set_reg regDE $file_type_ofs
+	lr35902_add_to_regHL regDE
 	## 0番目のファイルであるか否か
 	lr35902_copy_to_from regA regB
 	lr35902_compare_regA_and 00
 	(
 		# 0番目のファイルの場合
-		lr35902_copy_to_regA_from_addr $file_type_addr
+
+		# ファイルタイプをAへ格納
+		lr35902_copy_to_from regA ptrHL
 	) >src/f_view_dir_cyc.1.o
 	(
 		# 1番目以降のファイルの場合
-
-		# DEを使うのでpush
-		lr35902_push_reg regDE
-
-		# 1つ目のファイルタイプアドレスをHLへ格納
-		lr35902_set_reg regHL $file_type_addr
 
 		# 次のファイルタイプアドレスへのオフセットをDEへ格納
 		lr35902_set_reg regDE $(four_digits $GBOS_FS_FILE_ATTR_SZ)
@@ -1425,9 +1436,6 @@ f_view_dir_cyc() {
 		# ファイルタイプをAへ格納
 		lr35902_copy_to_from regA ptrHL
 
-		# DEを元に戻す(pop)
-		lr35902_pop_reg regDE
-
 		# 0番目の場合の処理を飛ばす
 		local sz_1=$(stat -c '%s' src/f_view_dir_cyc.1.o)
 		lr35902_rel_jump $(two_digits_d $sz_1)
@@ -1438,6 +1446,8 @@ f_view_dir_cyc() {
 	cat src/f_view_dir_cyc.2.o
 	## 0番目のファイルの場合
 	cat src/f_view_dir_cyc.1.o
+	## DEを元に戻す(pop)
+	lr35902_pop_reg regDE
 
 	# アイコンを描画
 	lr35902_call $a_lay_icon
@@ -1447,9 +1457,11 @@ f_view_dir_cyc() {
 
 	# ディレクトリのファイル数取得
 	## TODO ルートディレクトリ固定なのでオフセットは0x0000固定
-	local num_files_ofs=0000
-	local num_files_addr=$(calc16 "${GBOS_FS_BASE}+${num_files_ofs}")
-	lr35902_copy_to_regA_from_addr $num_files_addr
+	lr35902_copy_to_regA_from_addr $var_fs_base_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_fs_base_th
+	lr35902_copy_to_from regH regA
+	lr35902_copy_to_from regA ptrHL
 
 	# 終了判定
 	## ファイル数(A) == 次に表示するファイル番目(B) だったら終了
@@ -2717,6 +2729,12 @@ init() {
 	# タイトル・中身空のウィンドウを描画
 	draw_blank_window
 
+	# ファイルシステム先頭アドレス変数をデフォルト値で初期化
+	lr35902_set_reg regA $(echo $GBOS_FS_BASE_DEF | cut -c3-4)
+	lr35902_copy_to_addr_from_regA $var_fs_base_bh
+	lr35902_set_reg regA $(echo $GBOS_FS_BASE_DEF | cut -c1-2)
+	lr35902_copy_to_addr_from_regA $var_fs_base_th
+
 	# 初期アイコンを配置
 	lr35902_call $a_view_dir
 	(
@@ -2770,11 +2788,6 @@ init() {
 	lr35902_copy_to_addr_from_regA $var_tdq_stat
 	# - マウス有効化
 	lr35902_copy_to_addr_from_regA $var_mouse_enable
-	# - ファイルシステム先頭アドレス変数をデフォルト値で初期化
-	lr35902_set_reg regA $(echo $GBOS_FS_BASE_DEF | cut -c3-4)
-	lr35902_copy_to_addr_from_regA $var_fs_base_bh
-	lr35902_set_reg regA $(echo $GBOS_FS_BASE_DEF | cut -c1-2)
-	lr35902_copy_to_addr_from_regA $var_fs_base_th
 
 	# タイルミラー領域の初期化
 	init_tmrr
@@ -2876,8 +2889,13 @@ view_file() {
 
 	# ファイルタイプ取得
 	local file_type_1st_ofs=0007
-	local file_type_1st_addr=$(calc16 "${GBOS_FS_BASE}+${file_type_1st_ofs}")
-	lr35902_set_reg regHL $file_type_1st_addr
+	lr35902_copy_to_regA_from_addr $var_fs_base_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_fs_base_th
+	lr35902_copy_to_from regH regA
+	lr35902_set_reg regDE $file_type_1st_ofs
+	lr35902_add_to_regHL regDE
+	lr35902_copy_to_from regA regB
 	lr35902_compare_regA_and 00
 	(
 		# ファイル番号 != 0 の場合
@@ -2910,7 +2928,10 @@ view_file() {
 	lr35902_copy_to_from regA ptrHL
 	lr35902_copy_to_from regD regA
 	## FSベースアドレスと足してファイルサイズ・データ先頭アドレス取得
-	lr35902_set_reg regHL $GBOS_FS_BASE
+	lr35902_copy_to_regA_from_addr $var_fs_base_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_fs_base_th
+	lr35902_copy_to_from regH regA
 	lr35902_add_to_regHL regDE
 
 	# ファイルタイプをAへ復帰
