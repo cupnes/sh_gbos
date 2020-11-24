@@ -2377,6 +2377,45 @@ f_select_rom() {
 	lr35902_return
 }
 
+# RAM領域を表示
+f_select_rom >src/f_select_rom.o
+fsz=$(to16 $(stat -c '%s' src/f_select_rom.o))
+fadr=$(calc16 "${a_select_rom}+${fsz}")
+a_select_ram=$(four_digits $fadr)
+echo -e "a_select_ram=$a_select_ram" >>$MAP_FILE_NAME
+f_select_ram() {
+	# push
+	lr35902_push_reg regAF
+
+	# ウィンドウステータスをAへ取得
+	lr35902_copy_to_regA_from_addr $var_win_stat
+
+	# ウィンドウステータスが「ディレクトリ表示中」であるか確認
+	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
+	(
+		# 「ディレクトリ表示中」の場合
+
+		# ファイルシステム先頭アドレス変数へRAMのアドレスを設定
+		lr35902_set_reg regA $(echo $GBOS_FS_BASE_RAM | cut -c3-4)
+		lr35902_copy_to_addr_from_regA $var_fs_base_bh
+		lr35902_set_reg regA $(echo $GBOS_FS_BASE_RAM | cut -c1-2)
+		lr35902_copy_to_addr_from_regA $var_fs_base_th
+
+		# clr_win設定
+		lr35902_call $a_clr_win
+
+		# view_dir設定
+		lr35902_call $a_view_dir
+	) >src/select_ram.1.o
+	local sz_1=$(stat -c '%s' src/select_ram.1.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
+	cat src/select_ram.1.o
+
+	# pop & return
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2428,6 +2467,7 @@ global_functions() {
 	f_get_file_addr_and_type
 	f_right_click_event
 	f_select_rom
+	f_select_ram
 }
 
 gbos_vec() {
@@ -3111,6 +3151,15 @@ btn_release_handler() {
 	sz=$(stat -c '%s' src/btn_release_handler.3.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
 	cat src/btn_release_handler.3.o
+
+	# スタートボタンの確認
+	lr35902_test_bitN_of_reg $GBOS_START_KEY_BITNUM regA
+	(
+		lr35902_call $a_select_ram
+	) >src/btn_release_handler.4.o
+	sz=$(stat -c '%s' src/btn_release_handler.4.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
+	cat src/btn_release_handler.4.o
 }
 
 # タイル描画キュー処理

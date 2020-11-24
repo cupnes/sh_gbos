@@ -32,3 +32,4 @@ a_byte_to_tile=150D
 a_get_file_addr_and_type=151F
 a_right_click_event=1541
 a_select_rom=157C
+a_select_ram=1596
