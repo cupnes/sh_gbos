@@ -2242,6 +2242,43 @@ f_get_file_addr_and_type() {
 	lr35902_return
 }
 
+# ファイルを編集
+# in : regA - ファイル番号
+## TODO 関数化
+## TODO regA >= ファイル数 の時、直ちにret
+edit_file() {
+	# DEは呼び出し元で使っているので予め退避
+	lr35902_push_reg regDE
+
+	# HLへファイルシステム先頭アドレスを設定
+	# TODO 引数等でバンク指定できるようにする
+	## 今は予め指定されたバンク固定
+	## 単にカートリッジRAMの先頭アドレスを設定するだけ
+	lr35902_set_reg regHL $GB_CARTRAM_BASE
+
+	# 編集対象ファイルのファイルサイズ・データ先頭アドレス取得
+	lr35902_call $a_get_file_addr_and_type
+
+	# 取得したアドレスを実行ファイル用変数1・2へ設定
+	## リトルエンディアン
+	lr35902_copy_to_from regA regL
+	lr35902_copy_to_addr_from_regA $var_exe_1
+	lr35902_copy_to_from regA regH
+	lr35902_copy_to_addr_from_regA $var_exe_2
+
+	# バイナリエディタのファイルサイズ・データ先頭アドレス取得
+	# TODO ROMのバンク番号を明示的に設定
+	lr35902_set_reg regHL $GB_CARTROM_BANK1_BASE
+	lr35902_set_reg regA $GBOS_SYSBANK_FNO_BEDIT
+	lr35902_call $a_get_file_addr_and_type
+
+	# バイナリエディタ実行
+	lr35902_call $a_run_exe
+
+	# DEを復帰
+	lr35902_pop_reg regDE
+}
+
 # Aボタンリリース(右クリック)時の処理
 # btn_release_handler()から呼ばれる専用の関数
 # src/event_driven.2.oが128バイト以上になってしまったため関数化
@@ -2301,6 +2338,45 @@ f_right_click_event() {
 	lr35902_return
 }
 
+# ROM領域を表示
+f_right_click_event >src/f_right_click_event.o
+fsz=$(to16 $(stat -c '%s' src/f_right_click_event.o))
+fadr=$(calc16 "${a_right_click_event}+${fsz}")
+a_select_rom=$(four_digits $fadr)
+echo -e "a_select_rom=$a_select_rom" >>$MAP_FILE_NAME
+f_select_rom() {
+	# push
+	lr35902_push_reg regAF
+
+	# ウィンドウステータスをAへ取得
+	lr35902_copy_to_regA_from_addr $var_win_stat
+
+	# ウィンドウステータスが「ディレクトリ表示中」であるか確認
+	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
+	(
+		# 「ディレクトリ表示中」の場合
+
+		# ファイルシステム先頭アドレス変数へROMのアドレスを設定
+		lr35902_set_reg regA $(echo $GBOS_FS_BASE_ROM | cut -c3-4)
+		lr35902_copy_to_addr_from_regA $var_fs_base_bh
+		lr35902_set_reg regA $(echo $GBOS_FS_BASE_ROM | cut -c1-2)
+		lr35902_copy_to_addr_from_regA $var_fs_base_th
+
+		# clr_win設定
+		lr35902_call $a_clr_win
+
+		# view_dir設定
+		lr35902_call $a_view_dir
+	) >src/select_rom.1.o
+	local sz_1=$(stat -c '%s' src/select_rom.1.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
+	cat src/select_rom.1.o
+
+	# pop & return
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2351,6 +2427,7 @@ global_functions() {
 	f_byte_to_tile
 	f_get_file_addr_and_type
 	f_right_click_event
+	f_select_rom
 }
 
 gbos_vec() {
@@ -3003,58 +3080,6 @@ click_event() {
 	lr35902_pop_reg regAF
 }
 
-# ファイルを編集
-# in : regA - ファイル番号
-## TODO 関数化
-## TODO regA >= ファイル数 の時、直ちにret
-edit_file() {
-	# DEは呼び出し元で使っているので予め退避
-	lr35902_push_reg regDE
-
-	# HLへファイルシステム先頭アドレスを設定
-	# TODO 引数等でバンク指定できるようにする
-	## 今は予め指定されたバンク固定
-	## 単にカートリッジRAMの先頭アドレスを設定するだけ
-	lr35902_set_reg regHL $GB_CARTRAM_BASE
-
-	# 編集対象ファイルのファイルサイズ・データ先頭アドレス取得
-	lr35902_call $a_get_file_addr_and_type
-
-	# 取得したアドレスを実行ファイル用変数1・2へ設定
-	## リトルエンディアン
-	lr35902_copy_to_from regA regL
-	lr35902_copy_to_addr_from_regA $var_exe_1
-	lr35902_copy_to_from regA regH
-	lr35902_copy_to_addr_from_regA $var_exe_2
-
-	# バイナリエディタのファイルサイズ・データ先頭アドレス取得
-	# TODO ROMのバンク番号を明示的に設定
-	lr35902_set_reg regHL $GB_CARTROM_BANK1_BASE
-	lr35902_set_reg regA $GBOS_SYSBANK_FNO_BEDIT
-	lr35902_call $a_get_file_addr_and_type
-
-	# バイナリエディタ実行
-	lr35902_call $a_run_exe
-
-	# DEを復帰
-	lr35902_pop_reg regDE
-}
-
-# ROM領域を表示
-select_rom() {
-	# push
-	lr35902_push_reg regAF
-
-	# ファイルシステム先頭アドレス変数へROMのアドレスを設定
-	lr35902_set_reg regA $(echo $GBOS_FS_BASE_ROM | cut -c3-4)
-	lr35902_copy_to_addr_from_regA $var_fs_base_bh
-	lr35902_set_reg regA $(echo $GBOS_FS_BASE_ROM | cut -c1-2)
-	lr35902_copy_to_addr_from_regA $var_fs_base_th
-
-	# pop
-	lr35902_pop_reg regAF
-}
-
 # ボタンリリースに応じた処理
 # in : regA - リリースされたボタン(上位4ビット)
 btn_release_handler() {
@@ -3081,7 +3106,7 @@ btn_release_handler() {
 	# セレクトボタンの確認
 	lr35902_test_bitN_of_reg $GBOS_SELECT_KEY_BITNUM regA
 	(
-		select_rom
+		lr35902_call $a_select_rom
 	) >src/btn_release_handler.3.o
 	sz=$(stat -c '%s' src/btn_release_handler.3.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
