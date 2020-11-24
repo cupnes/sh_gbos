@@ -547,6 +547,7 @@ f_dump_addr_and_data_4bytes() {
 # 指定されたアドレスから1画面分ダンプ
 # in : regHL - ダンプするデータ開始アドレス
 # out: var_dumped_bytes_this_page
+#      ※ 1ページ目の時だけ0x00をセットする
 f_dump_addr_and_data() {
 	# push
 	lr35902_push_reg regAF
@@ -602,7 +603,7 @@ f_dump_addr_and_data() {
 	lr35902_test_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
 	(
 		# セットされていなければこの時点でpop & return
-		# ※ 1ページ目に関しては、ダンプしたバイト数は返さない
+		# ※ 初期化時の1ページ目に関しては、ダンプしたバイト数は返さない
 		lr35902_pop_reg regHL
 		lr35902_pop_reg regDE
 		lr35902_pop_reg regBC
@@ -613,18 +614,57 @@ f_dump_addr_and_data() {
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
 	cat f_dump_addr_and_data.2.o
 
-	# regHとregCを使ってダンプしたバイト数を取得
-	# ダンプしたバイト数 = (12 - regC) * 4 - (4 - regH)
-	#                    = (12 - regC) * 4 - 4 + regH
-	lr35902_set_reg regA 0c
-	lr35902_sub_to_regA regC
-	lr35902_shift_left_arithmetic regA
-	lr35902_shift_left_arithmetic regA
-	lr35902_sub_to_regA 04
-	lr35902_add_to_regA regH
+	# 今描画しているのが1ページ目か否かを確認
+	# 1ページ目なら、
+	# $var_remain_bytes_{th,bh} + 1ページのバイト数(0x0030)
+	#   == $var_file_size_{th,bh}
+	lr35902_push_reg regHL
+	lr35902_push_reg regBC
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_remain_bytes_th
+	lr35902_copy_to_from regH regA
+	lr35902_set_reg regBC 0030
+	lr35902_add_to_regHL regBC
+	lr35902_copy_to_regA_from_addr $var_file_size_bh
+	lr35902_xor_to_regA regL
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_file_size_th
+	lr35902_xor_to_regA regH
+	lr35902_or_to_regA regL
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regHL
+	lr35902_or_to_regA regA
+	(
+		# 1ページ目の場合
 
-	# 現在の画面のバイト数を変数へ設定
-	lr35902_copy_to_addr_from_regA $var_dumped_bytes_this_page
+		# 現在の画面のバイト数に0x00を設定
+		lr35902_copy_to_addr_from_regA $var_dumped_bytes_this_page
+	) >f_dump_addr_and_data.6.o
+	(
+		# 1ページ目でない場合
+
+		# regHとregCを使ってダンプしたバイト数を取得
+		# ダンプしたバイト数 = (12 - regC) * 4 - (4 - regH)
+		#                    = (12 - regC) * 4 - 4 + regH
+		lr35902_set_reg regA 0c
+		lr35902_sub_to_regA regC
+		lr35902_shift_left_arithmetic regA
+		lr35902_shift_left_arithmetic regA
+		lr35902_sub_to_regA 04
+		lr35902_add_to_regA regH
+
+		# 現在の画面のバイト数を変数へ設定
+		lr35902_copy_to_addr_from_regA $var_dumped_bytes_this_page
+
+		# 1ページ目の場合の処理を飛ばす
+		local sz_6=$(stat -c '%s' f_dump_addr_and_data.6.o)
+		lr35902_rel_jump $(two_digits_d $sz_6)
+	) >f_dump_addr_and_data.7.o
+	local sz_7=$(stat -c '%s' f_dump_addr_and_data.7.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_7)
+	cat f_dump_addr_and_data.7.o	# 1ページ目でない場合
+	cat f_dump_addr_and_data.6.o	# 1ページ目の場合
 
 	# TODO ダンプしたバイト数が(* 4 12)48ならこの時点でpop&return
 
