@@ -23,6 +23,7 @@ GBOS_BG_TILEMAP_START=9800
 GBOS_WINDOW_TILEMAP_START=9c00
 GBOS_FS_BASE_ROM=4000	# 16KB ROM Bank 01
 GBOS_FS_BASE_RAM=a000	# 8KB External RAM
+GBOS_FS_BASE_DEF=$GBOS_FS_BASE_RAM
 GBOS_FS_BASE=$GBOS_FS_BASE_RAM
 GBOS_FS_FILE_ATTR_SZ=07
 
@@ -2769,6 +2770,11 @@ init() {
 	lr35902_copy_to_addr_from_regA $var_tdq_stat
 	# - マウス有効化
 	lr35902_copy_to_addr_from_regA $var_mouse_enable
+	# - ファイルシステム先頭アドレス変数をデフォルト値で初期化
+	lr35902_set_reg regA $(echo $GBOS_FS_BASE_DEF | cut -c3-4)
+	lr35902_copy_to_addr_from_regA $var_fs_base_bh
+	lr35902_set_reg regA $(echo $GBOS_FS_BASE_DEF | cut -c1-2)
+	lr35902_copy_to_addr_from_regA $var_fs_base_th
 
 	# タイルミラー領域の初期化
 	init_tmrr
