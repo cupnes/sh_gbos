@@ -31,5 +31,5 @@ a_enq_tdq=14BD
 a_byte_to_tile=150D
 a_get_file_addr_and_type=151F
 a_right_click_event=1541
-a_select_rom=1580
-a_select_ram=159A
+a_select_rom=1585
+a_select_ram=159F

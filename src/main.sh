@@ -2247,14 +2247,17 @@ f_get_file_addr_and_type() {
 ## TODO 関数化
 ## TODO regA >= ファイル数 の時、直ちにret
 edit_file() {
-	# DEは呼び出し元で使っているので予め退避
-	lr35902_push_reg regDE
+	# regAをregBへバックアップ
+	lr35902_copy_to_from regB regA
 
 	# HLへファイルシステム先頭アドレスを設定
-	# TODO 引数等でバンク指定できるようにする
-	## 今は予め指定されたバンク固定
-	## 単にカートリッジRAMの先頭アドレスを設定するだけ
-	lr35902_set_reg regHL $GB_CARTRAM_BASE
+	lr35902_copy_to_regA_from_addr $var_fs_base_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_fs_base_th
+	lr35902_copy_to_from regH regA
+
+	# regAをregBから復元
+	lr35902_copy_to_from regA regB
 
 	# 編集対象ファイルのファイルサイズ・データ先頭アドレス取得
 	lr35902_call $a_get_file_addr_and_type
@@ -2274,9 +2277,6 @@ edit_file() {
 
 	# バイナリエディタ実行
 	lr35902_call $a_run_exe
-
-	# DEを復帰
-	lr35902_pop_reg regDE
 }
 
 # Aボタンリリース(右クリック)時の処理
