@@ -2306,7 +2306,14 @@ f_right_click_event() {
 
 		## TODO regA == 80 (クリックした場所がファイルアイコン外)の時
 		##      edit_fileではなく、ファイル新規作成
-		edit_file
+		lr35902_compare_regA_and 80
+		(
+			# regA != 80 (クリックした場所がいずれかのアイコン)
+			edit_file
+		) >src/right_click_event.3.o
+		local sz_3=$(stat -c '%s' src/right_click_event.3.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
+		cat src/right_click_event.3.o
 
 		# pop & return
 		lr35902_pop_reg regAF
