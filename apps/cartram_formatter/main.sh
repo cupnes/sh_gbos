@@ -604,6 +604,30 @@ main() {
 
 	# 定常処理
 
+	# アプリ用ボタンリリースフラグをregAへ取得
+	lr35902_copy_to_regA_from_addr $var_app_release_btn
+
+	# Aボタン(右クリック): 終了
+	lr35902_test_bitN_of_reg $GBOS_A_KEY_BITNUM regA
+	(
+		# Aボタン(右クリック)のリリースがあった場合
+
+		# DAS: run_exeをクリア
+		lr35902_copy_to_regA_from_addr $var_draw_act_stat
+		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
+		lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+		# pop & return
+		lr35902_pop_reg regHL
+		lr35902_pop_reg regDE
+		lr35902_pop_reg regBC
+		lr35902_pop_reg regAF
+		lr35902_return
+	) >main.2.o
+	local sz_2=$(stat -c '%s' main.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat main.2.o
+
 	# pop & return
 	lr35902_pop_reg regHL
 	lr35902_pop_reg regDE
