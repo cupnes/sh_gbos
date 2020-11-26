@@ -89,33 +89,463 @@ f_draw_init_tiles() {
 
 	# 2行目(0x9882-)
 	# 「しよきかしますか?」
+	lr35902_set_reg regDE 9882
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_MA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_QUESTION
+	lr35902_call $a_enq_tdq
 
 	# 4行目(0x98c2-)
 	# 「しよきかすると、」
+	lr35902_set_reg regDE 98c2
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_TOUTEN
+	lr35902_call $a_enq_tdq
 
 	# 5行目(0x98e2-)
 	# 「かーとりつし゛のRAMか゛」
+	lr35902_set_reg regDE 98e2
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DASH
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TSU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DAKUTEN
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_NO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $(get_alpha_tile_num R)
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $(get_alpha_tile_num A)
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $(get_alpha_tile_num M)
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DAKUTEN
+	lr35902_call $a_enq_tdq
 
 	# 6行目(0x9902-)
 	# 「さいしよのし゛ようたいに」
+	lr35902_set_reg regDE 9902
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_I
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_NO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DAKUTEN
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_U
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_I
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_NI
+	lr35902_call $a_enq_tdq
 
 	# 7行目(0x9922-)
 	# 「もと゛ります。」
+	lr35902_set_reg regDE 9922
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_MO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DAKUTEN
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_MA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_KUTEN
+	lr35902_call $a_enq_tdq
 
 	# 8行目(0x9942-)
 	# 「(ふあいるも、さいしよの」
+	lr35902_set_reg regDE 9942
+	lr35902_set_reg regB $GBOS_TILE_NUM_OPEN_BRACKET
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_FU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_A
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_I
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_MO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_TOUTEN
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_I
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_NO
+	lr35902_call $a_enq_tdq
 
 	# 9行目(0x9962-)
 	# 「し゛ようたいにもと゛ります。)」
+	lr35902_set_reg regDE 9962
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DAKUTEN
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_U
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_I
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_NI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_MO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DAKUTEN
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_MA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_KUTEN
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_CLOSE_BRACKET
+	lr35902_call $a_enq_tdq
 
 	# 11行目(0x99a2-)
 	# 「すたーとほ゛たん→しよきかする」
+	lr35902_set_reg regDE 99a2
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DASH
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_HO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DAKUTEN
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_N
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_RIGHT_ARROW
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RU
+	lr35902_call $a_enq_tdq
 
 	# 12行目(0x99c2-)
 	# 「Aほ゛たん→ふあいるいちらんへ」
+	lr35902_set_reg regDE 99c2
+	lr35902_set_reg regB $(get_alpha_tile_num A)
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_HO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DAKUTEN
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_N
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_RIGHT_ARROW
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_FU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_A
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_I
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_I
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_CHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_N
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_HE
+	lr35902_call $a_enq_tdq
 
 	# 13行目(0x99e8-)
 	# 「もと゛る」
+	lr35902_set_reg regDE 99e8
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_MO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DAKUTEN
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RU
+	lr35902_call $a_enq_tdq
 
 	# return
 	lr35902_return
