@@ -21,6 +21,9 @@ APP_FUNCS_BASE=$(calc16 "$APP_VARS_BASE+$APP_VARS_SZ")
 # 汎用フラグ変数
 CF_GFLG_BITNUM_INITED=0	# 初期化済みフラグのビット番号
 
+# RAM0オリジナルデータ用ROMバンク番号
+CF_CARTROM_BANK_NUM=02
+
 map_file=map.sh
 rm -f $map_file
 
@@ -612,6 +615,11 @@ main() {
 	(
 		# Aボタン(右クリック)のリリースがあった場合
 
+		# カートリッジROMのバンクを
+		# ファイルシステムのバンクへ戻す
+		lr35902_set_reg regA $GBOS_CARTROM_BANK_SYS
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROM_BANK_ADDR
+
 		# DAS: run_exeをクリア
 		lr35902_copy_to_regA_from_addr $var_draw_act_stat
 		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
@@ -627,6 +635,20 @@ main() {
 	local sz_2=$(stat -c '%s' main.2.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
 	cat main.2.o
+
+	# スタートボタン: 初期化実施
+	lr35902_test_bitN_of_reg $GBOS_START_KEY_BITNUM regA
+	(
+		# スタートボタンのリリースがあった場合
+
+		# カートリッジROMのバンクを
+		# RAM0オリジナルデータのバンクへ切り替える
+		lr35902_set_reg regA $CF_CARTROM_BANK_NUM
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROM_BANK_ADDR
+	) >main.3.o
+	local sz_3=$(stat -c '%s' main.3.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
+	cat main.3.o
 
 	# pop & return
 	lr35902_pop_reg regHL
