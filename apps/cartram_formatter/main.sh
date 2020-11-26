@@ -19,7 +19,7 @@ APP_VARS_BASE=$(calc16 "$APP_MAIN_BASE+$APP_MAIN_SZ")
 APP_FUNCS_BASE=$(calc16 "$APP_VARS_BASE+$APP_VARS_SZ")
 
 # 汎用フラグ変数
-BE_GFLG_BITNUM_INITED=0	# 初期化済みフラグのビット番号
+CF_GFLG_BITNUM_INITED=0	# 初期化済みフラグのビット番号
 
 map_file=map.sh
 rm -f $map_file
@@ -581,7 +581,7 @@ main() {
 
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $var_general_flgs
-		lr35902_set_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
+		lr35902_set_bitN_of_reg $CF_GFLG_BITNUM_INITED regA
 		lr35902_copy_to_addr_from_regA $var_general_flgs
 
 		# pop & return
@@ -594,7 +594,7 @@ main() {
 
 	# フラグ変数の初期化済みフラグチェック
 	lr35902_copy_to_regA_from_addr $var_general_flgs
-	lr35902_test_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
+	lr35902_test_bitN_of_reg $CF_GFLG_BITNUM_INITED regA
 
 	# フラグがセットされていたら(初期化済みだったら)、
 	# 初期化処理をスキップ
