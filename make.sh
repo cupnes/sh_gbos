@@ -49,7 +49,7 @@ print_rom() {
 	# 0x00 8000 - 0x00 bfff: Bank 002 (16KB)
 	cat fs_ram0_orig.img
 
-	# 0x00 c000 - 0x1f bfff: Bank 003 - 126 (2000KB)
+	# 0x00 c000 - 0x1f bfff: Bank 003 - 126 (1984KB)
 	dd if=/dev/zero bs=K count=1984 2>/dev/null
 
 	# 0x1f c000 - 0x1f ffff: Bank 127 (16KB)
