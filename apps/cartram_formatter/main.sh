@@ -645,6 +645,42 @@ main() {
 		# RAM0オリジナルデータのバンクへ切り替える
 		lr35902_set_reg regA $CF_CARTROM_BANK_NUM
 		lr35902_copy_to_addr_from_regA $GB_MBC_ROM_BANK_ADDR
+
+		# 「しよきかちゆう」のメッセージを出す
+		# 0x99A2-
+		lr35902_set_reg regDE 99A2
+		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+		lr35902_call $a_enq_tdq
+
+		lr35902_inc regE
+		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
+		lr35902_call $a_enq_tdq
+
+		lr35902_inc regE
+		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KI
+		lr35902_call $a_enq_tdq
+
+		lr35902_inc regE
+		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+		lr35902_call $a_enq_tdq
+
+		lr35902_inc regE
+		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_CHI
+		lr35902_call $a_enq_tdq
+
+		lr35902_inc regE
+		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YU
+		lr35902_call $a_enq_tdq
+
+		lr35902_inc regE
+		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_U
+		lr35902_call $a_enq_tdq
+		# TODO 関数化して元の文字を消す
+
+		# TODO 1サイクルで何バイトコピーできるか?
+		#      次のVBlank開始までにどれだけコピーできるか?
+
+		# 0x4000(ROM)〜8KB分を、0xa000(RAM)〜へコピー
 	) >main.3.o
 	local sz_3=$(stat -c '%s' main.3.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
