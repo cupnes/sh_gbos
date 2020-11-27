@@ -11,6 +11,7 @@ SRC_MAIN_SH=true
 . include/tiles.sh
 . include/gbos.sh
 . include/tdq.sh
+. include/fs.sh
 . src/tiles.sh
 
 rm -f $MAP_FILE_NAME
@@ -2300,20 +2301,28 @@ f_right_click_event() {
 	(
 		# 「ディレクトリ表示中」の場合
 
+		# ファイルシステム内のファイル数をregBへ取得
+		get_num_files_in_fs
+		lr35902_copy_to_from regB regA
+
+		# クリックした場所のファイル番号をregAへ取得
 		lr35902_clear_reg regA
 		lr35902_call $a_check_click_icon_area_x
 		lr35902_call $a_check_click_icon_area_y
 
-		## TODO regA == 80 (クリックした場所がファイルアイコン外)の時
-		##      edit_fileではなく、ファイル新規作成
-		lr35902_compare_regA_and 80
+		# regA(ファイル番号) >= regB(ファイル数) ?
+		lr35902_compare_regA_and regB
 		(
-			# regA != 80 (クリックした場所がいずれかのアイコン)
+			# regA(ファイル番号) < regB(ファイル数) の場合
+			# クリックした場所のファイル番号のファイルが存在する
 			edit_file
 		) >src/right_click_event.3.o
 		local sz_3=$(stat -c '%s' src/right_click_event.3.o)
-		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
+		lr35902_rel_jump_with_cond NC $(two_digits_d $sz_3)
 		cat src/right_click_event.3.o
+
+		# TODO 「regA(ファイル番号) >= regB(ファイル数)」の時
+		#      edit_fileではなく、ファイル新規作成
 
 		# pop & return
 		lr35902_pop_reg regAF
