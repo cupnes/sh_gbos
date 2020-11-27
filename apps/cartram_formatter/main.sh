@@ -624,6 +624,59 @@ f_draw_initializing_tiles() {
 	lr35902_return
 }
 
+# 0x4000(ROM)〜8KB分を、0xa000(RAM)〜へコピー
+# ※ この関数内で使うレジスタは事前のpushと事後のpopをしていない
+# ※ regCは書き換えないこと
+f_copy_rom_to_ram() {
+	# push
+	lr35902_push_reg regBC
+
+	# regHLにSRCアドレス(0x4000)をロード
+	lr35902_set_reg regHL $GB_CARTROM_BANK1_BASE
+
+	# regDEにDSTアドレス(0xa000)をロード
+	lr35902_set_reg regDE $GB_CARTRAM_BASE
+
+	# regBCに8192(0x2000)をロード
+	lr35902_set_reg regBC 2000
+
+	(
+		# SRCをインクリメントしながら1バイト読み出す
+		lr35902_copyinc_to_regA_from_ptrHL
+
+		# SRCをスタックへ退避
+		lr35902_push_reg regHL
+
+		# DSTをregHLへ設定
+		lr35902_copy_to_from regL regE
+		lr35902_copy_to_from regH regD
+
+		# DSTをインクリメントしながら1バイト書き込む
+		lr35902_copyinc_to_ptrHL_from_regA
+
+		# DSTをregDEへ退避
+		lr35902_copy_to_from regE regL
+		lr35902_copy_to_from regD regH
+
+		# SRCをスタックから復帰
+		lr35902_pop_reg regHL
+
+		# regBCをデクリメント
+		lr35902_dec regBC
+
+		# regBCが0か確認
+		lr35902_copy_to_from regA regC
+		lr35902_or_to_regA regB
+	) >f_copy_rom_to_ram.1.o
+	cat f_copy_rom_to_ram.1.o
+	local sz_1=$(stat -c '%s' f_copy_rom_to_ram.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+
+	# pop & return
+	lr35902_pop_reg regBC
+	lr35902_return
+}
+
 funcs() {
 	local fsz
 
@@ -638,6 +691,13 @@ funcs() {
 	a_draw_initializing_tiles=$(four_digits $(calc16 "${a_draw_init_tiles}+${fsz}"))
 	echo -e "a_draw_initializing_tiles=$a_draw_initializing_tiles" >>$map_file
 	f_draw_initializing_tiles
+
+	# 0x4000(ROM)〜8KB分を、0xa000(RAM)〜へコピー
+	f_draw_initializing_tiles >f_draw_initializing_tiles.o
+	fsz=$(to16 $(stat -c '%s' f_draw_initializing_tiles.o))
+	a_copy_rom_to_ram=$(four_digits $(calc16 "${a_draw_initializing_tiles}+${fsz}"))
+	echo -e "a_copy_rom_to_ram=$a_copy_rom_to_ram" >>$map_file
+	f_copy_rom_to_ram
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -733,6 +793,7 @@ main() {
 		#      次のVBlank開始までにどれだけコピーできるか?
 
 		# 0x4000(ROM)〜8KB分を、0xa000(RAM)〜へコピー
+		lr35902_call $a_copy_rom_to_ram
 
 		# アプリ用ボタンリリースフラグのスタートボタンをクリア
 		lr35902_copy_to_from regA regC
