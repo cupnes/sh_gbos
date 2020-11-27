@@ -554,6 +554,76 @@ f_draw_init_tiles() {
 	lr35902_return
 }
 
+# 「しよきかちゆう」の文字列を描画し、下部のその他の領域はクリアする
+# ※ この関数内で使うレジスタは事前のpushと事後のpopをしていない
+# ※ regCは書き換えないこと
+f_draw_initializing_tiles() {
+	# 11行目(0x99a2-)
+	# 「しよきかちゆう」
+	lr35902_set_reg regDE 99A2
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_CHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YU
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_U
+	lr35902_call $a_enq_tdq
+
+	# 8個のスペース文字を入れてクリア
+	lr35902_set_reg regA 08
+	lr35902_set_reg regB $GBOS_TILE_NUM_SPC
+	(
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_dec regA
+	) >f_draw_initializing_tiles.1.o
+	cat f_draw_initializing_tiles.1.o
+	local sz_1=$(stat -c '%s' f_draw_initializing_tiles.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+
+	# 12行目(0x99c2-)
+	# 15個のスペース文字を入れてクリア
+	lr35902_set_reg regA 0f
+	lr35902_set_reg regDE 99c2
+	(
+		lr35902_call $a_enq_tdq
+		lr35902_inc regE
+		lr35902_dec regA
+	) >f_draw_initializing_tiles.2.o
+	cat f_draw_initializing_tiles.2.o
+	local sz_2=$(stat -c '%s' f_draw_initializing_tiles.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_2 + 2)))
+
+	# 13行目(0x99e8-)
+	# 4個のスペース文字を入れてクリア
+	lr35902_set_reg regA 04
+	lr35902_set_reg regDE 99e8
+	cat f_draw_initializing_tiles.2.o
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_2 + 2)))
+
+	# return
+	lr35902_return
+}
+
 funcs() {
 	local fsz
 
@@ -561,6 +631,13 @@ funcs() {
 	a_draw_init_tiles=$APP_FUNCS_BASE
 	echo -e "a_draw_init_tiles=$a_draw_init_tiles" >>$map_file
 	f_draw_init_tiles
+
+	# 「しよきかちゆう」の文字列を描画し、下部のその他の領域はクリアする
+	f_draw_init_tiles >f_draw_init_tiles.o
+	fsz=$(to16 $(stat -c '%s' f_draw_init_tiles.o))
+	a_draw_initializing_tiles=$(four_digits $(calc16 "${a_draw_init_tiles}+${fsz}"))
+	echo -e "a_draw_initializing_tiles=$a_draw_initializing_tiles" >>$map_file
+	f_draw_initializing_tiles
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -641,46 +718,26 @@ main() {
 	(
 		# スタートボタンのリリースがあった場合
 
+		# ボタンリリース状態をregCへ取っておく
+		lr35902_copy_to_from regC regA
+
 		# カートリッジROMのバンクを
 		# RAM0オリジナルデータのバンクへ切り替える
 		lr35902_set_reg regA $CF_CARTROM_BANK_NUM
 		lr35902_copy_to_addr_from_regA $GB_MBC_ROM_BANK_ADDR
 
-		# 「しよきかちゆう」のメッセージを出す
-		# 0x99A2-
-		lr35902_set_reg regDE 99A2
-		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
-		lr35902_call $a_enq_tdq
-
-		lr35902_inc regE
-		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
-		lr35902_call $a_enq_tdq
-
-		lr35902_inc regE
-		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KI
-		lr35902_call $a_enq_tdq
-
-		lr35902_inc regE
-		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
-		lr35902_call $a_enq_tdq
-
-		lr35902_inc regE
-		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_CHI
-		lr35902_call $a_enq_tdq
-
-		lr35902_inc regE
-		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YU
-		lr35902_call $a_enq_tdq
-
-		lr35902_inc regE
-		lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_U
-		lr35902_call $a_enq_tdq
-		# TODO 関数化して元の文字を消す
+		# 「しよきかちゆう」の文字列を描画
+		lr35902_call $a_draw_initializing_tiles
 
 		# TODO 1サイクルで何バイトコピーできるか?
 		#      次のVBlank開始までにどれだけコピーできるか?
 
 		# 0x4000(ROM)〜8KB分を、0xa000(RAM)〜へコピー
+
+		# アプリ用ボタンリリースフラグのスタートボタンをクリア
+		lr35902_copy_to_from regA regC
+		lr35902_res_bitN_of_reg $GBOS_START_KEY_BITNUM regA
+		lr35902_copy_to_addr_from_regA $var_app_release_btn
 	) >main.3.o
 	local sz_3=$(stat -c '%s' main.3.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
