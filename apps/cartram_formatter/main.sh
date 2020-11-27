@@ -677,6 +677,68 @@ f_copy_rom_to_ram() {
 	lr35902_return
 }
 
+# 「しよきかかんりよう!」の文字列を描画
+# ※ この関数内で使うレジスタは事前のpushと事後のpopをしていない
+# ※ regCは書き換えないこと
+f_draw_initialized_tiles() {
+	# 11行目(0x99a2-)
+	# 「しよきかかんりよう」
+	lr35902_set_reg regDE 99A2
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SHI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_N
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RI
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_YO
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_U
+	lr35902_call $a_enq_tdq
+
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_EXCLAMATION
+	lr35902_call $a_enq_tdq
+
+	# 5個のスペース文字を入れてクリア
+	lr35902_set_reg regA 05
+	lr35902_set_reg regB $GBOS_TILE_NUM_SPC
+	(
+		lr35902_inc regE
+		lr35902_call $a_enq_tdq
+		lr35902_dec regA
+	) >f_draw_initialized_tiles.1.o
+	cat f_draw_initialized_tiles.1.o
+	local sz_1=$(stat -c '%s' f_draw_initialized_tiles.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+
+	# return
+	lr35902_return
+}
+
 funcs() {
 	local fsz
 
@@ -698,6 +760,13 @@ funcs() {
 	a_copy_rom_to_ram=$(four_digits $(calc16 "${a_draw_initializing_tiles}+${fsz}"))
 	echo -e "a_copy_rom_to_ram=$a_copy_rom_to_ram" >>$map_file
 	f_copy_rom_to_ram
+
+	# 「しよきかかんりよう!」の文字列を描画
+	f_copy_rom_to_ram >f_copy_rom_to_ram.o
+	fsz=$(to16 $(stat -c '%s' f_copy_rom_to_ram.o))
+	a_draw_initialized_tiles=$(four_digits $(calc16 "${a_copy_rom_to_ram}+${fsz}"))
+	echo -e "a_draw_initialized_tiles=$a_draw_initialized_tiles" >>$map_file
+	f_draw_initialized_tiles
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -752,11 +821,6 @@ main() {
 	(
 		# Aボタン(右クリック)のリリースがあった場合
 
-		# カートリッジROMのバンクを
-		# ファイルシステムのバンクへ戻す
-		lr35902_set_reg regA $GBOS_CARTROM_BANK_SYS
-		lr35902_copy_to_addr_from_regA $GB_MBC_ROM_BANK_ADDR
-
 		# DAS: run_exeをクリア
 		lr35902_copy_to_regA_from_addr $var_draw_act_stat
 		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
@@ -786,14 +850,16 @@ main() {
 		lr35902_set_reg regA $CF_CARTROM_BANK_NUM
 		lr35902_copy_to_addr_from_regA $GB_MBC_ROM_BANK_ADDR
 
-		# 「しよきかちゆう」の文字列を描画
-		lr35902_call $a_draw_initializing_tiles
-
-		# TODO 1サイクルで何バイトコピーできるか?
-		#      次のVBlank開始までにどれだけコピーできるか?
-
 		# 0x4000(ROM)〜8KB分を、0xa000(RAM)〜へコピー
 		lr35902_call $a_copy_rom_to_ram
+
+		# カートリッジROMのバンクを
+		# ファイルシステムのバンクへ戻す
+		lr35902_set_reg regA $GBOS_CARTROM_BANK_SYS
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROM_BANK_ADDR
+
+		# 「しよきかかんりよう!」の文字列を描画
+		lr35902_call $a_draw_initialized_tiles
 
 		# アプリ用ボタンリリースフラグのスタートボタンをクリア
 		lr35902_copy_to_from regA regC
