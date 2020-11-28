@@ -8,7 +8,7 @@ SRC_TILES_SH=true
 GBOS_GFUNC_START=1000
 
 GBOS_TILEDATA_AREA_BYTES=$(calc16 "${GBOS_GFUNC_START}-150")
-GBOS_NUM_ALL_TILES=86
+GBOS_NUM_ALL_TILES=87
 GBOS_NUM_ALL_TILE_BYTES=$(four_digits $(calc16 "${GBOS_NUM_ALL_TILES}*10"))
 
 tiles_bc_form="ibase=16;${GBOS_TILEDATA_AREA_BYTES}-${GBOS_NUM_ALL_TILE_BYTES}"
@@ -464,4 +464,8 @@ char_tiles() {
 	# 85: ←
 	echo -en '\x00\x00\x08\x08\x10\x10\x20\x20'
 	echo -en '\x7f\x7f\x20\x20\x10\x10\x08\x08'
+
+	# 86: [ ] (binedit用カーソル)
+	echo -en '\xc3\xc3\x81\x81\x81\x81\x81\x81'
+	echo -en '\x81\x81\x81\x81\x81\x81\xc3\xc3'
 }
