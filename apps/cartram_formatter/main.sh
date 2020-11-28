@@ -788,6 +788,10 @@ main() {
 		# 初期画面描画のエントリをTDQへ積む
 		lr35902_call $a_draw_init_tiles
 
+		# カートリッジRAM enable
+		lr35902_set_reg regA $GB_MBC_RAM_EN_VAL
+		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
+
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $var_general_flgs
 		lr35902_set_bitN_of_reg $CF_GFLG_BITNUM_INITED regA
@@ -820,6 +824,10 @@ main() {
 	lr35902_test_bitN_of_reg $GBOS_A_KEY_BITNUM regA
 	(
 		# Aボタン(右クリック)のリリースがあった場合
+
+		# カートリッジRAM disable
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
 
 		# DAS: run_exeをクリア
 		lr35902_copy_to_regA_from_addr $var_draw_act_stat
