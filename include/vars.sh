@@ -39,6 +39,10 @@ var_tdq_tail_th=c01a	# tdq.tail[15:8]
 var_tdq_stat=c01b	# tdq.stat
 var_app_release_btn=c01c	# アプリ用ボタンリリースフラグ
 var_hidden_com_stat=c01d	# 隠しコマンドステート
+# 実行ファイル用変数は使い終わったらゼロクリアすること
+# bineditはこの変数が0か否かで、
+# ファイル右クリックで呼び出されたか
+# bineditを直接起動したかを判定している
 var_exe_1=c01e	# 実行ファイル用変数1
 var_exe_2=c01f	# 実行ファイル用変数2
 var_mouse_enable=c020	# マウスの有効(=0x01)/無効(=0x00)

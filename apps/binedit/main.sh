@@ -1977,6 +1977,127 @@ f_proc_dir_keys() {
 	lr35902_return
 }
 
+# 初期化処理
+# ※ 使用するレジスタのpush/popをしていない
+f_proc_init() {
+	# アプリ用ボタンリリースフラグをクリア
+	lr35902_clear_reg regA
+	lr35902_copy_to_addr_from_regA $var_app_release_btn
+
+	# OBJサイズを8x8へ変更する
+	lr35902_copy_to_regA_from_ioport $GB_IO_LCDC
+	lr35902_res_bitN_of_reg $GB_LCDC_BITNUM_OBJ_SIZE regA
+	lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
+
+	# カーネル側でマウスカーソルの更新をしないように専用の変数を設定
+	lr35902_clear_reg regA
+	lr35902_copy_to_addr_from_regA $var_mouse_enable
+
+	# 画面更新中フラグをセット
+	lr35902_set_reg regA 01
+	lr35902_copy_to_addr_from_regA $var_drawing_flag
+
+	# 初期画面描画のエントリをTDQへ積む
+	lr35902_call $a_draw_init_tiles
+
+	# 初期表示として、
+	# var_exe_1(下位),var_exe_2(上位)のデータをダンプする
+	## var_exe_{1,2}をregHLへロード
+	lr35902_copy_to_regA_from_addr $var_exe_1
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_exe_2
+	lr35902_copy_to_from regH regA
+
+	# ファイル右クリックで呼び出されたか直接起動されたかを判定
+	# (var_exe_2(上位)が0x00か否かで判定)
+	lr35902_or_to_regA regA
+	(
+		# var_exe_2 == 0x00
+		# (直接起動された)
+
+		# サイズを0xffffでregBCへ設定
+		# 併せて変数へ保存
+		lr35902_set_reg regBC ffff
+		lr35902_set_reg regA ff
+		lr35902_copy_to_addr_from_regA $var_file_size_bh
+		lr35902_copy_to_addr_from_regA $var_file_size_th
+		lr35902_copy_to_addr_from_regA $var_remain_bytes_bh
+		lr35902_copy_to_addr_from_regA $var_remain_bytes_th
+
+		# データ最終アドレスにも0xffffを設定
+		lr35902_copy_to_addr_from_regA $var_dadr_last_bh
+		lr35902_copy_to_addr_from_regA $var_dadr_last_th
+
+		# この時点のregHLを
+		# カーソル位置のデータアドレス変数に設定
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+	) >f_proc_init.1.o
+	(
+		# var_exe_2 != 0x00
+		# (右クリックで呼び出された)
+
+		# サイズをregBCへロード
+		# 併せて変数へ保存
+		lr35902_copyinc_to_regA_from_ptrHL
+		lr35902_copy_to_from regC regA
+		lr35902_copy_to_addr_from_regA $var_file_size_bh
+		lr35902_copy_to_addr_from_regA $var_remain_bytes_bh
+		lr35902_copyinc_to_regA_from_ptrHL
+		lr35902_copy_to_from regB regA
+		lr35902_copy_to_addr_from_regA $var_file_size_th
+		lr35902_copy_to_addr_from_regA $var_remain_bytes_th
+
+		# この時点のregHLはデータ部分の先頭アドレス
+		# カーソル位置のデータアドレス変数をこのregHLで初期化
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_csl_dadr_th
+
+		# この時点のregHL(データ先頭アドレス)に
+		# データサイズ - 1 を足して、
+		# データ最終アドレスを得る
+		lr35902_push_reg regHL
+		lr35902_add_to_regHL regBC
+		## -1の2の補数(0xffff)をregHLへ足す
+		lr35902_set_reg regBC ffff
+		lr35902_add_to_regHL regBC
+		# それを変数へ保存
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_dadr_last_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_dadr_last_th
+		lr35902_pop_reg regHL
+
+		# var_exe_2 == 0x00 の処理を飛ばす
+		local sz_1=$(stat -c '%s' f_proc_init.1.o)
+		lr35902_rel_jump $(two_digits_d $sz_1)
+	) >f_proc_init.2.o
+	local sz_2=$(stat -c '%s' f_proc_init.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat f_proc_init.2.o	# var_exe_2 != 0x00
+	cat f_proc_init.1.o	# var_exe_2 == 0x00
+
+	# 1画面分ダンプ
+	lr35902_call $a_dump_addr_and_data
+
+	# 画面更新中フラグをリセットするエントリをtdqへ積む
+	lr35902_clear_reg regB
+	lr35902_set_reg regDE $var_drawing_flag
+	lr35902_call $a_enq_tdq
+
+	# 初期化済みフラグをセット
+	lr35902_copy_to_regA_from_addr $var_general_flgs
+	lr35902_set_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
+	lr35902_copy_to_addr_from_regA $var_general_flgs
+
+	# return
+	lr35902_return
+}
+
 funcs() {
 	local fsz
 
@@ -2056,6 +2177,13 @@ funcs() {
 	a_proc_dir_keys=$(four_digits $(calc16 "${a_dec_cursor}+${fsz}"))
 	echo -e "a_proc_dir_keys=$a_proc_dir_keys" >>$map_file
 	f_proc_dir_keys
+
+	# 初期化処理
+	f_proc_dir_keys >f_proc_dir_keys.o
+	fsz=$(to16 $(stat -c '%s' f_proc_dir_keys.o))
+	a_proc_init=$(four_digits $(calc16 "${a_proc_dir_keys}+${fsz}"))
+	echo -e "a_proc_init=$a_proc_init" >>$map_file
+	f_proc_init
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -2070,79 +2198,8 @@ main() {
 
 	# 初期化処理
 	(
-		# アプリ用ボタンリリースフラグをクリア
-		lr35902_clear_reg regA
-		lr35902_copy_to_addr_from_regA $var_app_release_btn
-
-		# OBJサイズを8x8へ変更する
-		lr35902_copy_to_regA_from_ioport $GB_IO_LCDC
-		lr35902_res_bitN_of_reg $GB_LCDC_BITNUM_OBJ_SIZE regA
-		lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
-
-		# カーネル側でマウスカーソルの更新をしないように専用の変数を設定
-		lr35902_clear_reg regA
-		lr35902_copy_to_addr_from_regA $var_mouse_enable
-
-		# 画面更新中フラグをセット
-		lr35902_set_reg regA 01
-		lr35902_copy_to_addr_from_regA $var_drawing_flag
-
-		# 初期画面描画のエントリをTDQへ積む
-		lr35902_call $a_draw_init_tiles
-
-		# 初期表示として、
-		# var_exe_1(下位),var_exe_2(上位)のデータをダンプする
-		## var_exe_{1,2}をregHLへロード
-		lr35902_copy_to_regA_from_addr $var_exe_1
-		lr35902_copy_to_from regL regA
-		lr35902_copy_to_regA_from_addr $var_exe_2
-		lr35902_copy_to_from regH regA
-
-		## サイズをregBCへロード
-		## 併せて変数へ保存
-		lr35902_copyinc_to_regA_from_ptrHL
-		lr35902_copy_to_from regC regA
-		lr35902_copy_to_addr_from_regA $var_file_size_bh
-		lr35902_copy_to_addr_from_regA $var_remain_bytes_bh
-		lr35902_copyinc_to_regA_from_ptrHL
-		lr35902_copy_to_from regB regA
-		lr35902_copy_to_addr_from_regA $var_file_size_th
-		lr35902_copy_to_addr_from_regA $var_remain_bytes_th
-
-		## この時点のregHLはデータ部分の先頭アドレス
-		## カーソル位置のデータアドレス変数をこのregHLで初期化
-		lr35902_copy_to_from regA regL
-		lr35902_copy_to_addr_from_regA $var_csl_dadr_bh
-		lr35902_copy_to_from regA regH
-		lr35902_copy_to_addr_from_regA $var_csl_dadr_th
-
-		## この時点のregHL(データ先頭アドレス)に
-		## データサイズ - 1 を足して、
-		## データ最終アドレスを得る
-		lr35902_push_reg regHL
-		lr35902_add_to_regHL regBC
-		### -1の2の補数(0xffff)をregHLへ足す
-		lr35902_set_reg regBC ffff
-		lr35902_add_to_regHL regBC
-		## それを変数へ保存
-		lr35902_copy_to_from regA regL
-		lr35902_copy_to_addr_from_regA $var_dadr_last_bh
-		lr35902_copy_to_from regA regH
-		lr35902_copy_to_addr_from_regA $var_dadr_last_th
-		lr35902_pop_reg regHL
-
-		# 1画面分ダンプ
-		lr35902_call $a_dump_addr_and_data
-
-		# 画面更新中フラグをリセットするエントリをtdqへ積む
-		lr35902_clear_reg regB
-		lr35902_set_reg regDE $var_drawing_flag
-		lr35902_call $a_enq_tdq
-
-		# 初期化済みフラグをセット
-		lr35902_copy_to_regA_from_addr $var_general_flgs
-		lr35902_set_bitN_of_reg $BE_GFLG_BITNUM_INITED regA
-		lr35902_copy_to_addr_from_regA $var_general_flgs
+		# 初期化処理を呼び出す
+		lr35902_call $a_proc_init
 
 		# pop & return
 		lr35902_pop_reg regHL
@@ -2187,6 +2244,11 @@ main() {
 		# カーネル側でマウスカーソルの更新を再開するように専用の変数を設定
 		lr35902_set_reg regA 01
 		lr35902_copy_to_addr_from_regA $var_mouse_enable
+
+		# 実行ファイル用変数をゼロクリア
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $var_exe_1
+		lr35902_copy_to_addr_from_regA $var_exe_2
 
 		# DAS: run_exeをクリア
 		lr35902_copy_to_regA_from_addr $var_draw_act_stat

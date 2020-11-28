@@ -2906,6 +2906,9 @@ init() {
 	lr35902_copy_to_addr_from_regA $var_draw_act_stat
 	# - アプリ用ボタンリリースフラグをゼロクリア
 	lr35902_copy_to_addr_from_regA $var_app_release_btn
+	# - 実行ファイル用変数をゼロクリア
+	lr35902_copy_to_addr_from_regA $var_exe_1
+	lr35902_copy_to_addr_from_regA $var_exe_2
 	# - ウィンドウステータスをディレクトリ表示中で初期化
 	lr35902_set_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
 	lr35902_copy_to_addr_from_regA $var_win_stat
