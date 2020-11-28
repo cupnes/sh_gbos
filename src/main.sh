@@ -1237,15 +1237,30 @@ echo -e "a_view_dir=$a_view_dir" >>$MAP_FILE_NAME
 f_view_dir() {
 	# push
 	lr35902_push_reg regAF
+	lr35902_push_reg regHL
 
-	# 0番目のファイルから表示する
-	lr35902_clear_reg regA
-	lr35902_copy_to_addr_from_regA $var_view_dir_file_th
+	# ファイルシステム上のファイル数が0でないか確認
+	lr35902_copy_to_regA_from_addr $var_fs_base_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_fs_base_th
+	lr35902_copy_to_from regH regA
+	lr35902_copy_to_from regA ptrHL
+	lr35902_or_to_regA regA
+	(
+		# ファイル数 != 0
 
-	# DASへディレクトリ表示のビットをセット
-	lr35902_copy_to_regA_from_addr $var_draw_act_stat
-	lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_VIEW_DIR regA
-	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+		# 0番目のファイルから表示する
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $var_view_dir_file_th
+
+		# DASへディレクトリ表示のビットをセット
+		lr35902_copy_to_regA_from_addr $var_draw_act_stat
+		lr35902_set_bitN_of_reg $GBOS_DA_BITNUM_VIEW_DIR regA
+		lr35902_copy_to_addr_from_regA $var_draw_act_stat
+	) >src/f_view_dir.1.o
+	local sz_1=$(stat -c '%s' src/f_view_dir.1.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
+	cat src/f_view_dir.1.o
 
 	# ウィンドウステータスにディレクトリ表示中のビットをセット
 	lr35902_copy_to_regA_from_addr $var_win_stat
@@ -1257,6 +1272,7 @@ f_view_dir() {
 	lr35902_copy_to_addr_from_regA $var_hidden_com_stat
 
 	# pop & return
+	lr35902_pop_reg regHL
 	lr35902_pop_reg regAF
 	lr35902_return
 }
