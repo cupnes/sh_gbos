@@ -2372,6 +2372,10 @@ f_select_rom() {
 	(
 		# 「ディレクトリ表示中」の場合
 
+		# カートリッジRAM disable
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
+
 		# ファイルシステム先頭アドレス変数へROMのアドレスを設定
 		lr35902_set_reg regA $(echo $GBOS_FS_BASE_ROM | cut -c3-4)
 		lr35902_copy_to_addr_from_regA $var_fs_base_bh
@@ -2410,6 +2414,10 @@ f_select_ram() {
 	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
 	(
 		# 「ディレクトリ表示中」の場合
+
+		# カートリッジRAM enable
+		lr35902_set_reg regA $GB_MBC_RAM_EN_VAL
+		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
 
 		# ファイルシステム先頭アドレス変数へRAMのアドレスを設定
 		lr35902_set_reg regA $(echo $GBOS_FS_BASE_RAM | cut -c3-4)
