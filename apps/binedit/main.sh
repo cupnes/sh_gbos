@@ -42,6 +42,9 @@ BE_KEY_PRESS_TH=05
 # カーソル移動補助変数
 BE_CSL_ATTR_BITNUM_IS_UPPER=2
 
+# カーソルに使うタイルのタイル番号
+BE_TILE_NUM_CSL=$GBOS_TILE_NUM_LOWER_BAR
+
 map_file=map.sh
 rm -f $map_file
 
@@ -183,7 +186,7 @@ f_draw_init_tiles() {
 	lr35902_call $a_enq_tdq
 	### タイル番号
 	lr35902_inc regE
-	lr35902_set_reg regB 06
+	lr35902_set_reg regB $BE_TILE_NUM_CSL
 	lr35902_call $a_enq_tdq
 	### 属性
 	lr35902_inc regE
