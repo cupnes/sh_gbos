@@ -1839,9 +1839,6 @@ f_proc_dir_keys() {
 	cat f_proc_dir_keys.4.o
 	cat f_proc_dir_keys.3.o
 
-	# 現在のカウンタ値をregCへ保存
-	lr35902_copy_to_from regC regA
-
 	# カウンタ値のしきい値チェック(押下判定)
 	lr35902_compare_regA_and $BE_KEY_PRESS_TH
 	(
@@ -1892,6 +1889,32 @@ f_proc_dir_keys() {
 		local sz_6=$(stat -c '%s' f_proc_dir_keys.6.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
 		cat f_proc_dir_keys.6.o
+
+		# 現在のファイルシステムはRAM上か?
+		## ※ ここでreturnしない(RAM上である)としても、
+		##    regAは結局ゼロクリアされるだけなので、
+		##    regAはここで破壊して構わない
+		## ファイルシステム先頭アドレスの上位8ビットを取得
+		lr35902_copy_to_regA_from_addr $var_fs_base_th
+		## カートリッジRAMアドレス上位8ビットと等しいか?
+		lr35902_compare_regA_and $(echo $GB_CARTRAM_BASE | cut -c1-2)
+		(
+			# 等しくない場合
+
+			# カウンタ値をゼロクリア
+			lr35902_clear_reg regA
+			lr35902_copy_to_addr_from_regA $var_press_counter
+
+			# 前回の入力状態更新
+			lr35902_copy_to_from regA regB
+			lr35902_copy_to_addr_from_regA $var_prev_dir_input
+
+			# return
+			lr35902_return
+		) >f_proc_dir_keys.11.o
+		local sz_11=$(stat -c '%s' f_proc_dir_keys.11.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_11)
+		cat f_proc_dir_keys.11.o
 
 		# ↑か?
 		lr35902_test_bitN_of_reg $GBOS_JOYP_BITNUM_UP regB
@@ -1944,7 +1967,6 @@ f_proc_dir_keys() {
 	cat f_proc_dir_keys.9.o
 
 	# カウンタ値更新
-	lr35902_copy_to_from regA regC
 	lr35902_copy_to_addr_from_regA $var_press_counter
 
 	# 前回の入力状態更新
