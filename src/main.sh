@@ -1802,6 +1802,10 @@ f_run_exe() {
 	lr35902_set_reg regA $GBOS_WST_NUM_EXE
 	lr35902_copy_to_addr_from_regA $var_win_stat
 
+	# アプリ用ボタンリリースフラグをクリア
+	lr35902_clear_reg regA
+	lr35902_copy_to_addr_from_regA $var_app_release_btn
+
 	# pop & return
 	lr35902_pop_reg regHL
 	lr35902_pop_reg regDE
