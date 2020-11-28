@@ -33,3 +33,4 @@ a_get_file_addr_and_type=1523
 a_right_click_event=1545
 a_select_rom=1592
 a_select_ram=15B0
+a_exit_exe=15CF

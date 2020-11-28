@@ -2444,6 +2444,26 @@ f_select_ram() {
 	lr35902_return
 }
 
+# run_exe_cycを終了させる
+f_select_ram >src/f_select_ram.o
+fsz=$(to16 $(stat -c '%s' src/f_select_ram.o))
+fadr=$(calc16 "${a_select_ram}+${fsz}")
+a_exit_exe=$(four_digits $fadr)
+echo -e "a_exit_exe=$a_exit_exe" >>$MAP_FILE_NAME
+f_exit_exe() {
+	# push
+	lr35902_push_reg regAF
+
+	# DAS: run_exeをクリア
+	lr35902_copy_to_regA_from_addr $var_draw_act_stat
+	lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
+	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+	# pop & return
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2496,6 +2516,7 @@ global_functions() {
 	f_right_click_event
 	f_select_rom
 	f_select_ram
+	f_exit_exe
 }
 
 gbos_vec() {
