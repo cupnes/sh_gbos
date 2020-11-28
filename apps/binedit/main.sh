@@ -1903,6 +1903,7 @@ f_proc_dir_keys() {
 		lr35902_compare_regA_and $(echo $GB_CARTRAM_BASE | cut -c1-2)
 		(
 			# 等しくない場合
+			# (現在のファイルシステムはROM上)
 
 			# カウンタ値をゼロクリア
 			lr35902_clear_reg regA
@@ -2017,6 +2018,10 @@ f_proc_init() {
 	(
 		# var_exe_2 == 0x00
 		# (直接起動された)
+
+		# カートリッジRAM enable
+		lr35902_set_reg regA $GB_MBC_RAM_EN_VAL
+		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
 
 		# サイズを0xffffでregBCへ設定
 		# 併せて変数へ保存
@@ -2252,29 +2257,40 @@ main() {
 		lr35902_set_reg regA 01
 		lr35902_copy_to_addr_from_regA $var_mouse_enable
 
-		# 実行ファイル用変数をゼロクリア
-		lr35902_clear_reg regA
-		lr35902_copy_to_addr_from_regA $var_exe_1
-		lr35902_copy_to_addr_from_regA $var_exe_2
-
 		# DAS: run_exeをクリア
 		lr35902_copy_to_regA_from_addr $var_draw_act_stat
 		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
 		lr35902_copy_to_addr_from_regA $var_draw_act_stat
 
-		# 安全のため(?)にnopを10個くらい入れておく
-		for i in $(seq 10); do
-			lr35902_nop
-		done
+		# 実行ファイル用変数をゼロクリア
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $var_exe_1
+		lr35902_copy_to_addr_from_regA $var_exe_2
 
-		# カートリッジRAM enable
-		lr35902_set_reg regA $GB_MBC_RAM_EN_VAL
-		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
+		# 現在のファイルシステムはRAM上か?
+		lr35902_copy_to_regA_from_addr $var_fs_base_th
+		## カートリッジRAMアドレス上位8ビットと等しいか?
+		lr35902_compare_regA_and $(echo $GB_CARTRAM_BASE | cut -c1-2)
+		(
+			# 等しい(現在RAM上)
 
-		# 安全のため(?)にnopを10個くらい入れておく
-		for i in $(seq 10); do
-			lr35902_nop
-		done
+			# 安全のため(?)にnopを10個くらい入れておく
+			for i in $(seq 10); do
+				lr35902_nop
+			done
+
+			# カートリッジRAM enable
+			lr35902_set_reg regA $GB_MBC_RAM_EN_VAL
+			lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
+
+			# 安全のため(?)にnopを10個くらい入れておく
+			for i in $(seq 10); do
+				lr35902_nop
+			done
+		) >main.2.o
+		local sz_2=$(stat -c '%s' main.2.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
+		cat main.2.o
 
 		# pop & return
 		lr35902_pop_reg regHL
