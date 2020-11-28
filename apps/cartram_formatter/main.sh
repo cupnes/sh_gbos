@@ -829,10 +829,8 @@ main() {
 		lr35902_clear_reg regA
 		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
 
-		# DAS: run_exeをクリア
-		lr35902_copy_to_regA_from_addr $var_draw_act_stat
-		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
-		lr35902_copy_to_addr_from_regA $var_draw_act_stat
+		# run_exe_cycを終了させる
+		lr35902_call $a_exit_exe
 
 		# pop & return
 		lr35902_pop_reg regHL
