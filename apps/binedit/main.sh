@@ -2233,6 +2233,10 @@ main() {
 	(
 		# Aボタン(右クリック)のリリースがあった場合
 
+		# カートリッジRAM disable
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
+
 		# マウスカーソル表示・その他使用したOBJを非表示 のOAM変更をtdqへ積む
 		lr35902_call $a_draw_restore_tiles
 
@@ -2254,6 +2258,20 @@ main() {
 		lr35902_copy_to_regA_from_addr $var_draw_act_stat
 		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
 		lr35902_copy_to_addr_from_regA $var_draw_act_stat
+
+		# 安全のため(?)にnopを10個くらい入れておく
+		for i in $(seq 10); do
+			lr35902_nop
+		done
+
+		# カートリッジRAM enable
+		lr35902_set_reg regA $GB_MBC_RAM_EN_VAL
+		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
+
+		# 安全のため(?)にnopを10個くらい入れておく
+		for i in $(seq 10); do
+			lr35902_nop
+		done
 
 		# pop & return
 		lr35902_pop_reg regHL
