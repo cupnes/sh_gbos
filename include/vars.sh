@@ -48,6 +48,8 @@ var_exe_2=c01f	# 実行ファイル用変数2
 var_mouse_enable=c020	# マウスの有効(=0x01)/無効(=0x00)
 var_fs_base_bh=c021	# ファイルシステム先頭アドレス(下位8ビット)
 var_fs_base_th=c022	# ファイルシステム先頭アドレス(上位8ビット)
+var_con_tadr_bh=c023	# コンソールで次に描画するタイルアドレス(下位8ビット)
+var_con_tadr_th=c024	# コンソールで次に描画するタイルアドレス(下位8ビット)
 
 # 変数領域が$GBOS_TDQ_FIRSTに達しないようにすること
 # (include/tdq.sh参照)

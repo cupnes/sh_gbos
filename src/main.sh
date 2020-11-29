@@ -12,6 +12,7 @@ SRC_MAIN_SH=true
 . include/gbos.sh
 . include/tdq.sh
 . include/fs.sh
+. include/con.sh
 . src/tiles.sh
 
 rm -f $MAP_FILE_NAME
@@ -2486,6 +2487,20 @@ f_exit_exe() {
 	lr35902_return
 }
 
+# コンソールを初期化する
+f_exit_exe >src/f_exit_exe.o
+fsz=$(to16 $(stat -c '%s' src/f_exit_exe.o))
+fadr=$(calc16 "${a_exit_exe}+${fsz}")
+a_init_con=$(four_digits $fadr)
+echo -e "a_init_con=$a_init_con" >>$MAP_FILE_NAME
+f_init_con() {
+	# コンソールの初期化
+	con_init
+
+	# return
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2539,6 +2554,7 @@ global_functions() {
 	f_select_rom
 	f_select_ram
 	f_exit_exe
+	f_init_con
 }
 
 gbos_vec() {
