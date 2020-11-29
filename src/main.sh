@@ -3438,10 +3438,9 @@ das_handler() {
 		lr35902_test_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
 		(
 			# run_exeがセットされていた場合
-			# TIMA = 01
+
+			# EXE周期実行関数を呼び出す
 			lr35902_call $a_run_exe_cyc
-			# TIMA = 02
-			# (* (/ 1 16384.0) 1000)0.06103515625 ms
 		) >src/das_handler.7.o
 		local sz_7=$(stat -c '%s' src/das_handler.7.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_7)

@@ -32,11 +32,14 @@ var_view_img_nyt=c013	# view_img: 次に描画するウィンドウタイル座�
 var_view_img_nxt=c014	# view_img: 次に描画するウィンドウタイル座標X
 var_win_stat=c015	# ウィンドウステータス
 var_view_dir_file_th=c016	# view_dir: 表示するのは何番目のファイルか(0始まり)
+
+# tdq用変数
 var_tdq_head_bh=c017	# tdq.head[7:0]
 var_tdq_head_th=c018	# tdq.head[15:8]
 var_tdq_tail_bh=c019	# tdq.tail[7:0]
 var_tdq_tail_th=c01a	# tdq.tail[15:8]
 var_tdq_stat=c01b	# tdq.stat
+
 var_app_release_btn=c01c	# アプリ用ボタンリリースフラグ
 var_hidden_com_stat=c01d	# 隠しコマンドステート
 
