@@ -2519,6 +2519,20 @@ f_putch() {
 	lr35902_return
 }
 
+# コンソールの描画領域をクリアする
+f_putch >src/f_putch.o
+fsz=$(to16 $(stat -c '%s' src/f_putch.o))
+fadr=$(calc16 "${a_putch}+${fsz}")
+a_clr_con=$(four_digits $fadr)
+echo -e "a_clr_con=$a_clr_con" >>$MAP_FILE_NAME
+f_clr_con() {
+	# コンソールのcon_clearを呼び出す
+	con_clear
+
+	# return
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2574,6 +2588,7 @@ global_functions() {
 	f_select_ram
 	f_exit_exe
 	f_putch
+	f_clr_con
 }
 
 gbos_vec() {

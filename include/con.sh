@@ -36,6 +36,91 @@ con_init() {
 	lr35902_pop_reg regAF
 }
 
+# コンソールの描画領域をクリアする
+# - コンソール描画領域は、ウィンドウ内のdrawableエリア
+con_clear() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	# regBへクリア文字(スペース)を設定
+	lr35902_set_reg regB $GBOS_TILE_NUM_SPC
+
+	# regDEへ描画領域の開始アドレスを設定
+	lr35902_set_reg regDE $CON_TADR_BASE
+
+	# 1タイルずつクリアするエントリをtdqへ積むループ
+	(
+		# tdqへ追加
+		lr35902_call $a_enq_tdq
+
+		# regDEが最終行最終文字か?
+		lr35902_set_reg regA $(echo $CON_TADR_EOP | cut -c3-4)
+		lr35902_xor_to_regA regE
+		lr35902_copy_to_from regH regA
+		lr35902_set_reg regA $(echo $CON_TADR_EOP | cut -c1-2)
+		lr35902_xor_to_regA regD
+		lr35902_or_to_regA regH
+		(
+			# 最終行最終文字
+
+			# ループを脱出
+			lr35902_rel_jump $(two_digits_d 2)
+		) >src/con_clear.2.o
+		(
+			# 最終行最終文字ではない
+
+			# 行末か?
+			lr35902_copy_to_from regA regE
+			lr35902_and_to_regA $CON_EOL_MASK
+			lr35902_compare_regA_and $CON_EOL_VAL
+			(
+				# 行末
+
+				# 次の行の行頭のアドレスをregDEへ設定
+				# (現在のアドレスに0x11を足す)
+				lr35902_set_reg regHL 0011
+				lr35902_add_to_regHL regDE
+				lr35902_copy_to_from regE regL
+				lr35902_copy_to_from regD regH
+			) >src/con_clear.4.o
+			(
+				# 行末ではない
+
+				# regDEをインクリメント
+				lr35902_inc regDE
+
+				# 行末の処理を飛ばす
+				local sz_4=$(stat -c '%s' src/con_clear.4.o)
+				lr35902_rel_jump $(two_digits_d $sz_4)
+			) >src/con_clear.5.o
+			local sz_5=$(stat -c '%s' src/con_clear.5.o)
+			lr35902_rel_jump_with_cond Z $(two_digits_d $sz_5)
+			cat src/con_clear.5.o	# 行末ではない
+			cat src/con_clear.4.o	# 行末
+
+			# 最終行最終文字の処理を飛ばす
+			local sz_2=$(stat -c '%s' src/con_clear.2.o)
+			lr35902_rel_jump $(two_digits_d $sz_2)
+		) >src/con_clear.3.o
+		local sz_3=$(stat -c '%s' src/con_clear.3.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_3)
+		cat src/con_clear.3.o	# 最終行最終文字ではない
+		cat src/con_clear.2.o	# 最終行最終文字
+	) >src/con_clear.1.o
+	cat src/con_clear.1.o
+	local sz_1=$(stat -c '%s' src/con_clear.1.o)
+	lr35902_rel_jump $(two_comp_d $((sz_1 + 2)))	# 2
+
+	# pop
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+}
+
 # 次に描画するアドレスを更新する
 # ※ con_putch()内でインライン展開されることを想定
 # ※ con_putch()でpush/popしているregAF・regDEはpush/popしていない
