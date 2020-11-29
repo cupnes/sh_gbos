@@ -36,4 +36,4 @@ a_select_rom=15B0
 a_select_ram=15CE
 a_exit_exe=15ED
 a_putch=15FE
-a_clr_con=1660
+a_clr_con=169B

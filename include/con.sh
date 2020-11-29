@@ -253,13 +253,35 @@ con_putch() {
 	lr35902_push_reg regAF
 	lr35902_push_reg regDE
 
-	# 次に描画するアドレスをregDEへ設定
+	# 改ページが必要か?
 	lr35902_copy_to_regA_from_addr $var_con_tadr_th
-	## TODO この時点でregAが0x00だった場合、
-	##      改ページ処理をしてから次の文字を積むようにする必要がある
-	lr35902_copy_to_from regD regA
-	lr35902_copy_to_regA_from_addr $var_con_tadr_bh
-	lr35902_copy_to_from regE regA
+	lr35902_or_to_regA regA
+	(
+		# 改ページ必要
+
+		# コンソール領域クリアのエントリをtdqへ積む
+		con_clear
+
+		# regDEへ描画領域開始アドレスを設定
+		lr35902_set_reg regDE $CON_TADR_BASE
+	) >src/con_putch.3.o
+	(
+		# 改ページ不要
+
+		# 次に描画するアドレスをregDEへ設定
+		lr35902_copy_to_regA_from_addr $var_con_tadr_th
+		lr35902_copy_to_from regD regA
+		lr35902_copy_to_regA_from_addr $var_con_tadr_bh
+		lr35902_copy_to_from regE regA
+
+		# 改ページ必要の処理を飛ばす
+		local sz_3=$(stat -c '%s' src/con_putch.3.o)
+		lr35902_rel_jump $(two_digits_d $sz_3)
+	) >src/con_putch.4.o
+	local sz_4=$(stat -c '%s' src/con_putch.4.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
+	cat src/con_putch.4.o	# 改ページ不要
+	cat src/con_putch.3.o	# 改ページ必要
 
 	# 指定された文字が改行文字か否か
 	lr35902_copy_to_from regA regB
