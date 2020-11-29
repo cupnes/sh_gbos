@@ -2257,10 +2257,8 @@ main() {
 		lr35902_set_reg regA 01
 		lr35902_copy_to_addr_from_regA $var_mouse_enable
 
-		# DAS: run_exeをクリア
-		lr35902_copy_to_regA_from_addr $var_draw_act_stat
-		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
-		lr35902_copy_to_addr_from_regA $var_draw_act_stat
+		# run_exe_cycを終了させる
+		lr35902_call $a_exit_exe
 
 		# 実行ファイル用変数をゼロクリア
 		lr35902_clear_reg regA

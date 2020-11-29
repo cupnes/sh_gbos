@@ -489,10 +489,8 @@ main() {
 		(
 			# Aボタン(右クリック)のリリースがあった場合
 
-			# DAS: run_exeをクリア
-			lr35902_copy_to_regA_from_addr $var_draw_act_stat
-			lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
-			lr35902_copy_to_addr_from_regA $var_draw_act_stat
+			# run_exe_cycを終了させる
+			lr35902_call $a_exit_exe
 
 			# tdq初期化
 			# - tdq.head = tdq.tail = TDQ_FIRST
