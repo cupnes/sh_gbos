@@ -2475,6 +2475,12 @@ f_exit_exe() {
 	lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
 	lr35902_copy_to_addr_from_regA $var_draw_act_stat
 
+	# clr_win設定
+	lr35902_call $a_clr_win
+
+	# view_dir設定
+	lr35902_call $a_view_dir
+
 	# pop & return
 	lr35902_pop_reg regAF
 	lr35902_return
