@@ -56,7 +56,7 @@ var_fs_base_th=c022	# ファイルシステム先頭アドレス(上位8ビッ�
 # ・var_con_tadr_{th,bh}を$CON_TADR_BASEへ更新
 # が必要であることを示す
 var_con_tadr_bh=c023	# コンソールで次に描画するタイルアドレス(下位8ビット)
-var_con_tadr_th=c024	# コンソールで次に描画するタイルアドレス(下位8ビット)
+var_con_tadr_th=c024	# コンソールで次に描画するタイルアドレス(上位8ビット)
 
 # 変数領域が$GBOS_TDQ_FIRSTに達しないようにすること
 # (include/tdq.sh参照)
