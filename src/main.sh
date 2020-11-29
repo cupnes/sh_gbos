@@ -1756,11 +1756,25 @@ f_check_click_icon_area_y() {
 	lr35902_return
 }
 
-# 実行ファイル実行開始関数
-# in : regHL - ファイルサイズ・データ先頭アドレス
+# コンソールを初期化する
 f_check_click_icon_area_y >src/f_check_click_icon_area_y.o
 fsz=$(to16 $(stat -c '%s' src/f_check_click_icon_area_y.o))
 fadr=$(calc16 "${a_check_click_icon_area_y}+${fsz}")
+a_init_con=$(four_digits $fadr)
+echo -e "a_init_con=$a_init_con" >>$MAP_FILE_NAME
+f_init_con() {
+	# コンソールの初期化
+	con_init
+
+	# return
+	lr35902_return
+}
+
+# 実行ファイル実行開始関数
+# in : regHL - ファイルサイズ・データ先頭アドレス
+f_init_con >src/f_init_con.o
+fsz=$(to16 $(stat -c '%s' src/f_init_con.o))
+fadr=$(calc16 "${a_init_con}+${fsz}")
 a_run_exe=$(four_digits $fadr)
 echo -e "a_run_exe=$a_run_exe" >>$MAP_FILE_NAME
 f_run_exe() {
@@ -1822,6 +1836,9 @@ f_run_exe() {
 	# アプリ用ボタンリリースフラグをクリア
 	lr35902_clear_reg regA
 	lr35902_copy_to_addr_from_regA $var_app_release_btn
+
+	# コンソールの初期化
+	lr35902_call $a_init_con
 
 	# pop & return
 	lr35902_pop_reg regHL
@@ -2487,20 +2504,6 @@ f_exit_exe() {
 	lr35902_return
 }
 
-# コンソールを初期化する
-f_exit_exe >src/f_exit_exe.o
-fsz=$(to16 $(stat -c '%s' src/f_exit_exe.o))
-fadr=$(calc16 "${a_exit_exe}+${fsz}")
-a_init_con=$(four_digits $fadr)
-echo -e "a_init_con=$a_init_con" >>$MAP_FILE_NAME
-f_init_con() {
-	# コンソールの初期化
-	con_init
-
-	# return
-	lr35902_return
-}
-
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2543,6 +2546,7 @@ global_functions() {
 	f_view_dir_cyc
 	f_check_click_icon_area_x
 	f_check_click_icon_area_y
+	f_init_con
 	f_run_exe
 	f_run_exe_cyc
 	f_update_hidden_com_stat
@@ -2554,7 +2558,6 @@ global_functions() {
 	f_select_rom
 	f_select_ram
 	f_exit_exe
-	f_init_con
 }
 
 gbos_vec() {
@@ -2955,6 +2958,9 @@ init() {
 		 $GBOS_TILE_NUM_CSL $GBOS_OBJ_DEF_ATTR
 	# 別途 obj_move とかの関数も作る
 	# TODO グローバル関数化
+
+	# コンソールの初期化
+	lr35902_call $a_init_con
 
 	# 処理棒の初期化
 	proc_bar_init
