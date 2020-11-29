@@ -2504,6 +2504,21 @@ f_exit_exe() {
 	lr35902_return
 }
 
+# 指定された1文字をtdqへ積む
+# in : regB - 出力する文字のタイル番号あるいは改行文字
+f_exit_exe >src/f_exit_exe.o
+fsz=$(to16 $(stat -c '%s' src/f_exit_exe.o))
+fadr=$(calc16 "${a_exit_exe}+${fsz}")
+a_putch=$(four_digits $fadr)
+echo -e "a_putch=$a_putch" >>$MAP_FILE_NAME
+f_putch() {
+	# コンソールのputchを呼び出す
+	con_putch
+
+	# return
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2558,6 +2573,7 @@ global_functions() {
 	f_select_rom
 	f_select_ram
 	f_exit_exe
+	f_putch
 }
 
 gbos_vec() {

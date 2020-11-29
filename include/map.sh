@@ -35,3 +35,4 @@ a_right_click_event=1563
 a_select_rom=15B0
 a_select_ram=15CE
 a_exit_exe=15ED
+a_putch=15FE
