@@ -314,3 +314,54 @@ con_putch() {
 	lr35902_pop_reg regDE
 	lr35902_pop_reg regAF
 }
+
+# 指定されたアドレスの文字列を出力する
+# in : regHL - 文字列の先頭アドレス
+con_print() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regHL
+
+	# ヌル文字に到達するまで繰り返す
+	(
+		# regHLの指す先からregAへ1文字取得し、regHLをインクリメント
+		lr35902_copyinc_to_regA_from_ptrHL
+
+		# regAがヌル文字か否か?
+		lr35902_compare_regA_and $GBOS_CTRL_CHR_NULL
+		(
+			# regA == ヌル文字
+
+			# ループを脱出
+			lr35902_rel_jump $(two_digits_d 2)
+		) >src/con_print.1.o
+		(
+			# regA != ヌル文字
+
+			# push
+			lr35902_push_reg regBC
+
+			# regAを出力
+			lr35902_copy_to_from regB regA
+			lr35902_call $a_putch
+
+			# pop
+			lr35902_pop_reg regBC
+
+			# regA == ヌル文字の処理を飛ばす
+			local sz_1=$(stat -c '%s' src/con_print.1.o)
+			lr35902_rel_jump $(two_digits_d $sz_1)
+		) >src/con_print.2.o
+		local sz_2=$(stat -c '%s' src/con_print.2.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+		cat src/con_print.2.o	# regA != ヌル文字
+		cat src/con_print.1.o	# regA == ヌル文字
+	) >src/con_print.3.o
+	cat src/con_print.3.o
+	local sz_3=$(stat -c '%s' src/con_print.3.o)
+	lr35902_rel_jump $(two_comp_d $((sz_3 + 2)))	# 2
+
+	# pop
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regAF
+}

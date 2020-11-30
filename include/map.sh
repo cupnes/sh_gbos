@@ -37,3 +37,4 @@ a_select_ram=15CE
 a_exit_exe=15ED
 a_putch=15FE
 a_clr_con=169B
+a_print=16CC

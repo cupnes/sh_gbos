@@ -2533,6 +2533,21 @@ f_clr_con() {
 	lr35902_return
 }
 
+# 指定されたアドレスの文字列を出力する
+# in : regHL - 文字列の先頭アドレス
+f_clr_con >src/f_clr_con.o
+fsz=$(to16 $(stat -c '%s' src/f_clr_con.o))
+fadr=$(calc16 "${a_clr_con}+${fsz}")
+a_print=$(four_digits $fadr)
+echo -e "a_print=$a_print" >>$MAP_FILE_NAME
+f_print() {
+	# コンソールのcon_clearを呼び出す
+	con_print
+
+	# return
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2589,6 +2604,7 @@ global_functions() {
 	f_exit_exe
 	f_putch
 	f_clr_con
+	f_print
 }
 
 gbos_vec() {
