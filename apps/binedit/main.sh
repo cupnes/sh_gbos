@@ -161,6 +161,18 @@ vars() {
 	var_drawing_flag=$(calc16 "$var_dumped_bytes_this_page+1")
 	echo -e "var_drawing_flag=$var_drawing_flag" >>$map_file
 	echo -en '\x00'
+
+	# 表示アドレスオフセット
+	# f_dump_addr_and_data_4bytesは
+	# このアドレスを足した値をアドレス列へダンプする
+	## 下位8ビット
+	var_disp_dadr_ofs_bh=$(calc16 "$var_drawing_flag+1")
+	echo -e "var_disp_dadr_ofs_bh=$var_disp_dadr_ofs_bh" >>$map_file
+	echo -en '\x00'
+	## 上位8ビット
+	var_disp_dadr_ofs_th=$(calc16 "$var_disp_dadr_ofs_bh+1")
+	echo -e "var_disp_dadr_ofs_th=$var_disp_dadr_ofs_th" >>$map_file
+	echo -en '\x00'
 }
 # 変数設定のために空実行
 vars >/dev/null
@@ -319,7 +331,16 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_push_reg regAF
 	lr35902_push_reg regBC
 
-	# アドレスをダンプ
+	# regHLにvar_disp_dadr_ofs_{th,bh}を足したアドレスをダンプ
+	## regHLをスタックへ退避
+	lr35902_push_reg regHL
+	## var_disp_dadr_ofs_{th,bh}をregBCへ設定
+	lr35902_copy_to_regA_from_addr $var_disp_dadr_ofs_bh
+	lr35902_copy_to_from regC regA
+	lr35902_copy_to_regA_from_addr $var_disp_dadr_ofs_th
+	lr35902_copy_to_from regB regA
+	## regHLにregBCを足す
+	lr35902_add_to_regHL regBC
 	## アドレス[15:12]
 	lr35902_copy_to_from regA regH
 	lr35902_swap_nibbles regA
@@ -341,6 +362,8 @@ f_dump_addr_and_data_4bytes() {
 	lr35902_call $a_byte_to_tile
 	lr35902_inc regE
 	lr35902_call $a_enq_tdq
+	## regHLをスタックから復帰
+	lr35902_pop_reg regHL
 
 	## 表示位置管理用カウンタを確認
 	lr35902_push_reg regHL
