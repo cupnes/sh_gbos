@@ -815,7 +815,11 @@ f_draw_restore_tiles() {
 	lr35902_set_reg regDE $BE_OAM_BASE_CSL
 	lr35902_call $a_enq_tdq
 
-	## TODO マウスカーソルを表示する
+	## マウスカーソルを表示する
+	lr35902_copy_to_regA_from_addr $var_mouse_y
+	lr35902_copy_to_from regB regA
+	lr35902_set_reg regDE $GBOS_OAM_BASE_CSL
+	lr35902_call $a_enq_tdq
 
 	## TODO ウィンドウタイトルを非表示にする
 
