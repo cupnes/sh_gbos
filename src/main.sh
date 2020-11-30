@@ -2283,6 +2283,8 @@ f_get_file_addr_and_type() {
 # in : regA - ファイル番号
 ## TODO 関数化
 ## TODO regA >= ファイル数 の時、直ちにret
+# ※ regDを破壊しないこと
+#    (event_driven内でキー入力状態の保持に使っている)
 edit_file() {
 	# regAをregBへバックアップ
 	lr35902_copy_to_from regB regA
@@ -2296,8 +2298,12 @@ edit_file() {
 	# regAをregBから復元
 	lr35902_copy_to_from regA regB
 
-	# 編集対象ファイルのファイルサイズ・データ先頭アドレス取得
+	# 編集対象ファイルのファイルサイズ・データ先頭アドレス
+	# ・ファイルタイプ取得
 	lr35902_call $a_get_file_addr_and_type
+
+	# 取得したファイルタイプを実行ファイル用変数3へ設定
+	lr35902_copy_to_addr_from_regA $var_exe_3
 
 	# 取得したアドレスを実行ファイル用変数1・2へ設定
 	## リトルエンディアン
@@ -3031,6 +3037,7 @@ init() {
 	# - 実行ファイル用変数をゼロクリア
 	lr35902_copy_to_addr_from_regA $var_exe_1
 	lr35902_copy_to_addr_from_regA $var_exe_2
+	lr35902_copy_to_addr_from_regA $var_exe_3
 	# - ウィンドウステータスをディレクトリ表示中で初期化
 	lr35902_set_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
 	lr35902_copy_to_addr_from_regA $var_win_stat

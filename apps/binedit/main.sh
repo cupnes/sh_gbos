@@ -2103,31 +2103,40 @@ f_proc_init() {
 		lr35902_copy_to_addr_from_regA $var_dadr_last_th
 		lr35902_pop_reg regHL
 
-		# var_disp_dadr_ofs_{th,bh}を設定
-		# TODO 指定されたファイルがEXEの場合のみ実施するようにする
-		## regHLをregDEへ退避
-		lr35902_copy_to_from regE regL
-		lr35902_copy_to_from regD regH
-		## regHLへregHLの2の補数を設定
-		lr35902_copy_to_from regA regL
-		lr35902_complement_regA
-		lr35902_copy_to_from regL regA
-		lr35902_copy_to_from regA regH
-		lr35902_complement_regA
-		lr35902_copy_to_from regH regA
-		lr35902_inc regHL
-		## regBCへEXEのロード先アドレスを設定
-		lr35902_set_reg regBC $GBOS_APP_MEM_BASE
-		## regHL + regBCをregHLへ設定
-		lr35902_add_to_regHL regBC
-		## regHLをvar_disp_dadr_ofs_{th,bh}へ設定
-		lr35902_copy_to_from regA regL
-		lr35902_copy_to_addr_from_regA $var_disp_dadr_ofs_bh
-		lr35902_copy_to_from regA regH
-		lr35902_copy_to_addr_from_regA $var_disp_dadr_ofs_th
-		## regHLをregDEから復帰
-		lr35902_copy_to_from regL regE
-		lr35902_copy_to_from regH regD
+		# var_exe_3に設定されたファイルタイプを確認
+		lr35902_copy_to_regA_from_addr $var_exe_3
+		lr35902_compare_regA_and $GBOS_ICON_NUM_EXE
+		(
+			# 実行ファイル
+
+			# var_disp_dadr_ofs_{th,bh}を設定
+			## regHLをregDEへ退避
+			lr35902_copy_to_from regE regL
+			lr35902_copy_to_from regD regH
+			## regHLへregHLの2の補数を設定
+			lr35902_copy_to_from regA regL
+			lr35902_complement_regA
+			lr35902_copy_to_from regL regA
+			lr35902_copy_to_from regA regH
+			lr35902_complement_regA
+			lr35902_copy_to_from regH regA
+			lr35902_inc regHL
+			## regBCへEXEのロード先アドレスを設定
+			lr35902_set_reg regBC $GBOS_APP_MEM_BASE
+			## regHL + regBCをregHLへ設定
+			lr35902_add_to_regHL regBC
+			## regHLをvar_disp_dadr_ofs_{th,bh}へ設定
+			lr35902_copy_to_from regA regL
+			lr35902_copy_to_addr_from_regA $var_disp_dadr_ofs_bh
+			lr35902_copy_to_from regA regH
+			lr35902_copy_to_addr_from_regA $var_disp_dadr_ofs_th
+			## regHLをregDEから復帰
+			lr35902_copy_to_from regL regE
+			lr35902_copy_to_from regH regD
+		) >f_proc_init.3.o
+		local sz_3=$(stat -c '%s' f_proc_init.3.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+		cat f_proc_init.3.o
 
 		# var_exe_2 == 0x00 の処理を飛ばす
 		local sz_1=$(stat -c '%s' f_proc_init.1.o)
@@ -2313,6 +2322,7 @@ main() {
 		lr35902_clear_reg regA
 		lr35902_copy_to_addr_from_regA $var_exe_1
 		lr35902_copy_to_addr_from_regA $var_exe_2
+		lr35902_copy_to_addr_from_regA $var_exe_3
 
 		# 現在のファイルシステムはRAM上か?
 		lr35902_copy_to_regA_from_addr $var_fs_base_th
