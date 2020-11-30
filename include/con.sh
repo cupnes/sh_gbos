@@ -154,6 +154,38 @@ con_putxy() {
 	lr35902_pop_reg regAF
 }
 
+# 指定されたコンソール座標のタイル番号を取得
+# in : regD - コンソールY座標
+#    : regE - コンソールX座標
+# out: regA - 取得したタイル番号
+con_getxy() {
+	# push
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+	lr35902_push_reg regAF
+
+	# drawable領域へのオフセットを足す
+	lr35902_copy_to_from regA regD
+	lr35902_add_to_regA $GBOS_WIN_DRAWABLE_OFS_YT
+	lr35902_copy_to_from regD regA
+	lr35902_copy_to_from regA regE
+	lr35902_add_to_regA $GBOS_WIN_DRAWABLE_OFS_XT
+	lr35902_copy_to_from regE regA
+
+	# タイル座標をアドレスへ変換
+	lr35902_call $a_tcoord_to_addr
+
+	# アドレスの値をregHへ取得
+	lr35902_copy_to_from regH ptrHL
+
+	# pop
+	lr35902_pop_reg regAF
+	## regAへ戻り値設定
+	lr35902_copy_to_from regA regH
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+}
+
 # 次に描画するアドレスを更新する
 # ※ con_putch()内でインライン展開されることを想定
 # ※ con_putch()でpush/popしているregAF・regDEはpush/popしていない

@@ -2569,6 +2569,23 @@ f_putxy() {
 	lr35902_return
 }
 
+# 指定されたコンソール座標のタイル番号を取得
+# in : regD - コンソールY座標
+#    : regE - コンソールX座標
+# out: regA - 取得したタイル番号
+f_putxy >src/f_putxy.o
+fsz=$(to16 $(stat -c '%s' src/f_putxy.o))
+fadr=$(calc16 "${a_putxy}+${fsz}")
+a_getxy=$(four_digits $fadr)
+echo -e "a_getxy=$a_getxy" >>$MAP_FILE_NAME
+f_getxy() {
+	# コンソールのcon_getxyを呼び出す
+	con_getxy
+
+	# return
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2627,6 +2644,7 @@ global_functions() {
 	f_clr_con
 	f_print
 	f_putxy
+	f_getxy
 }
 
 gbos_vec() {
