@@ -2282,7 +2282,6 @@ f_get_file_addr_and_type() {
 # ファイルを編集
 # in : regA - ファイル番号
 ## TODO 関数化
-## TODO regA >= ファイル数 の時、直ちにret
 # ※ regDを破壊しないこと
 #    (event_driven内でキー入力状態の保持に使っている)
 edit_file() {
@@ -2586,6 +2585,54 @@ f_getxy() {
 	lr35902_return
 }
 
+# Bボタンリリース(左クリック)時の処理
+# btn_release_handler()から呼ばれる専用の関数
+# src/event_driven.3.oが128バイト以上になってしまったため関数化
+# in : regA - リリースされたボタン(上位4ビット)
+f_getxy >src/f_getxy.o
+fsz=$(to16 $(stat -c '%s' src/f_getxy.o))
+fadr=$(calc16 "${a_getxy}+${fsz}")
+a_click_event=$(four_digits $fadr)
+echo -e "a_click_event=$a_click_event" >>$MAP_FILE_NAME
+f_click_event() {
+	# push
+	lr35902_push_reg regAF
+
+	# ウィンドウステータスが「ディレクトリ表示中」であるか確認
+	lr35902_copy_to_regA_from_addr $var_win_stat
+	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
+	(
+		# 「ディレクトリ表示中」の場合
+
+		# ファイルシステム内のファイル数をregBへ取得
+		get_num_files_in_fs
+		lr35902_copy_to_from regB regA
+
+		# クリックした場所のファイル番号をregAへ取得
+		lr35902_clear_reg regA
+		lr35902_call $a_check_click_icon_area_x
+		lr35902_call $a_check_click_icon_area_y
+
+		# regA(ファイル番号) >= regB(ファイル数) ?
+		lr35902_compare_regA_and regB
+		(
+			# regA(ファイル番号) < regB(ファイル数) の場合
+			# クリックした場所のファイル番号のファイルが存在する
+			view_file
+		) >src/click_event.2.o
+		local sz_2=$(stat -c '%s' src/click_event.2.o)
+		lr35902_rel_jump_with_cond NC $(two_digits_d $sz_2)
+		cat src/click_event.2.o
+	) >src/click_event.1.o
+	local sz_1=$(stat -c '%s' src/click_event.1.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
+	cat src/click_event.1.o
+
+	# pop & return
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2645,6 +2692,7 @@ global_functions() {
 	f_print
 	f_putxy
 	f_getxy
+	f_click_event
 }
 
 gbos_vec() {
@@ -3180,7 +3228,6 @@ update_mouse_cursor() {
 # in : regA - ファイル番号
 ## TODO 関数化
 ## TODO regA == 80 の時、直ちにret
-## TODO regA >= ファイル数 の時、直ちにret
 view_file() {
 	# DEは呼び出し元で使っているので予め退避
 	lr35902_push_reg regDE
@@ -3281,29 +3328,6 @@ view_file() {
 	lr35902_pop_reg regDE
 }
 
-# クリックイベント処理
-click_event() {
-	lr35902_push_reg regAF
-
-	# ウィンドウステータスが「ディレクトリ表示中」であるか確認
-	lr35902_copy_to_regA_from_addr $var_win_stat
-	lr35902_test_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
-	(
-		# 「ディレクトリ表示中」の場合
-
-		lr35902_clear_reg regA
-		lr35902_call $a_check_click_icon_area_x
-		lr35902_call $a_check_click_icon_area_y
-
-		view_file
-	) >src/click_event.1.o
-	local sz_1=$(stat -c '%s' src/click_event.1.o)
-	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_1)
-	cat src/click_event.1.o
-
-	lr35902_pop_reg regAF
-}
-
 # ボタンリリースに応じた処理
 # in : regA - リリースされたボタン(上位4ビット)
 btn_release_handler() {
@@ -3312,7 +3336,7 @@ btn_release_handler() {
 	# Bボタンの確認
 	lr35902_test_bitN_of_reg $GBOS_B_KEY_BITNUM regA
 	(
-		click_event
+		lr35902_call $a_click_event
 	) >src/btn_release_handler.1.o
 	sz=$(stat -c '%s' src/btn_release_handler.1.o)
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz)
