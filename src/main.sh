@@ -2552,6 +2552,23 @@ f_print() {
 	lr35902_return
 }
 
+# 指定されたコンソール座標に指定された文字を出力
+# in : regB - 出力する文字のタイル番号
+#    : regD - コンソールY座標
+#    : regE - コンソールX座標
+f_print >src/f_print.o
+fsz=$(to16 $(stat -c '%s' src/f_print.o))
+fadr=$(calc16 "${a_print}+${fsz}")
+a_putxy=$(four_digits $fadr)
+echo -e "a_putxy=$a_putxy" >>$MAP_FILE_NAME
+f_putxy() {
+	# コンソールのcon_putxyを呼び出す
+	con_putxy
+
+	# return
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2609,6 +2626,7 @@ global_functions() {
 	f_putch
 	f_clr_con
 	f_print
+	f_putxy
 }
 
 gbos_vec() {

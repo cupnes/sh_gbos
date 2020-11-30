@@ -38,3 +38,4 @@ a_exit_exe=15F0
 a_putch=1601
 a_clr_con=169E
 a_print=16CF
+a_putxy=16E5

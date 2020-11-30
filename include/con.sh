@@ -121,6 +121,39 @@ con_clear() {
 	lr35902_pop_reg regAF
 }
 
+# 指定されたコンソール座標に指定された文字を出力
+# in : regB - 出力する文字のタイル番号
+#    : regD - コンソールY座標
+#    : regE - コンソールX座標
+# ※ コンソール座標 - ウィンドウ内のdrawable領域の座標
+con_putxy() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	# drawable領域へのオフセットを足す
+	lr35902_copy_to_from regA regD
+	lr35902_add_to_regA $GBOS_WIN_DRAWABLE_OFS_YT
+	lr35902_copy_to_from regD regA
+	lr35902_copy_to_from regA regE
+	lr35902_add_to_regA $GBOS_WIN_DRAWABLE_OFS_XT
+	lr35902_copy_to_from regE regA
+
+	# タイル座標をアドレスへ変換しregDEへ設定
+	lr35902_call $a_tcoord_to_addr
+	lr35902_copy_to_from regE regL
+	lr35902_copy_to_from regD regH
+
+	# tdqへ積む
+	lr35902_call $a_enq_tdq
+
+	# pop
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regAF
+}
+
 # 次に描画するアドレスを更新する
 # ※ con_putch()内でインライン展開されることを想定
 # ※ con_putch()でpush/popしているregAF・regDEはpush/popしていない
