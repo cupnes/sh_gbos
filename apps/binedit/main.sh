@@ -89,6 +89,7 @@ vars() {
 
 	# □カーソル座標期待値
 	# OAMの更新が完了したかどうかの確認に使う
+	# TODO 今や使っていないので消す
 	## Y座標
 	var_csl_y=$(calc16 "$var_remain_bytes_th+1")
 	echo -e "var_csl_y=$var_csl_y" >>$map_file
