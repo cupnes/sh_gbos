@@ -702,21 +702,6 @@ f_dump_addr_and_data() {
 	lr35902_sub_to_regA regH
 	### 残りバイト数だけクリア処理を実施
 	lr35902_set_reg regB $GBOS_TILE_NUM_SPC
-	lr35902_compare_regA_and 04
-	(
-		# 残りバイト数が4バイト分ある場合
-		# 1バイト目は1タイル目のスキップは無しで2文字分のクリアを実施
-		lr35902_inc regE
-		lr35902_call $a_enq_tdq
-		lr35902_inc regE
-		lr35902_call $a_enq_tdq
-
-		# 残りバイト数(regA)をデクリメント
-		lr35902_dec regA
-	) >f_dump_addr_and_data.3.o
-	local sz_3=$(stat -c '%s' f_dump_addr_and_data.3.o)
-	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
-	cat f_dump_addr_and_data.3.o
 	#### 残りバイト数(regA)が1以上の間繰り返す
 	lr35902_compare_regA_and 01	# 2
 	(
