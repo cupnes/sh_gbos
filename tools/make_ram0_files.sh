@@ -3,12 +3,24 @@
 set -uex
 # set -ue
 
+put_footer() {
+	# 無限ループ
+	echo -en '\x18\xfe'	# jr $fe
+}
+FOOTER_SIZE=2
+
+create_blank_exe() {
+	local size=$1
+	dd if=/dev/zero bs=1 count=$((size - FOOTER_SIZE))
+	put_footer
+}
+
 mkdir fs_ram0_orig
 cd $_
 
 # 1行目：1画面分(48バイト)の空のEXE4つ
 for i in $(seq -w 01 04); do
-	dd if=/dev/zero of=0${i}0.exe bs=1 count=48
+	create_blank_exe 48 >0${i}0.exe
 done
 
 # TODO 2画面分以降のEXEには、Aでファイル一覧へ戻るヘッダ/フッタを
@@ -16,16 +28,16 @@ done
 
 # 2行目：4画面分(192バイト)の空のEXE4つ
 for i in $(seq -w 05 08); do
-	dd if=/dev/zero of=0${i}0.exe bs=1 count=192
+	create_blank_exe 192 >0${i}0.exe
 done
 
 # 3行目：13画面分(624バイト)の空のEXE4つ
 for i in $(seq -w 09 12); do
-	dd if=/dev/zero of=0${i}0.exe bs=1 count=624
+	create_blank_exe 624 >0${i}0.exe
 done
 
 # 4行目：空のEXEが2KB2つ、そして空の1画面分(208バイト)TXT2つ
-dd if=/dev/zero of=0130.exe bs=K count=2
-dd if=/dev/zero of=0140.exe bs=K count=2
+create_blank_exe 2048 >0130.exe
+create_blank_exe 2048 >0140.exe
 dd if=/dev/zero of=0150.txt bs=1 count=208
 dd if=/dev/zero of=0160.txt bs=1 count=208
