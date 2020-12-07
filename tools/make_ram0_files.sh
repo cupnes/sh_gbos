@@ -15,6 +15,11 @@ create_blank_exe() {
 	put_footer
 }
 
+create_blank_txt() {
+	dd if=/dev/zero bs=1 count=207
+	echo -en '\x85'	# '←'
+}
+
 mkdir fs_ram0_orig
 cd $_
 
@@ -39,5 +44,5 @@ done
 # 4行目：空のEXEが2KB2つ、そして空の1画面分(208バイト)TXT2つ
 create_blank_exe 2048 >0130.exe
 create_blank_exe 2048 >0140.exe
-dd if=/dev/zero of=0150.txt bs=1 count=208
-dd if=/dev/zero of=0160.txt bs=1 count=208
+create_blank_txt >0150.txt
+create_blank_txt >0160.txt
