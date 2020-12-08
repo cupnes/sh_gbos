@@ -2769,6 +2769,53 @@ f_print_regA() {
 	lr35902_return
 }
 
+# 指定されたタイル番号に対応する16進の数値を返す
+# in : regA - 数値へ変換するタイル番号
+# out: regB - 数値
+# ※ タイル番号は0x14〜0x1d('0'〜'9')・0x1e〜0x23('A'〜'F')の中で指定すること
+f_print_regA >src/f_print_regA.o
+fsz=$(to16 $(stat -c '%s' src/f_print_regA.o))
+fadr=$(calc16 "${a_print_regA}+${fsz}")
+a_tile_to_byte=$(four_digits $fadr)
+echo -e "a_tile_to_byte=$a_tile_to_byte" >>$MAP_FILE_NAME
+f_tile_to_byte() {
+	# push
+	lr35902_push_reg regAF
+
+	# regA < 0x1E ?
+	lr35902_compare_regA_and $GBOS_TILE_NUM_ALPHA_BASE
+	(
+		# regA < 0x1E('0'〜'9')
+
+		# '0'のタイル番号を引く
+		lr35902_sub_to_regA $GBOS_TILE_NUM_NUM_BASE
+	) >src/f_tile_to_byte.1.o
+	(
+		# regA >= 0x1E('A'〜'F')
+
+		# 'A'のタイル番号を引く
+		lr35902_sub_to_regA $GBOS_TILE_NUM_ALPHA_BASE
+
+		# 0x0aを足す
+		lr35902_add_to_regA 0a
+
+		# regA < 0x1E('0'〜'9') の処理を飛ばす
+		local sz_1=$(stat -c '%s' src/f_tile_to_byte.1.o)
+		lr35902_rel_jump $(two_digits_d $sz_1)
+	) >src/f_tile_to_byte.2.o
+	local sz_2=$(stat -c '%s' src/f_tile_to_byte.2.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_2)
+	cat src/f_tile_to_byte.2.o	# regA >= 0x1E('A'〜'F')
+	cat src/f_tile_to_byte.1.o	# regA < 0x1E('0'〜'9')
+
+	# 戻り値セット
+	lr35902_copy_to_from regB regA
+
+	# pop & return
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2830,6 +2877,7 @@ global_functions() {
 	f_getxy
 	f_click_event
 	f_print_regA
+	f_tile_to_byte
 }
 
 gbos_vec() {
