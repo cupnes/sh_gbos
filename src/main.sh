@@ -2585,6 +2585,110 @@ f_getxy() {
 	lr35902_return
 }
 
+# ファイルを閲覧
+# in : regA - ファイル番号
+## TODO 関数化
+## TODO regA == 80 の時、直ちにret
+view_file() {
+	# DEは呼び出し元で使っているので予め退避
+	lr35902_push_reg regDE
+
+	# Aは作業にも使うのでファイル番号はBへコピー
+	lr35902_copy_to_from regB regA
+
+	# ファイルタイプ取得
+	local file_type_1st_ofs=0007
+	lr35902_copy_to_regA_from_addr $var_fs_base_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_fs_base_th
+	lr35902_copy_to_from regH regA
+	lr35902_set_reg regDE $file_type_1st_ofs
+	lr35902_add_to_regHL regDE
+	lr35902_copy_to_from regA regB
+	lr35902_compare_regA_and 00
+	(
+		# ファイル番号 != 0 の場合
+
+		lr35902_set_reg regDE $(four_digits $GBOS_FS_FILE_ATTR_SZ)
+
+		(
+			lr35902_add_to_regHL regDE
+			lr35902_dec regA
+		) >src/view_file.3.o
+		cat src/view_file.3.o
+		local sz_3=$(stat -c '%s' src/view_file.3.o)
+		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_3 + 2)))
+	) >src/view_file.4.o
+	local sz_4=$(stat -c '%s' src/view_file.4.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
+	cat src/view_file.4.o
+	## ファイルタイプをAへ取得
+	lr35902_copy_to_from regA ptrHL
+
+	# Aは作業に使うのでCへコピー
+	lr35902_copy_to_from regC regA
+
+	# HLへファイルサイズ・データ先頭アドレスを設定
+	## ファイルサイズ・データへのオフセットが格納されたアドレスを設定
+	lr35902_inc regHL
+	## ファイルサイズ・データへのオフセット取得
+	lr35902_copyinc_to_regA_from_ptrHL
+	lr35902_copy_to_from regE regA
+	lr35902_copy_to_from regA ptrHL
+	lr35902_copy_to_from regD regA
+	## FSベースアドレスと足してファイルサイズ・データ先頭アドレス取得
+	lr35902_copy_to_regA_from_addr $var_fs_base_bh
+	lr35902_copy_to_from regL regA
+	lr35902_copy_to_regA_from_addr $var_fs_base_th
+	lr35902_copy_to_from regH regA
+	lr35902_add_to_regHL regDE
+
+	# ファイルタイプをAへ復帰
+	lr35902_copy_to_from regA regC
+
+	# 対象が実行ファイルの場合、f_run_exe() で実行する
+	lr35902_compare_regA_and $GBOS_ICON_NUM_EXE
+	(
+		# 実行ファイルの場合
+		lr35902_copy_to_from regA regB
+		lr35902_call $a_run_exe
+
+		# Aがこの後何にもヒットしないようにする
+		lr35902_clear_reg regA
+	) >src/view_file.5.o
+	local sz_5=$(stat -c '%s' src/view_file.5.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
+	cat src/view_file.5.o
+
+	# 対象がテキストファイルの場合、f_view_txt() で閲覧
+	lr35902_compare_regA_and $GBOS_ICON_NUM_TXT
+	(
+		# テキストファイルの場合
+		lr35902_copy_to_from regA regB
+		lr35902_call $a_view_txt
+
+		# Aがこの後何にもヒットしないようにする
+		lr35902_clear_reg regA
+	) >src/view_file.1.o
+	local sz_1=$(stat -c '%s' src/view_file.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
+	cat src/view_file.1.o
+
+	# 対象が画像ファイルの場合、f_view_img() で閲覧
+	lr35902_compare_regA_and $GBOS_ICON_NUM_IMG
+	(
+		# 画像ファイルの場合
+		lr35902_copy_to_from regA regB
+		lr35902_call $a_view_img
+	) >src/view_file.2.o
+	local sz_2=$(stat -c '%s' src/view_file.2.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
+	cat src/view_file.2.o
+
+	# DEを復帰
+	lr35902_pop_reg regDE
+}
+
 # Bボタンリリース(左クリック)時の処理
 # btn_release_handler()から呼ばれる専用の関数
 # src/event_driven.3.oが128バイト以上になってしまったため関数化
@@ -2629,6 +2733,38 @@ f_click_event() {
 	cat src/click_event.1.o
 
 	# pop & return
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
+# regAをコンソールのカーソル位置にダンプ
+# in : regA - ダンプする値
+f_click_event >src/f_click_event.o
+fsz=$(to16 $(stat -c '%s' src/f_click_event.o))
+fadr=$(calc16 "${a_click_event}+${fsz}")
+a_print_regA=$(four_digits $fadr)
+echo -e "a_print_regA=$a_print_regA" >>$MAP_FILE_NAME
+f_print_regA() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+
+	# regAの上の桁と下の桁を入れ替え
+	lr35902_swap_nibbles regA
+
+	# 上の桁をダンプ
+	lr35902_call $a_byte_to_tile
+	lr35902_call $a_putch
+
+	# regAの上の桁と下の桁を入れ替え
+	lr35902_swap_nibbles regA
+
+	# 下の桁をダンプ
+	lr35902_call $a_byte_to_tile
+	lr35902_call $a_putch
+
+	# pop & return
+	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
 	lr35902_return
 }
@@ -2693,6 +2829,7 @@ global_functions() {
 	f_putxy
 	f_getxy
 	f_click_event
+	f_print_regA
 }
 
 gbos_vec() {
@@ -3222,110 +3359,6 @@ update_mouse_cursor() {
 	lr35902_copy_to_addr_from_regA $var_mouse_y
 	lr35902_copy_to_from regA regB
 	lr35902_copy_to_addr_from_regA $var_mouse_x
-}
-
-# ファイルを閲覧
-# in : regA - ファイル番号
-## TODO 関数化
-## TODO regA == 80 の時、直ちにret
-view_file() {
-	# DEは呼び出し元で使っているので予め退避
-	lr35902_push_reg regDE
-
-	# Aは作業にも使うのでファイル番号はBへコピー
-	lr35902_copy_to_from regB regA
-
-	# ファイルタイプ取得
-	local file_type_1st_ofs=0007
-	lr35902_copy_to_regA_from_addr $var_fs_base_bh
-	lr35902_copy_to_from regL regA
-	lr35902_copy_to_regA_from_addr $var_fs_base_th
-	lr35902_copy_to_from regH regA
-	lr35902_set_reg regDE $file_type_1st_ofs
-	lr35902_add_to_regHL regDE
-	lr35902_copy_to_from regA regB
-	lr35902_compare_regA_and 00
-	(
-		# ファイル番号 != 0 の場合
-
-		lr35902_set_reg regDE $(four_digits $GBOS_FS_FILE_ATTR_SZ)
-
-		(
-			lr35902_add_to_regHL regDE
-			lr35902_dec regA
-		) >src/view_file.3.o
-		cat src/view_file.3.o
-		local sz_3=$(stat -c '%s' src/view_file.3.o)
-		lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_3 + 2)))
-	) >src/view_file.4.o
-	local sz_4=$(stat -c '%s' src/view_file.4.o)
-	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_4)
-	cat src/view_file.4.o
-	## ファイルタイプをAへ取得
-	lr35902_copy_to_from regA ptrHL
-
-	# Aは作業に使うのでCへコピー
-	lr35902_copy_to_from regC regA
-
-	# HLへファイルサイズ・データ先頭アドレスを設定
-	## ファイルサイズ・データへのオフセットが格納されたアドレスを設定
-	lr35902_inc regHL
-	## ファイルサイズ・データへのオフセット取得
-	lr35902_copyinc_to_regA_from_ptrHL
-	lr35902_copy_to_from regE regA
-	lr35902_copy_to_from regA ptrHL
-	lr35902_copy_to_from regD regA
-	## FSベースアドレスと足してファイルサイズ・データ先頭アドレス取得
-	lr35902_copy_to_regA_from_addr $var_fs_base_bh
-	lr35902_copy_to_from regL regA
-	lr35902_copy_to_regA_from_addr $var_fs_base_th
-	lr35902_copy_to_from regH regA
-	lr35902_add_to_regHL regDE
-
-	# ファイルタイプをAへ復帰
-	lr35902_copy_to_from regA regC
-
-	# 対象が実行ファイルの場合、f_run_exe() で実行する
-	lr35902_compare_regA_and $GBOS_ICON_NUM_EXE
-	(
-		# 実行ファイルの場合
-		lr35902_copy_to_from regA regB
-		lr35902_call $a_run_exe
-
-		# Aがこの後何にもヒットしないようにする
-		lr35902_clear_reg regA
-	) >src/view_file.5.o
-	local sz_5=$(stat -c '%s' src/view_file.5.o)
-	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
-	cat src/view_file.5.o
-
-	# 対象がテキストファイルの場合、f_view_txt() で閲覧
-	lr35902_compare_regA_and $GBOS_ICON_NUM_TXT
-	(
-		# テキストファイルの場合
-		lr35902_copy_to_from regA regB
-		lr35902_call $a_view_txt
-
-		# Aがこの後何にもヒットしないようにする
-		lr35902_clear_reg regA
-	) >src/view_file.1.o
-	local sz_1=$(stat -c '%s' src/view_file.1.o)
-	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
-	cat src/view_file.1.o
-
-	# 対象が画像ファイルの場合、f_view_img() で閲覧
-	lr35902_compare_regA_and $GBOS_ICON_NUM_IMG
-	(
-		# 画像ファイルの場合
-		lr35902_copy_to_from regA regB
-		lr35902_call $a_view_img
-	) >src/view_file.2.o
-	local sz_2=$(stat -c '%s' src/view_file.2.o)
-	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
-	cat src/view_file.2.o
-
-	# DEを復帰
-	lr35902_pop_reg regDE
 }
 
 # ボタンリリースに応じた処理

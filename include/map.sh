@@ -41,3 +41,4 @@ a_print=16CF
 a_putxy=16E5
 a_getxy=16FC
 a_click_event=1710
+a_print_regA=1774
