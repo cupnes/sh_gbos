@@ -67,6 +67,9 @@ src_name=$(basename $SRC_IMG_FILE | rev | cut -d'.' -f2- | rev)
 
 convert $SRC_IMG_FILE -type GrayScale $tempdir/${src_name}_gray.png
 convert $tempdir/${src_name}_gray.png -depth 2 $tempdir/${src_name}_depth2.png
+# 4色への減色の際にうまく行かない時は、予め元画像をGIMP等で4色に減色した上で、
+# convertコマンドによる減色処理は行わないようにするとうまく行くこともある
+# cp $tempdir/${src_name}_gray.png $tempdir/${src_name}_depth2.png
 convert $tempdir/${src_name}_depth2.png $tempdir/${src_name}_depth2.pgm
 
 oct4col=$(sed -n '$p' $tempdir/${src_name}_depth2.pgm | od -bv -w1 \
