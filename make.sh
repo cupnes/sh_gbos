@@ -11,32 +11,40 @@ ROM_FILE_NAME=${TARGET}.gb
 RAM_FILE_NAME=${TARGET}.sav
 
 print_boot_kern() {
-	# 0x0000 - 0x00ff: リスタートと割り込みのベクタテーブル (256バイト)
-	gbos_vec
+	if [ -f boot_kern.bin ]; then
+		cat boot_kern.bin
+		return
+	fi
 
-	# 0x0100 - 0x014f: カートリッジヘッダ (80バイト)
-	gbos_const >gbos_const.o
-	local offset=$(stat -c '%s' gbos_const.o)
-	local offset_hex=$(echo "obase=16;${offset}" | bc)
-	local bc_form="obase=16;ibase=16;${GB_ROM_FREE_BASE}+${offset_hex}"
-	local entry_addr=$(echo $bc_form | bc)
-	bc_form="obase=16;ibase=16;${entry_addr}+10000"
-	local entry_addr_4digits=$(echo $bc_form | bc | cut -c2-5)
-	gb_cart_header_no_title_mbc1 $entry_addr_4digits
+	(
+		# 0x0000 - 0x00ff: リスタートと割り込みのベクタテーブル (256バイト)
+		gbos_vec
 
-	# 0x0150 - 0x3fff: カートリッジROM(Bank 00) (16048バイト)
-	gbos_main >gbos_main.o
-	cat gbos_const.o gbos_main.o
-	## 16KBのサイズにするために残りをゼロ埋め
-	local num_const_bytes=$(stat -c '%s' gbos_const.o)
-	local num_main_bytes=$(stat -c '%s' gbos_main.o)
-	local padding=$((GB_ROM_BANK_SIZE_NOHEAD - num_const_bytes \
-						 - num_main_bytes))
-	dd if=/dev/zero bs=1 count=$padding 2>/dev/null
+		# 0x0100 - 0x014f: カートリッジヘッダ (80バイト)
+		gbos_const >gbos_const.o
+		local offset=$(stat -c '%s' gbos_const.o)
+		local offset_hex=$(echo "obase=16;${offset}" | bc)
+		local bc_form="obase=16;ibase=16;${GB_ROM_FREE_BASE}+${offset_hex}"
+		local entry_addr=$(echo $bc_form | bc)
+		bc_form="obase=16;ibase=16;${entry_addr}+10000"
+		local entry_addr_4digits=$(echo $bc_form | bc | cut -c2-5)
+		gb_cart_header_no_title_mbc1 $entry_addr_4digits
+
+		# 0x0150 - 0x3fff: カートリッジROM(Bank 00) (16048バイト)
+		gbos_main >gbos_main.o
+		cat gbos_const.o gbos_main.o
+		## 16KBのサイズにするために残りをゼロ埋め
+		local num_const_bytes=$(stat -c '%s' gbos_const.o)
+		local num_main_bytes=$(stat -c '%s' gbos_main.o)
+		local padding=$((GB_ROM_BANK_SIZE_NOHEAD - num_const_bytes \
+							 - num_main_bytes))
+		dd if=/dev/zero bs=1 count=$padding 2>/dev/null
+	) >boot_kern.bin
+	cat boot_kern.bin
 }
 
 print_fs_system() {
-	if [ -d fs_system.img ]; then
+	if [ -f fs_system.img ]; then
 		cat fs_system.img
 		return
 	fi
@@ -85,7 +93,7 @@ print_fs_system() {
 }
 
 print_fs_ram0_orig() {
-	if [ -d fs_ram0_orig.img ]; then
+	if [ -f fs_ram0_orig.img ]; then
 		cat fs_ram0_orig.img
 		return
 	fi
@@ -100,8 +108,7 @@ print_fs_ram0_orig() {
 
 print_rom() {
 	# 0x00 0000 - 0x00 3fff: Bank 000 (16KB)
-	print_boot_kern >boot_kern.bin
-	cat boot_kern.bin
+	print_boot_kern
 	# 0x00 4000 - 0x00 7fff: Bank 001 (16KB)
 	print_fs_system
 	# 0x00 8000 - 0x00 bfff: Bank 002 (16KB)
@@ -117,7 +124,7 @@ print_rom() {
 }
 
 print_fs_ram0() {
-	if [ -d fs_ram0.img ]; then
+	if [ -f fs_ram0.img ]; then
 		cat fs_ram0.img
 		return
 	fi
