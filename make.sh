@@ -6,14 +6,9 @@ set -uex
 . include/gb.sh
 . src/main.sh
 
-if [ $# -ne 1 ]; then
-	echo "Usage: $0 ROOTFS_IMAGE_FILE" 1>&2
-	exit 1
-fi
-
-ROOTFS_IMAGE_FILE=$1
-
-ROM_FILE_NAME=amado.gb
+TARGET=amado
+ROM_FILE_NAME=${TARGET}.gb
+RAM_FILE_NAME=${TARGET}.sav
 
 print_boot_kern() {
 	# 0x0000 - 0x00ff: リスタートと割り込みのベクタテーブル (256バイト)
@@ -40,14 +35,77 @@ print_boot_kern() {
 	dd if=/dev/zero bs=1 count=$padding 2>/dev/null
 }
 
+print_fs_system() {
+	if [ -d fs_system.img ]; then
+		cat fs_system.img
+		return
+	fi
+
+	(
+		mkdir -p fs_system
+
+		# binedit.exe
+		if [ ! -f fs_system/0100.exe ]; then
+			make -C apps/binedit
+			cp apps/binedit/binedit.exe fs_system/0100.exe
+		fi
+
+		# cartram_formatter.exe
+		if [ ! -f fs_system/0200.exe ]; then
+			make -C apps/cartram_formatter
+			cp apps/cartram_formatter/cartram_formatter.exe fs_system/0200.exe
+		fi
+
+		# welcome.txt
+		if [ ! -f fs_system/0300.txt ]; then
+			make -C docs/welcome
+			cp docs/welcome/welcome.txt fs_system/0300.txt
+		fi
+
+		# version.2bpp
+		if [ ! -f fs_system/0400.2bpp ]; then
+			cp imgs/version.2bpp fs_system/0400.2bpp
+		fi
+
+		# lifegame_glider.exe
+		if [ ! -f fs_system/0500.exe ]; then
+			make -C apps/lifegame_glider
+			cp apps/lifegame_glider/lifegame_glider.exe fs_system/0500.exe
+		fi
+
+		# lifegame_random.exe
+		if [ ! -f fs_system/0600.exe ]; then
+			make -C apps/lifegame_random
+			cp apps/lifegame_random/lifegame_random.exe fs_system/0600.exe
+		fi
+
+		tools/make_fs fs_system fs_system.img
+	) >/dev/null
+	cat fs_system.img
+}
+
+print_fs_ram0_orig() {
+	if [ -d fs_ram0_orig.img ]; then
+		cat fs_ram0_orig.img
+		return
+	fi
+
+	(
+		tools/make_ram0_files.sh
+
+		tools/make_fs fs_ram0_orig fs_ram0_orig.img
+	) >/dev/null
+	cat fs_ram0_orig.img
+}
+
 print_rom() {
 	# 0x00 0000 - 0x00 3fff: Bank 000 (16KB)
 	print_boot_kern >boot_kern.bin
 	cat boot_kern.bin
 	# 0x00 4000 - 0x00 7fff: Bank 001 (16KB)
-	cat $ROOTFS_IMAGE_FILE
+	print_fs_system
 	# 0x00 8000 - 0x00 bfff: Bank 002 (16KB)
-	cat fs_ram0_orig.img
+	print_fs_ram0_orig
 
 	# 0x00 c000 - 0x1f bfff: Bank 003 - 126 (1984KB)
 	dd if=/dev/zero bs=K count=1984 2>/dev/null
@@ -58,4 +116,23 @@ print_rom() {
 	dd if=/dev/zero bs=1 count=$(((16 * 1024) - 260 - 48)) 2>/dev/null
 }
 
+print_fs_ram0() {
+	if [ -d fs_ram0.img ]; then
+		cat fs_ram0.img
+		return
+	fi
+
+	tools/make_fs fs_ram0_orig fs_ram0.img ram >/dev/null
+	cat fs_ram0.img
+}
+
+print_ram() {
+	# 0x0000 - 0x1fff: Bank 0 (8KB)
+	print_fs_ram0
+
+	# 0x2000 - 0x7fff: Bank 1 - 3 (24KB)
+	dd if=/dev/zero bs=K count=24 2>/dev/null
+}
+
 print_rom >$ROM_FILE_NAME
+print_ram >$RAM_FILE_NAME

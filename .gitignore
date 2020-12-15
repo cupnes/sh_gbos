@@ -1,11 +1,11 @@
 *~
 *.o
-*.gb
-*.2bpp
 *.lst
 *.img
 *.exe
 boot_kern.bin
 map.txt
+amado*.gb
+amado*.sav
 
 rootfs*

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-set -uex
-# set -ue
+# set -uex
+set -ue
 
 # TODO シリアル通信プログラム
 # TODO 各サイクルの時間評価

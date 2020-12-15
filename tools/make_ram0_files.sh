@@ -1,7 +1,7 @@
 #!/bin/bash
 
-set -uex
-# set -ue
+# set -uex
+set -ue
 
 put_footer() {
 	# 無限ループ
@@ -20,7 +20,7 @@ create_blank_txt() {
 	echo -en '\x85'	# '←'
 }
 
-mkdir fs_ram0_orig
+mkdir -p fs_ram0_orig
 cd $_
 
 # 1行目：1画面分(48バイト)の空のEXE4つ

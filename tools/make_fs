@@ -4,7 +4,8 @@
 set -ue
 
 GB_BANK_SIZE=16384	# ROM
-# GB_BANK_SIZE=8192	# RAM
+
+
 
 # conv_char_code
 CONV_FROM='[ 0-9A-Za-z]'
@@ -12,7 +13,7 @@ CONV_TO='[\000\024-\035\036-\067\036-\067]'
 
 usage() {
 	echo 'Usage:' 1>&2
-	echo -e "\t$0 SRC_ROOTFS_DIR DST_ROOTFS_IMG" 1>&2
+	echo -e "\t$0 SRC_ROOTFS_DIR DST_ROOTFS_IMG [ram]" 1>&2
 	echo -e "\t$0 -h" 1>&2
 }
 
@@ -22,9 +23,17 @@ if [ $# -eq 1 ]; then
 		exit 0
 	fi
 fi
-if [ $# -ne 2 ]; then
+if [ $# -lt 2 -o $# -gt 3 ]; then
 	usage
 	exit 1
+fi
+if [ $# -eq 3 ]; then
+	if [ "$3" = "ram" ]; then
+		GB_BANK_SIZE=8192	# RAM
+	else
+		usage
+		exit 1
+	fi
 fi
 
 SRC_ROOTFS_DIR=$1

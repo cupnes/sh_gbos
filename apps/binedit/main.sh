@@ -1,7 +1,7 @@
 #!/bin/bash
 
-set -uex
-# set -ue
+# set -uex
+set -ue
 
 . include/gb.sh
 . include/map.sh
