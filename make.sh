@@ -1,14 +1,48 @@
 #!/bin/bash
 
+usage() {
+	echo 'Usage:' 1>&2
+	echo -e "\t$0 [ACTION]" 1>&2
+	echo -e "\t$0 -h" 1>&2
+	echo 1>&2
+	echo 'ACTION' 1>&2
+	echo -e '\tbuild(default), run, clean' 1>&2
+}
+
+TARGET=amado
+ROM_FILE_NAME=${TARGET}.gb
+RAM_FILE_NAME=${TARGET}.sav
+EMU=bgb
+
+action='build'
+if [ $# -eq 1 ]; then
+	case "$1" in
+	'build' | 'clean')
+		action="$1"
+		;;
+	'run')
+		$EMU $ROM_FILE_NAME
+		exit 0
+		;;
+	'-h')
+		usage
+		exit 0
+		;;
+	*)
+		usage
+		exit 1
+		;;
+	esac
+elif [ $# -gt 1 ]; then
+	usage
+	exit 1
+fi
+
 set -uex
 # set -ue
 
 . include/gb.sh
 . src/main.sh
-
-TARGET=amado
-ROM_FILE_NAME=${TARGET}.gb
-RAM_FILE_NAME=${TARGET}.sav
 
 print_boot_kern() {
 	if [ -f boot_kern.bin ]; then
@@ -141,5 +175,63 @@ print_ram() {
 	dd if=/dev/zero bs=K count=24 2>/dev/null
 }
 
-print_rom >$ROM_FILE_NAME
-print_ram >$RAM_FILE_NAME
+build() {
+	print_rom >$ROM_FILE_NAME
+	print_ram >$RAM_FILE_NAME
+}
+
+clean_boot_kern() {
+	rm -f boot_kern.bin
+}
+
+clean_apps() {
+	# binedit.exe
+	make -C apps/binedit clean
+
+	# cartram_formatter.exe
+	make -C apps/cartram_formatter clean
+
+	# lifegame_glider.exe
+	make -C apps/lifegame_glider clean
+
+	# lifegame_random.exe
+	make -C apps/lifegame_random clean
+}
+
+clean_docs() {
+	# welcome.txt
+	make -C docs/welcome clean
+}
+
+clean_fs_system() {
+	clean_apps
+	clean_docs
+	rm -rf fs_system.img fs_system
+}
+
+clean_fs_ram0_orig() {
+	rm -rf fs_ram0_orig.img fs_ram0_orig
+}
+
+clean_rom() {
+	clean_boot_kern
+	clean_fs_system
+	clean_fs_ram0_orig
+	rm -f $ROM_FILE_NAME
+}
+
+clean_fs_ram0() {
+	rm -f fs_ram0.img
+}
+
+clean_ram() {
+	clean_fs_ram0
+	rm -f $RAM_FILE_NAME
+}
+
+clean() {
+	clean_rom
+	clean_ram
+}
+
+$action
