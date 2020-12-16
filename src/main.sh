@@ -3230,9 +3230,6 @@ init() {
 	# ウィンドウ座標レジスタへ初期値設定
 	gb_set_window_pos $GBOS_WX_DEF $GBOS_WY_DEF
 
-	# パレット初期化
-	gb_set_palette_to_default
-
 	# V-Blankの開始を待つ
 	gb_wait_for_vblank_to_start
 
@@ -3240,6 +3237,9 @@ init() {
 	# - 停止の間はVRAMとOAMに自由にアクセスできる(vblankとか関係なく)
 	lr35902_set_reg regA ${GBOS_LCDC_BASE}
 	lr35902_copy_to_ioport_from_regA $GB_IO_LCDC
+
+	# パレット初期化
+	gb_set_palette_to_default
 
 	# タイルデータをVRAMのタイルデータ領域へロード
 	load_all_tiles

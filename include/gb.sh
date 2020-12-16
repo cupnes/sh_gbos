@@ -63,6 +63,11 @@ GB_IO_OBP0=48
 GB_IO_OBP1=49
 GB_IO_WY=4a
 GB_IO_WX=4b
+GBC_IO_BGPI=68
+GBC_IO_BGPD=69
+GBC_IO_BGPD=69
+GBC_IO_OBPI=6a
+GBC_IO_OBPD=6b
 GB_IO_IE=ff
 
 GB_TAC_BIT_START=04
@@ -84,6 +89,11 @@ GB_WX_ORIG=07
 
 GB_BGP_DEFAULT=e4		# %11100100
 GB_OBP_DEFAULT=e0		# %11100000
+GBC_PI_BIT_AI=80	# auto increment
+GBC_PLT_WHITE=7fff
+GBC_PLT_LIGHT_GRAY=3def
+GBC_PLT_DARK_GRAY=2108
+GBC_PLT_BLACK=0000
 
 GB_MBC_RAM_EN_ADDR=0000
 GB_MBC_RAM_EN_VAL=0a
@@ -229,6 +239,55 @@ gb_set_palette_to_default() {
 	lr35902_set_reg regA $GB_OBP_DEFAULT
 	lr35902_copy_to_ioport_from_regA $GB_IO_OBP0
 	lr35902_copy_to_ioport_from_regA $GB_IO_OBP1
+
+	## GBC用パレットも初期化
+	### BG 0
+	lr35902_set_reg regA $GBC_PI_BIT_AI
+	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPI
+	#### Color 0
+	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c3-4)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c1-2)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+	#### Color 1
+	lr35902_set_reg regA $(echo $GBC_PLT_LIGHT_GRAY | cut -c3-4)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+	lr35902_set_reg regA $(echo $GBC_PLT_LIGHT_GRAY | cut -c1-2)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+	#### Color 2
+	lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c3-4)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+	lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c1-2)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+	#### Color 1
+	lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c3-4)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+	lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c1-2)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+
+	### OBJ 0
+	lr35902_set_reg regA $GBC_PI_BIT_AI
+	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPI
+	#### Color 0
+	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c3-4)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c1-2)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+	#### Color 1
+	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c3-4)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c1-2)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+	#### Color 2
+	lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c3-4)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+	lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c1-2)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+	#### Color 1
+	lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c3-4)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+	lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c1-2)
+	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
 }
 
 gb_wait_for_vblank_to_start() {
