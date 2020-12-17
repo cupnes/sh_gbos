@@ -244,50 +244,54 @@ gb_set_palette_to_default() {
 	### BG 0
 	lr35902_set_reg regA $GBC_PI_BIT_AI
 	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPI
-	#### Color 0
-	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c3-4)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
-	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c1-2)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
-	#### Color 1
-	lr35902_set_reg regA $(echo $GBC_PLT_LIGHT_GRAY | cut -c3-4)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
-	lr35902_set_reg regA $(echo $GBC_PLT_LIGHT_GRAY | cut -c1-2)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
-	#### Color 2
-	lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c3-4)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
-	lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c1-2)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
-	#### Color 1
-	lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c3-4)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
-	lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c1-2)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+	for _i in $(seq 8); do
+		#### Color 0
+		lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c3-4)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+		lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c1-2)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+		#### Color 1
+		lr35902_set_reg regA $(echo $GBC_PLT_LIGHT_GRAY | cut -c3-4)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+		lr35902_set_reg regA $(echo $GBC_PLT_LIGHT_GRAY | cut -c1-2)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+		#### Color 2
+		lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c3-4)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+		lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c1-2)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+		#### Color 3
+		lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c3-4)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+		lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c1-2)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_BGPD
+	done
 
 	### OBJ 0
 	lr35902_set_reg regA $GBC_PI_BIT_AI
 	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPI
-	#### Color 0
-	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c3-4)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
-	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c1-2)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
-	#### Color 1
-	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c3-4)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
-	lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c1-2)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
-	#### Color 2
-	lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c3-4)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
-	lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c1-2)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
-	#### Color 1
-	lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c3-4)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
-	lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c1-2)
-	lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+	for _i in $(seq 8); do
+		#### Color 0
+		lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c3-4)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+		lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c1-2)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+		#### Color 1
+		lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c3-4)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+		lr35902_set_reg regA $(echo $GBC_PLT_WHITE | cut -c1-2)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+		#### Color 2
+		lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c3-4)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+		lr35902_set_reg regA $(echo $GBC_PLT_DARK_GRAY | cut -c1-2)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+		#### Color 3
+		lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c3-4)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+		lr35902_set_reg regA $(echo $GBC_PLT_BLACK | cut -c1-2)
+		lr35902_copy_to_ioport_from_regA $GBC_IO_OBPD
+	done
 }
 
 gb_wait_for_vblank_to_start() {
