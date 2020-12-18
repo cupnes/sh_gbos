@@ -109,6 +109,12 @@ print_fs_system() {
 			cp imgs/version.2bpp fs_system/0400.2bpp
 		fi
 
+		# appendix.txt
+		if [ ! -f fs_system/0450.txt ]; then
+			make -C docs/appendix
+			cp docs/appendix/appendix.txt fs_system/0450.txt
+		fi
+
 		# lifegame_glider.exe
 		if [ ! -f fs_system/0500.exe ]; then
 			make -C apps/lifegame_glider
