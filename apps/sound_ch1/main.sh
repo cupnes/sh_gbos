@@ -96,10 +96,39 @@ main() {
 	(
 		# 初期化済みフラグ == 0
 		init
+
+		# pop & return
+		lr35902_pop_reg regAF
+		lr35902_return
 	) >main.1.o
 	local sz_1=$(stat -c '%s' main.1.o)
 	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
 	cat main.1.o
+
+	# アプリ用ボタンリリースフラグをregAへ取得
+	lr35902_copy_to_regA_from_addr $var_app_release_btn
+
+	# Aボタン(右クリック): 終了
+	lr35902_test_bitN_of_reg $GBOS_A_KEY_BITNUM regA
+	(
+		# Aボタン(右クリック)のリリースがあった場合
+
+		# ch1: ミュート
+		lr35902_clear_reg regA
+		lr35902_copy_to_ioport_from_regA $GB_IO_NR12
+		lr35902_set_reg regA 80
+		lr35902_copy_to_ioport_from_regA $GB_IO_NR14
+
+		# run_exe_cycを終了させる
+		lr35902_call $a_exit_exe
+
+		# pop & return
+		lr35902_pop_reg regAF
+		lr35902_return
+	) >main.2.o
+	local sz_2=$(stat -c '%s' main.2.o)
+	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
+	cat main.2.o
 
 	# pop & return
 	lr35902_pop_reg regAF
