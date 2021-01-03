@@ -25,6 +25,9 @@ rm -f $map_file
 RAM_BKUP_NEXT_ADDR_TH=a000
 RAM_BKUP_NEXT_ADDR_BH=a001
 
+# RAM0オリジナルデータ用ROMバンク番号
+PAINT_RAM_BANK_NUM=01
+
 vars() {
 	# 汎用フラグ変数
 	var_general_flgs=$APP_VARS_BASE
@@ -61,6 +64,14 @@ main() {
 		lr35902_set_reg regA $GB_MBC_RAM_EN_VAL
 		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
 
+		# RAMバンクを設定できるようにする
+		lr35902_set_reg regA $GB_MBC_SEL_RAM
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_SEL_ADDR
+
+		# paint用のバンクを設定
+		lr35902_set_reg regA $PAINT_RAM_BANK_NUM
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_BANK_ADDR
+
 		# RAM_BKUP_NEXT_ADDR_TH にバックアップ領域のアドレス
 		# の上位8ビット(A0h 〜 AFh)が書かれているか確認
 		lr35902_copy_to_regA_from_addr $RAM_BKUP_NEXT_ADDR_TH
@@ -77,6 +88,10 @@ main() {
 		local sz_9=$(stat -c '%s' main.9.o)
 		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_9)
 		cat main.9.o
+
+		# デフォルトのバンクへ戻す
+		lr35902_set_reg regA $GBOS_CARTRAM_BANK_DEF
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_BANK_ADDR
 
 		# 初期化済みフラグをセット
 		lr35902_copy_to_regA_from_addr $APP_VARS_BASE
@@ -111,10 +126,18 @@ main() {
 	(
 		# Aボタン(右クリック)のリリースがあった場合
 
-		# DAS: run_exeをクリア
-		lr35902_copy_to_regA_from_addr $var_draw_act_stat
-		lr35902_res_bitN_of_reg $GBOS_DA_BITNUM_RUN_EXE regA
-		lr35902_copy_to_addr_from_regA $var_draw_act_stat
+		# ROMバンクモードへ戻しておく
+		# TODO カーネル側でRAMバンクモードにしておいて、
+		#      ずっとそのままで良いかも
+		lr35902_set_reg regA $GB_MBC_SEL_ROM
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_SEL_ADDR
+
+		# カートリッジ搭載RAMの無効化
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
+
+		# run_exe_cycを終了させる
+		lr35902_call $a_exit_exe
 
 		# pop & return
 		lr35902_pop_reg regHL
@@ -182,6 +205,9 @@ main() {
 		lr35902_call $a_enq_tdq
 
 		# バックアップ
+		## paint用のバンクを設定
+		lr35902_set_reg regA $PAINT_RAM_BANK_NUM
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_BANK_ADDR
 		## WALもどき
 		## RAM_BKUP_NEXT_ADDR_{TH,BH}が指すRAMアドレスを
 		## regHLへ設定
@@ -200,6 +226,9 @@ main() {
 		lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_TH
 		lr35902_copy_to_from regA regL
 		lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_BH
+		## デフォルトのバンクへ戻す
+		lr35902_set_reg regA $GBOS_CARTRAM_BANK_DEF
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_BANK_ADDR
 
 		# アプリ用ボタンリリースフラグのBボタン(左クリック)をクリア
 		lr35902_copy_to_from regA regC
@@ -218,11 +247,19 @@ main() {
 		# ボタンリリース状態をregCへ取っておく
 		lr35902_copy_to_from regC regA
 
+		# paint用のバンクを設定
+		lr35902_set_reg regA $PAINT_RAM_BANK_NUM
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_BANK_ADDR
+
 		# RAM_BKUP_NEXT_ADDR_{TH,BH}を初期化
 		lr35902_set_reg regA a0
 		lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_TH
 		lr35902_set_reg regA 02
 		lr35902_copy_to_addr_from_regA $RAM_BKUP_NEXT_ADDR_BH
+
+		# デフォルトのバンクへ戻す
+		lr35902_set_reg regA $GBOS_CARTRAM_BANK_DEF
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_BANK_ADDR
 
 		# TODO 画面を初期化
 
@@ -258,6 +295,11 @@ main() {
 			lr35902_copy_to_from regD regA
 			lr35902_copyinc_to_regA_from_ptrHL
 			lr35902_copy_to_from regE regA
+
+			# デフォルトのバンクへ戻す
+			lr35902_set_reg regA $GBOS_CARTRAM_BANK_DEF
+			lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_BANK_ADDR
+
 			lr35902_call $a_enq_tdq
 		) >main.5.o
 		local sz_5=$(stat -c '%s' main.5.o)
@@ -266,6 +308,10 @@ main() {
 
 		# regH < RAM_BKUP_NEXT_ADDR_TH の間繰り返す
 		(
+			# paint用のバンクを設定
+			lr35902_set_reg regA $PAINT_RAM_BANK_NUM
+			lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_BANK_ADDR
+
 			lr35902_copy_to_regA_from_addr $RAM_BKUP_NEXT_ADDR_TH
 			lr35902_copy_to_from regC regA
 			lr35902_copy_to_from regA regH
@@ -282,6 +328,10 @@ main() {
 
 		# regL < RAM_BKUP_NEXT_ADDR_BH の間繰り返す
 		(
+			# paint用のバンクを設定
+			lr35902_set_reg regA $PAINT_RAM_BANK_NUM
+			lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_BANK_ADDR
+
 			lr35902_copy_to_regA_from_addr $RAM_BKUP_NEXT_ADDR_BH
 			lr35902_copy_to_from regC regA
 			lr35902_copy_to_from regA regL
@@ -295,6 +345,10 @@ main() {
 		## 条件判定処理先頭までジャンプ
 		local sz_8=$(stat -c '%s' main.8.o)
 		lr35902_rel_jump $(two_comp_d $((sz_8 + 2)))
+
+		# デフォルトのバンクへ戻す
+		lr35902_set_reg regA $GBOS_CARTRAM_BANK_DEF
+		lr35902_copy_to_addr_from_regA $GB_MBC_ROMRAM_BANK_ADDR
 
 		# アプリ用ボタンリリースフラグのセレクトボタンをクリア
 		lr35902_copy_to_regA_from_addr $var_app_release_btn
