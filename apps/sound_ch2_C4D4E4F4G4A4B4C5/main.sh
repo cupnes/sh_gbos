@@ -160,6 +160,34 @@ main() {
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
 	cat main.2.o
 
+	# Vブランクカウンタをインクリメント
+	lr35902_copy_to_regA_from_addr $var_vblank_counter
+	lr35902_inc regA
+
+	# Vブランクカウンタ(regA) >= 30(0x1e) ?
+	lr35902_compare_regA_and 1e
+	(
+		# Vブランクカウンタ(regA) < 30(0x1e) の場合
+
+		# インクリメントした値を変数へ設定
+		lr35902_copy_to_addr_from_regA $var_vblank_counter
+	) >main.4.o
+	(
+		# Vブランクカウンタ(regA) >= 30(0x1e) の場合
+
+		# 変数をゼロクリア
+		lr35902_clear_reg regA
+		lr35902_copy_to_addr_from_regA $var_vblank_counter
+
+		# Vブランクカウンタ(regA) < 30(0x1e) の場合の処理を飛ばす
+		local sz_4=$(stat -c '%s' main.4.o)
+		lr35902_rel_jump $(two_digits_d $sz_4)
+	) >main.3.o
+	local sz_3=$(stat -c '%s' main.3.o)
+	lr35902_rel_jump_with_cond C $(two_digits_d $sz_3)
+	cat main.3.o	# regA >= 0x1e
+	cat main.4.o	# regA < 0x1e
+
 	# pop & return
 	lr35902_pop_reg regAF
 	lr35902_return
