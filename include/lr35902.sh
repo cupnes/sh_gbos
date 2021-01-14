@@ -1342,10 +1342,18 @@ lr35902_swap_nibbles() {
 }
 
 lr35902_abs_jump() {
-	local addr=$1
-	echo -en '\xc3'
-	echo_2bytes $addr	# jp ${addr}
-	echo -e "jp \$$addr\t;16" >>$ASM_LIST_FILE
+	local reg_or_addr=$1
+	case $reg_or_addr in
+	ptrHL)
+		echo -en '\xe9'			# jp [hl]
+		echo -e 'jp [hl]\t;4' >>$ASM_LIST_FILE
+		;;
+	*)
+		echo -en '\xc3'
+		echo_2bytes $reg_or_addr	# jp ${addr}
+		echo -e "jp \$$reg_or_addr\t;16" >>$ASM_LIST_FILE
+		;;
+	esac
 }
 
 lr35902_rel_jump() {
