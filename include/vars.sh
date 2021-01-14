@@ -64,6 +64,13 @@ var_con_tadr_th=c024	# コンソールで次に描画するタイルアドレス
 # 実行ファイル用変数
 var_exe_3=c025	# ファイルタイプ
 
+# タイマーハンドラの実体
+# タイマー割り込みで、このアドレスへジャンプしてくる
+# push AF -> push HLの後、ここへジャンプしてくるため
+# 最低限、pop HL(0xe1) -> pop AF(0xf1) -> reti(0xd9) は行うこと
+var_timer_handler=c026
+# 現状、0xc028 までは使っている
+
 # 変数領域が$GBOS_TDQ_FIRSTに達しないようにすること
 # (include/tdq.sh参照)
 

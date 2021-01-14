@@ -13,6 +13,7 @@ SRC_MAIN_SH=true
 . include/tdq.sh
 . include/fs.sh
 . include/con.sh
+. include/timer.sh
 . src/tiles.sh
 
 rm -f $MAP_FILE_NAME
@@ -2894,8 +2895,11 @@ gbos_vec() {
 	dd if=/dev/zero bs=1 count=7 2>/dev/null
 
 	# Timer (INT 50h)
-	lr35902_ei_and_ret
-	dd if=/dev/zero bs=1 count=7 2>/dev/null
+	lr35902_push_reg regAF				     # 1
+	lr35902_push_reg regHL				     # 1
+	lr35902_set_reg regHL $var_timer_handler	     # 3
+	lr35902_abs_jump ptrHL				     # 1
+	dd if=/dev/zero bs=1 count=2 2>/dev/null	     # 2
 
 	# Serial (INT 58h)
 	lr35902_ei_and_ret
@@ -3322,6 +3326,8 @@ init() {
 	lr35902_copy_to_addr_from_regA $var_tdq_stat
 	# - マウス有効化
 	lr35902_copy_to_addr_from_regA $var_mouse_enable
+	# - タイマーハンドラ初期化
+	timer_init_handler
 
 	# タイルミラー領域の初期化
 	init_tmrr
