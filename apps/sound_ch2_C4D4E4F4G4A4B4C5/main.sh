@@ -11,7 +11,6 @@ set -uex
 . include/tiles.sh
 . include/gbos.sh
 . include/tdq.sh
-. include/timer.sh
 
 # アプリのメモリマップ
 APP_MAIN_SZ=0500
@@ -30,31 +29,17 @@ vars() {
 	echo -e "var_is_inited=$var_is_inited" >>$map_file
 	echo -en '\x00'
 
-	# タイマー割り込みカウンタ
-	var_timer_counter=$(calc16 "$var_is_inited+1")
-	echo -e "var_timer_counter=$var_timer_counter" >>$map_file
+	# Vブランクカウンタ
+	var_vblank_counter=$(calc16 "$var_is_inited+1")
+	echo -e "var_vblank_counter=$var_vblank_counter" >>$map_file
 	echo -en '\x00'
 }
 # 変数設定のために空実行
 vars >/dev/null
 rm -f $map_file
 
-# タイマーハンドラ
-f_timer_handler() {
-	lr35902_copy_to_regA_from_addr $var_timer_counter
-	lr35902_inc regA
-	lr35902_copy_to_addr_from_regA $var_timer_counter
-
-	lr35902_pop_reg regHL
-	lr35902_pop_reg regAF
-	lr35902_ei_and_ret
-}
-
 funcs() {
-	# タイマーハンドラ
-	a_timer_handler=$APP_FUNCS_BASE
-	echo -e "a_timer_handler=$a_timer_handler" >>$map_file
-	f_timer_handler
+	:
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -124,37 +109,6 @@ init() {
 	lr35902_copy_to_ioport_from_regA $GB_IO_NR44
 
 	#
-	# タイマー
-	#
-
-	# タイマーハンドラ設定
-	# jp $a_timer_handler (c3 $a_timer_handler) を設定
-	lr35902_push_reg regHL
-	lr35902_set_reg regHL $var_timer_handler
-	lr35902_set_reg regA c3
-	lr35902_copyinc_to_ptrHL_from_regA
-	lr35902_set_reg regA $(echo $a_timer_handler | cut -c3-4)
-	lr35902_copyinc_to_ptrHL_from_regA
-	lr35902_set_reg regA $(echo $a_timer_handler | cut -c1-2)
-	lr35902_copyinc_to_ptrHL_from_regA
-	lr35902_pop_reg regHL
-
-	# FF04 - DIV - 分周レジスタ 設定
-	lr35902_clear_reg regA
-	lr35902_copy_to_ioport_from_regA $GB_IO_DIV
-	# FF05 - TIMA - タイマーカウンタ 設定
-	lr35902_copy_to_ioport_from_regA $GB_IO_TIMA
-	# FF06 - TMA - タイマーモジュロ 設定
-	lr35902_copy_to_ioport_from_regA $GB_IO_TMA
-	# FF07 - TAC - タイマー制御 設定
-	lr35902_set_reg regA $GB_TAC_BIT_START
-	lr35902_copy_to_ioport_from_regA $GB_IO_TAC
-	# FFFF - IE - 割り込み有効 設定
-	lr35902_copy_to_regA_from_ioport $GB_IO_IE
-	lr35902_set_bitN_of_reg $GB_IE_BITNUM_TIMER regA
-	lr35902_copy_to_ioport_from_regA $GB_IO_IE
-
-	#
 	# 変数設定
 	#
 
@@ -194,19 +148,6 @@ main() {
 		## FF26 - NR52 - サウンド ON/OFF 設定
 		lr35902_set_reg regA $GB_NR52_BIT_ALL_OFF
 		lr35902_copy_to_ioport_from_regA $GB_IO_NR52
-
-		# タイマー
-		## FFFF - IE - 割り込み有効 設定
-		lr35902_copy_to_regA_from_ioport $GB_IO_IE
-		lr35902_res_bitN_of_reg $GB_IE_BITNUM_TIMER regA
-		lr35902_copy_to_ioport_from_regA $GB_IO_IE
-		## FF07 - TAC - タイマー制御 設定
-		lr35902_clear_reg regA
-		lr35902_copy_to_ioport_from_regA $GB_IO_TAC
-		## タイマーハンドラをデフォルトに戻す
-		lr35902_push_reg regHL
-		timer_init_handler
-		lr35902_pop_reg regHL
 
 		# run_exe_cycを終了させる
 		lr35902_call $a_exit_exe
