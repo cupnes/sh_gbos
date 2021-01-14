@@ -20,6 +20,9 @@ APP_MAIN_BASE=$GB_WRAM1_BASE
 APP_VARS_BASE=$(calc16 "$APP_MAIN_BASE+$APP_MAIN_SZ")
 APP_FUNCS_BASE=$(calc16 "$APP_VARS_BASE+$APP_VARS_SZ")
 
+# 楽譜の音符の数
+SCORE_LEN=07
+
 map_file=map.sh
 rm -f $map_file
 
@@ -33,6 +36,32 @@ vars() {
 	var_vblank_counter=$(calc16 "$var_is_inited+1")
 	echo -e "var_vblank_counter=$var_vblank_counter" >>$map_file
 	echo -en '\x00'
+
+	# 楽譜
+	var_score=$(calc16 "$var_vblank_counter+1")
+	echo -e "var_score=$var_score" >>$map_file
+	# echo -en "\x$GB_NR23_BIT_FREQ_C4\x$GB_NR24_BIT_FREQ_C4"	# ド4
+	# ド4は初期値で入っている
+	echo -en "\x$GB_NR23_BIT_FREQ_D4\x$GB_NR24_BIT_FREQ_D4"	# レ4
+	echo -en "\x$GB_NR23_BIT_FREQ_E4\x$GB_NR24_BIT_FREQ_E4"	# ミ4
+	echo -en "\x$GB_NR23_BIT_FREQ_F4\x$GB_NR24_BIT_FREQ_F4"	# ファ4
+	echo -en "\x$GB_NR23_BIT_FREQ_G4\x$GB_NR24_BIT_FREQ_G4"	# ソ4
+	echo -en "\x$GB_NR23_BIT_FREQ_A4\x$GB_NR24_BIT_FREQ_A4"	# ラ4
+	echo -en "\x$GB_NR23_BIT_FREQ_B4\x$GB_NR24_BIT_FREQ_B4"	# シ4
+	echo -en "\x$GB_NR23_BIT_FREQ_C5\x$GB_NR24_BIT_FREQ_C5"	# ド5
+
+	# 次の音のアドレス
+	var_next_note_bh=$(calc16 "$var_score+E")
+	echo -e "var_next_note_bh=$var_next_note_bh" >>$map_file
+	echo -en "\x$(echo $var_score | cut -c3-4)"
+	var_next_note_th=$(calc16 "$var_next_note_bh+1")
+	echo -e "var_next_note_th=$var_next_note_th" >>$map_file
+	echo -en "\x$(echo $var_score | cut -c1-2)"
+
+	# 残音数
+	var_num_notes=$(calc16 "$var_next_note_th+1")
+	echo -e "var_num_notes=$var_num_notes" >>$map_file
+	echo -en "\x$SCORE_LEN"
 }
 # 変数設定のために空実行
 vars >/dev/null
@@ -80,10 +109,10 @@ init() {
 	lr35902_set_reg regA $(calc16_2 "$GB_NR22_BIT_INIT_ENV_VOL_8+$GB_NR22_BIT_ENV_SWEEP_NUM_STOP_ENV")
 	lr35902_copy_to_ioport_from_regA $GB_IO_NR22
 	## FF18 - NR23 - チャンネル 2 周波数下位データ 設定
-	lr35902_set_reg regA $GB_NR23_BIT_FREQ_A4
+	lr35902_set_reg regA $GB_NR23_BIT_FREQ_C4
 	lr35902_copy_to_ioport_from_regA $GB_IO_NR23
 	## FF19 - NR24 - チャンネル 2 周波数上位データ 設定
-	lr35902_set_reg regA $(calc16_2 "$GB_NR24_BIT_RESTART_SOUND+$GB_NR24_BIT_FREQ_A4")
+	lr35902_set_reg regA $(calc16_2 "$GB_NR24_BIT_RESTART_SOUND+$GB_NR24_BIT_FREQ_C4")
 	lr35902_copy_to_ioport_from_regA $GB_IO_NR24
 
 	# サウンドチャンネル3(波形出力) 設定
@@ -178,6 +207,66 @@ main() {
 		# 変数をゼロクリア
 		lr35902_clear_reg regA
 		lr35902_copy_to_addr_from_regA $var_vblank_counter
+
+		# 残音数 == 0 ?
+		lr35902_copy_to_regA_from_addr $var_num_notes
+		lr35902_or_to_regA regA
+		(
+			# 残音数 == 0
+
+			# サウンドコントロールレジスタ
+			## FF26 - NR52 - サウンド ON/OFF 設定
+			lr35902_set_reg regA $GB_NR52_BIT_ALL_OFF
+			lr35902_copy_to_ioport_from_regA $GB_IO_NR52
+		) >main.5.o
+		(
+			# 残音数 != 0
+
+			# 残音数をデクリメント
+			lr35902_dec regA
+			lr35902_copy_to_addr_from_regA $var_num_notes
+
+			# 使うレジスタをpush
+			lr35902_push_reg regHL
+
+			# 次の音のアドレスをregHLへ取得
+			lr35902_copy_to_regA_from_addr $var_next_note_bh
+			lr35902_copy_to_from regL regA
+			lr35902_copy_to_regA_from_addr $var_next_note_th
+			lr35902_copy_to_from regH regA
+
+			# 周波数下位データ取得
+			lr35902_copyinc_to_regA_from_ptrHL
+
+			# 周波数下位データ設定
+			lr35902_copy_to_ioport_from_regA $GB_IO_NR23
+
+			# 周波数上位データ取得
+			lr35902_copyinc_to_regA_from_ptrHL
+
+			# リスタートフラグを立てる
+			lr35902_or_to_regA $GB_NR24_BIT_RESTART_SOUND
+
+			# 周波数上位データ設定
+			lr35902_copy_to_ioport_from_regA $GB_IO_NR24
+
+			# 次の音のアドレスを変数へ書き戻す
+			lr35902_copy_to_from regA regL
+			lr35902_copy_to_addr_from_regA $var_next_note_bh
+			lr35902_copy_to_from regA regH
+			lr35902_copy_to_addr_from_regA $var_next_note_th
+
+			# 使ったレジスタをpop
+			lr35902_pop_reg regHL
+
+			# 残音数 == 0の場合の処理を飛ばす
+			local sz_5=$(stat -c '%s' main.5.o)
+			lr35902_rel_jump $(two_digits_d $sz_5)
+		) >main.6.o
+		local sz_6=$(stat -c '%s' main.6.o)
+		lr35902_rel_jump_with_cond Z $(two_digits_d $sz_6)
+		cat main.6.o	# 残音数 != 0
+		cat main.5.o	# 残音数 == 0
 
 		# Vブランクカウンタ(regA) < 30(0x1e) の場合の処理を飛ばす
 		local sz_4=$(stat -c '%s' main.4.o)
