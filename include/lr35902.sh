@@ -1182,6 +1182,15 @@ lr35902_shift_left_arithmetic() {
 #   0x55(carry=1) -> 0x2a(carry=1)
 #   0xaa(carry=1) -> 0xd5(carry=0)
 
+# 0xcb 3[8-f] (srl reg)
+# 動作イメージ:
+# [b7] → [b6] → [b5] → ... → [b1] → [b0] → [carry]
+# 動作例:
+#   0x55(carry=0) -> 0x2a(carry=1)
+#   0xaa(carry=0) -> 0x55(carry=0)
+#   0x55(carry=1) -> 0x2a(carry=1)
+#   0xaa(carry=1) -> 0x55(carry=0)
+
 lr35902_func_bitN_of_reg_impl() {
 	local n=$1
 	local reg=$2
