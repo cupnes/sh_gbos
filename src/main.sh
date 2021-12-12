@@ -3224,9 +3224,9 @@ init() {
 	lr35902_set_reg regA 01
 	lr35902_copy_to_addr_from_regA $GB_MBC_ROM_BANK_ADDR
 
-	# カートリッジ搭載RAMの有効化
-	lr35902_set_reg regA $GB_MBC_RAM_EN_VAL
-	lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
+	# # カートリッジ搭載RAMの有効化
+	# lr35902_set_reg regA $GB_MBC_RAM_EN_VAL
+	# lr35902_copy_to_addr_from_regA $GB_MBC_RAM_EN_ADDR
 
 	# スクロールレジスタクリア
 	gb_reset_scroll_pos
