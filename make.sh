@@ -1,12 +1,13 @@
 #!/bin/bash
 
 usage() {
-	echo 'Usage:' 1>&2
-	echo -e "\t$0 [ACTION]" 1>&2
-	echo -e "\t$0 -h" 1>&2
-	echo 1>&2
-	echo 'ACTION' 1>&2
-	echo -e '\tbuild(default), run, clean' 1>&2
+	echo -e "Usage:\t$0 ACTION [OPTION]"
+	echo
+	echo 'ACTION:'
+	echo -e '\tbuild [--32kb-rom]'
+	echo -e '\tclean'
+	echo -e '\thelp'
+	echo -e '\trun'
 }
 
 TARGET=amado
@@ -14,29 +15,36 @@ ROM_FILE_NAME=${TARGET}.gb
 RAM_FILE_NAME=${TARGET}.sav
 EMU=bgb
 
-action='build'
-if [ $# -eq 1 ]; then
-	case "$1" in
-	'build' | 'clean')
-		action="$1"
-		;;
-	'run')
-		$EMU $ROM_FILE_NAME
-		exit 0
-		;;
-	'-h')
-		usage
-		exit 0
-		;;
-	*)
-		usage
-		exit 1
-		;;
-	esac
-elif [ $# -gt 1 ]; then
-	usage
+if [ $# -eq 0 ]; then
+	usage >&2
 	exit 1
 fi
+
+case "$1" in
+'build')
+	action="$1"
+	if [ $# -eq 2 ]; then
+		opt="$2"
+	else
+		opt=''
+	fi
+	;;
+'clean')
+	action="$1"
+	;;
+'help')
+	usage
+	exit 0
+	;;
+'run')
+	$EMU $ROM_FILE_NAME
+	exit 0
+	;;
+*)
+	usage >&2
+	exit 1
+	;;
+esac
 
 set -uex
 # set -ue
@@ -151,6 +159,9 @@ print_rom() {
 	print_boot_kern
 	# 0x00 4000 - 0x00 7fff: Bank 001 (16KB)
 	print_fs_system
+	if [ "$opt" == "--32kb-rom" ]; then
+		return
+	fi
 	# 0x00 8000 - 0x00 bfff: Bank 002 (16KB)
 	print_fs_ram0_orig
 
@@ -183,6 +194,9 @@ print_ram() {
 
 build() {
 	print_rom >$ROM_FILE_NAME
+	if [ "$opt" == "--32kb-rom" ]; then
+		return
+	fi
 	print_ram >$RAM_FILE_NAME
 }
 
