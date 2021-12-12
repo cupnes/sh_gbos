@@ -121,10 +121,22 @@ print_fs_system() {
 			cp apps/lifegame_glider/lifegame_glider.exe fs_system/0500.exe
 		fi
 
-		# lifegame_random.exe
+		# # lifegame_random.exe
+		# if [ ! -f fs_system/0600.exe ]; then
+		# 	make -C apps/lifegame_random
+		# 	cp apps/lifegame_random/lifegame_random.exe fs_system/0600.exe
+		# fi
+
+		# # sound_ch2_A4.exe
+		# if [ ! -f fs_system/0600.exe ]; then
+		# 	make -C apps/sound_ch2_A4
+		# 	cp apps/sound_ch2_A4/sound_ch2_A4.exe fs_system/0600.exe
+		# fi
+
+		# sound_ch2_C4D4E4F4G4A4B4C5.exe
 		if [ ! -f fs_system/0600.exe ]; then
-			make -C apps/lifegame_random
-			cp apps/lifegame_random/lifegame_random.exe fs_system/0600.exe
+			make -C apps/sound_ch2_C4D4E4F4G4A4B4C5
+			cp apps/sound_ch2_C4D4E4F4G4A4B4C5/sound_ch2_C4D4E4F4G4A4B4C5.exe fs_system/0600.exe
 		fi
 
 		tools/make_fs fs_system fs_system.img
