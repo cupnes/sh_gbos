@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# set -uex
+set -ue
+
+# ヘッダのオフセット0x0134-0x014Cのバイト列を半角スペース区切りで並べる
+## 0x0134-0x0142
+HEADER_0134_0142=$(echo -n '00'; for _i in $(seq 14); do echo -n ' 00'; done)
+## 0x0143 - CGB Flag
+HEADER_0143='80'
+## 0x0144-0x0145 - New Licensee Code
+HEADER_0144_0145='00 00'
+## 0x0146 - SGB Flag
+HEADER_0146='03'
+## 0x0147 - Cartridge Type
+HEADER_0147='00'
+# HEADER_0147='03'
+## 0x0148 - ROM Size
+HEADER_0148='00'
+# HEADER_0148='01'
+## 0x0149 - RAM Size
+HEADER_0149='00'
+# HEADER_0149='03'
+## 0x014A - Destination Code
+HEADER_014A='00'
+## 0x014B - Old Licensee Code
+HEADER_014B='33'
+## 0x014C - Mask ROM Version number
+HEADER_014C='00'
+## 計算に使用する変数へ格納する
+H="${HEADER_0134_0142} ${HEADER_0143} ${HEADER_0144_0145} ${HEADER_0146} ${HEADER_0147} ${HEADER_0148} ${HEADER_0149} ${HEADER_014A} ${HEADER_014B} ${HEADER_014C}"
+H_UP=$(echo -n $H | tr '[:lower:]' '[:upper:]')
+
+# x=0:FOR i=0134h TO 014Ch:x=x-MEM[i]-1:NEXT
+x='0'
+for mem in $H_UP; do
+	x=$(echo "obase=16;ibase=16;${x} - ${mem} - 1" | bc)
+done
+echo "obase=16;ibase=16;100${x}" | bc
