@@ -2830,8 +2830,14 @@ f_get_rnd() {
 	lr35902_push_reg regBC
 	lr35902_push_reg regAF
 
-	# TIMAを乱数とする
+	# 乱数生成
 	lr35902_copy_to_regA_from_ioport $GB_IO_TIMA
+	lr35902_copy_to_from regB regA
+	lr35902_copy_to_regA_from_addr $var_mouse_x
+	lr35902_add_to_regA regB
+	lr35902_copy_to_from regB regA
+	lr35902_copy_to_regA_from_addr $var_mouse_y
+	lr35902_add_to_regA regB
 	lr35902_copy_to_from regB regA
 
 	# pop & return
