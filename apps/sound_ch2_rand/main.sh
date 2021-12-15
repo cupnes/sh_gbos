@@ -33,6 +33,11 @@ vars() {
 	var_vblank_counter=$(calc16 "$var_is_inited+1")
 	echo -e "var_vblank_counter=$var_vblank_counter" >>$map_file
 	echo -en '\x00'
+
+	# Vブランクしきい値
+	var_vblank_th=$(calc16 "$var_vblank_counter+1")
+	echo -e "var_vblank_th=$var_vblank_th" >>$map_file
+	echo -en '\x1e'
 }
 # 変数設定のために空実行
 vars >/dev/null
@@ -160,20 +165,27 @@ main() {
 	lr35902_rel_jump_with_cond Z $(two_digits_d $sz_2)
 	cat main.2.o
 
+	# push
+	lr35902_push_reg regBC
+
+	# Vブランクしきい値をregBへ取得
+	lr35902_copy_to_regA_from_addr $var_vblank_th
+	lr35902_copy_to_from regB regA
+
 	# Vブランクカウンタをインクリメント
 	lr35902_copy_to_regA_from_addr $var_vblank_counter
 	lr35902_inc regA
 
-	# Vブランクカウンタ(regA) >= 30(0x1e) ?
-	lr35902_compare_regA_and 1e
+	# Vブランクカウンタ(regA) >= Vブランクしきい値(regB) ?
+	lr35902_compare_regA_and regB
 	(
-		# Vブランクカウンタ(regA) < 30(0x1e) の場合
+		# Vブランクカウンタ(regA) < Vブランクしきい値(regB) の場合
 
 		# インクリメントした値を変数へ設定
 		lr35902_copy_to_addr_from_regA $var_vblank_counter
 	) >main.4.o
 	(
-		# Vブランクカウンタ(regA) >= 30(0x1e) の場合
+		# Vブランクカウンタ(regA) >= Vブランクしきい値(regB) の場合
 
 		# 変数をゼロクリア
 		lr35902_clear_reg regA
@@ -195,16 +207,21 @@ main() {
 		# 周波数上位データ設定
 		lr35902_copy_to_ioport_from_regA $GB_IO_NR24
 
-		# Vブランクカウンタ(regA) < 30(0x1e) の場合の処理を飛ばす
+		# Vブランクしきい値を更新
+		lr35902_call $a_get_rnd
+		lr35902_copy_to_addr_from_regA $var_vblank_th
+
+		# Vブランクカウンタ(regA) < Vブランクしきい値(regB) の場合の処理を飛ばす
 		local sz_4=$(stat -c '%s' main.4.o)
 		lr35902_rel_jump $(two_digits_d $sz_4)
 	) >main.3.o
 	local sz_3=$(stat -c '%s' main.3.o)
 	lr35902_rel_jump_with_cond C $(two_digits_d $sz_3)
-	cat main.3.o	# regA >= 0x1e
-	cat main.4.o	# regA < 0x1e
+	cat main.3.o	# regA >= regB
+	cat main.4.o	# regA < regB
 
 	# pop & return
+	lr35902_pop_reg regBC
 	lr35902_pop_reg regAF
 	lr35902_return
 }
