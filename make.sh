@@ -103,10 +103,16 @@ print_fs_system() {
 			cp apps/binedit/binedit.exe fs_system/0100.exe
 		fi
 
-		# sound_ch2_C4D4E4F4G4A4B4C5.exe
+		# # sound_ch2_C4D4E4F4G4A4B4C5.exe
+		# if [ ! -f fs_system/0200.exe ]; then
+		# 	make -C apps/sound_ch2_C4D4E4F4G4A4B4C5
+		# 	cp apps/sound_ch2_C4D4E4F4G4A4B4C5/sound_ch2_C4D4E4F4G4A4B4C5.exe fs_system/0200.exe
+		# fi
+
+		# sound_ch2_rand.exe
 		if [ ! -f fs_system/0200.exe ]; then
-			make -C apps/sound_ch2_C4D4E4F4G4A4B4C5
-			cp apps/sound_ch2_C4D4E4F4G4A4B4C5/sound_ch2_C4D4E4F4G4A4B4C5.exe fs_system/0200.exe
+			make -C apps/sound_ch2_rand
+			cp apps/sound_ch2_rand/sound_ch2_rand.exe fs_system/0200.exe
 		fi
 
 		# # cartram_formatter.exe
@@ -226,8 +232,11 @@ clean_apps() {
 	# lifegame_random.exe
 	make -C apps/lifegame_random clean
 
-	# sound_ch2_C4D4E4F4G4A4B4C5.exe
-	make -C apps/sound_ch2_C4D4E4F4G4A4B4C5 clean
+	# # sound_ch2_C4D4E4F4G4A4B4C5.exe
+	# make -C apps/sound_ch2_C4D4E4F4G4A4B4C5 clean
+
+	# sound_ch2_rand.exe
+	make -C apps/sound_ch2_rand clean
 }
 
 clean_docs() {
