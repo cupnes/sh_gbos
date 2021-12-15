@@ -179,14 +179,15 @@ main() {
 		lr35902_clear_reg regA
 		lr35902_copy_to_addr_from_regA $var_vblank_counter
 
-		# 次に鳴らす周波数の下位データをregAへ設定
-		lr35902_set_reg regA $GB_NR23_BIT_FREQ_C4
+		# 次に鳴らす周波数(11ビット)の下位データ(8ビット)をregAへ設定
+		lr35902_call $a_get_rnd
 
 		# 周波数下位データ設定
 		lr35902_copy_to_ioport_from_regA $GB_IO_NR23
 
-		# 次に鳴らす周波数の下位データをregAへ設定
-		lr35902_set_reg regA $GB_NR24_BIT_FREQ_C4
+		# 次に鳴らす周波数(11ビット)の上位データ(3ビット)をregAへ設定
+		lr35902_call $a_get_rnd
+		lr35902_and_to_regA 07
 
 		# リスタートフラグを立てる
 		lr35902_or_to_regA $GB_NR24_BIT_RESTART_SOUND
