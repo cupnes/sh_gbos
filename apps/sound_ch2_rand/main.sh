@@ -209,6 +209,7 @@ main() {
 
 		# Vブランクしきい値を更新
 		lr35902_call $a_get_rnd
+		lr35902_and_to_regA 0F
 		lr35902_copy_to_addr_from_regA $var_vblank_th
 
 		# Vブランクカウンタ(regA) < Vブランクしきい値(regB) の場合の処理を飛ばす
