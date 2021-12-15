@@ -103,40 +103,46 @@ print_fs_system() {
 			cp apps/binedit/binedit.exe fs_system/0100.exe
 		fi
 
-		# cartram_formatter.exe
+		# sound_ch2_C4D4E4F4G4A4B4C5.exe
 		if [ ! -f fs_system/0200.exe ]; then
-			make -C apps/cartram_formatter
-			cp apps/cartram_formatter/cartram_formatter.exe fs_system/0200.exe
+			make -C apps/sound_ch2_C4D4E4F4G4A4B4C5
+			cp apps/sound_ch2_C4D4E4F4G4A4B4C5/sound_ch2_C4D4E4F4G4A4B4C5.exe fs_system/0200.exe
 		fi
 
-		# welcome.txt
-		if [ ! -f fs_system/0300.txt ]; then
-			make -C docs/welcome
-			cp docs/welcome/welcome.txt fs_system/0300.txt
-		fi
+		# # cartram_formatter.exe
+		# if [ ! -f fs_system/0200.exe ]; then
+		# 	make -C apps/cartram_formatter
+		# 	cp apps/cartram_formatter/cartram_formatter.exe fs_system/0200.exe
+		# fi
 
-		# version.2bpp
-		if [ ! -f fs_system/0400.2bpp ]; then
-			cp imgs/version.2bpp fs_system/0400.2bpp
-		fi
+		# # welcome.txt
+		# if [ ! -f fs_system/0300.txt ]; then
+		# 	make -C docs/welcome
+		# 	cp docs/welcome/welcome.txt fs_system/0300.txt
+		# fi
 
-		# appendix.txt
-		if [ ! -f fs_system/0450.txt ]; then
-			make -C docs/appendix
-			cp docs/appendix/appendix.txt fs_system/0450.txt
-		fi
+		# # version.2bpp
+		# if [ ! -f fs_system/0400.2bpp ]; then
+		# 	cp imgs/version.2bpp fs_system/0400.2bpp
+		# fi
 
-		# lifegame_glider.exe
-		if [ ! -f fs_system/0500.exe ]; then
-			make -C apps/lifegame_glider
-			cp apps/lifegame_glider/lifegame_glider.exe fs_system/0500.exe
-		fi
+		# # appendix.txt
+		# if [ ! -f fs_system/0450.txt ]; then
+		# 	make -C docs/appendix
+		# 	cp docs/appendix/appendix.txt fs_system/0450.txt
+		# fi
 
-		# lifegame_random.exe
-		if [ ! -f fs_system/0600.exe ]; then
-			make -C apps/lifegame_random
-			cp apps/lifegame_random/lifegame_random.exe fs_system/0600.exe
-		fi
+		# # lifegame_glider.exe
+		# if [ ! -f fs_system/0500.exe ]; then
+		# 	make -C apps/lifegame_glider
+		# 	cp apps/lifegame_glider/lifegame_glider.exe fs_system/0500.exe
+		# fi
+
+		# # lifegame_random.exe
+		# if [ ! -f fs_system/0600.exe ]; then
+		# 	make -C apps/lifegame_random
+		# 	cp apps/lifegame_random/lifegame_random.exe fs_system/0600.exe
+		# fi
 
 		tools/make_fs fs_system fs_system.img
 	) >/dev/null
@@ -219,6 +225,9 @@ clean_apps() {
 
 	# lifegame_random.exe
 	make -C apps/lifegame_random clean
+
+	# sound_ch2_C4D4E4F4G4A4B4C5.exe
+	make -C apps/sound_ch2_C4D4E4F4G4A4B4C5 clean
 }
 
 clean_docs() {
