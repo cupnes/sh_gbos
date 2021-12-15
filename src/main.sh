@@ -2818,6 +2818,29 @@ f_tile_to_byte() {
 	lr35902_return
 }
 
+# 乱数を返す
+# out: regA - 乱数(0x00 - 0xff)
+f_tile_to_byte >src/f_tile_to_byte.o
+fsz=$(to16 $(stat -c '%s' src/f_tile_to_byte.o))
+fadr=$(calc16 "${a_tile_to_byte}+${fsz}")
+a_get_rnd=$(four_digits $fadr)
+echo -e "a_get_rnd=$a_get_rnd" >>$MAP_FILE_NAME
+f_get_rnd() {
+	# push
+	lr35902_push_reg regBC
+	lr35902_push_reg regAF
+
+	# TIMAを乱数とする
+	lr35902_copy_to_regA_from_ioport $GB_IO_TIMA
+	lr35902_copy_to_from regB regA
+
+	# pop & return
+	lr35902_pop_reg regAF
+	lr35902_copy_to_from regA regB
+	lr35902_pop_reg regBC
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2880,6 +2903,7 @@ global_functions() {
 	f_click_event
 	f_print_regA
 	f_tile_to_byte
+	f_get_rnd
 }
 
 gbos_vec() {
