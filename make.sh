@@ -103,16 +103,15 @@ print_fs_system() {
 			cp apps/binedit/binedit.exe fs_system/0100.exe
 		fi
 
-		# # sound_ch2_C4D4E4F4G4A4B4C5.exe
-		# if [ ! -f fs_system/0200.exe ]; then
-		# 	make -C apps/sound_ch2_C4D4E4F4G4A4B4C5
-		# 	cp apps/sound_ch2_C4D4E4F4G4A4B4C5/sound_ch2_C4D4E4F4G4A4B4C5.exe fs_system/0200.exe
-		# fi
+		# sound_ch2_rand_description.2bpp
+		if [ ! -f fs_system/0200.2bpp ]; then
+			cp imgs/sound_ch2_rand_description.2bpp fs_system/0200.2bpp
+		fi
 
 		# sound_ch2_rand.exe
-		if [ ! -f fs_system/0200.exe ]; then
+		if [ ! -f fs_system/0300.exe ]; then
 			make -C apps/sound_ch2_rand
-			cp apps/sound_ch2_rand/sound_ch2_rand.exe fs_system/0200.exe
+			cp apps/sound_ch2_rand/sound_ch2_rand.exe fs_system/0300.exe
 		fi
 
 		# # cartram_formatter.exe
