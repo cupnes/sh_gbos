@@ -46,8 +46,69 @@ vars() {
 vars >/dev/null
 rm -f $map_file
 
+# タイトルを画面中央へ描画する
+f_draw_app_name() {
+	# 新たに使用するレジスタをpush
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+
+	# アプリ名を画面中央に表示
+	## ら
+	lr35902_set_reg regDE $APP_NAME_VRAM_ADDR
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RA
+	lr35902_call $a_tdq_enq
+	## ん
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_N
+	lr35902_call $a_tdq_enq
+	## す
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_SU
+	lr35902_call $a_tdq_enq
+	## う
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_U
+	lr35902_call $a_tdq_enq
+	## か
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+	lr35902_call $a_tdq_enq
+	## な
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_NA
+	lr35902_call $a_tdq_enq
+	## て
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_TE
+	lr35902_call $a_tdq_enq
+	## ゛
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DAKUTEN
+	lr35902_call $a_tdq_enq
+	## ー
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_DASH
+	lr35902_call $a_tdq_enq
+	## る
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RU
+	lr35902_call $a_tdq_enq
+
+	# 使用したレジスタをpop
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+
+	# return
+	lr35902_return
+}
+
 funcs() {
-	:
+	local fsz
+
+	# タイトルを画面中央へ描画する
+	a_draw_app_name=$APP_FUNCS_BASE
+	echo -e "a_draw_app_name=$a_draw_app_name" >>$map_file
+	f_draw_app_name
 }
 # 変数設定のために空実行
 funcs >/dev/null
@@ -127,19 +188,7 @@ init() {
 	#
 	# 画面表示
 	#
-
-	# 新たに使用するレジスタをpush
-	lr35902_push_reg regBC
-	lr35902_push_reg regDE
-
-	# アプリ名を画面中央に表示
-	lr35902_set_reg regDE $APP_NAME_VRAM_ADDR
-	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RA
-	lr35902_call $a_tdq_enq
-
-	# 使用したレジスタをpop
-	lr35902_pop_reg regDE
-	lr35902_pop_reg regBC
+	lr35902_call $a_draw_app_name
 }
 
 main() {
