@@ -114,6 +114,12 @@ print_fs_system() {
 			cp apps/sound_ch2_rand/sound_ch2_rand.exe fs_system/0300.exe
 		fi
 
+		# colophon_random_sound_play.txt
+		if [ ! -f fs_system/0400.txt ]; then
+			make -C docs/colophon_random_sound_play
+			cp docs/colophon_random_sound_play/colophon_random_sound_play.txt fs_system/0400.txt
+		fi
+
 		# # cartram_formatter.exe
 		# if [ ! -f fs_system/0200.exe ]; then
 		# 	make -C apps/cartram_formatter
