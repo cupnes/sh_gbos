@@ -20,6 +20,9 @@ APP_MAIN_BASE=$GB_WRAM1_BASE
 APP_VARS_BASE=$(calc16 "$APP_MAIN_BASE+$APP_MAIN_SZ")
 APP_FUNCS_BASE=$(calc16 "$APP_VARS_BASE+$APP_VARS_SZ")
 
+# アプリ名1文字目のVRAMアドレス
+APP_NAME_VRAM_ADDR=9923
+
 map_file=map.sh
 rm -f $map_file
 
@@ -120,6 +123,23 @@ init() {
 	# 初期化済みフラグをセットする
 	lr35902_set_reg regA 01
 	lr35902_copy_to_addr_from_regA $var_is_inited
+
+	#
+	# 画面表示
+	#
+
+	# 新たに使用するレジスタをpush
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+
+	# アプリ名を画面中央に表示
+	lr35902_set_reg regDE $APP_NAME_VRAM_ADDR
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RA
+	lr35902_call $a_tdq_enq
+
+	# 使用したレジスタをpop
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
 }
 
 main() {
@@ -156,6 +176,18 @@ main() {
 
 		# run_exe_cycを終了させる
 		lr35902_call $a_exit_exe
+
+		# tdq初期化
+		# - tdq.head = tdq.tail = TDQ_FIRST
+		lr35902_set_reg regA $(echo $GBOS_TDQ_FIRST | cut -c3-4)
+		lr35902_copy_to_addr_from_regA $var_tdq_head_bh
+		lr35902_copy_to_addr_from_regA $var_tdq_tail_bh
+		lr35902_set_reg regA $(echo $GBOS_TDQ_FIRST | cut -c1-2)
+		lr35902_copy_to_addr_from_regA $var_tdq_head_th
+		lr35902_copy_to_addr_from_regA $var_tdq_tail_th
+		# - tdq.stat = is_empty
+		lr35902_set_reg regA 01
+		lr35902_copy_to_addr_from_regA $var_tdq_stat
 
 		# pop & return
 		lr35902_pop_reg regAF
