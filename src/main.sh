@@ -2847,6 +2847,114 @@ f_get_rnd() {
 	lr35902_return
 }
 
+# tdqへエントリを追加する
+# in : regB  - 配置するタイル番号
+#      regD  - VRAMアドレス[15:8]
+#      regE  - VRAMアドレス[7:0]
+f_get_rnd >src/f_get_rnd.o
+fsz=$(to16 $(stat -c '%s' src/f_get_rnd.o))
+fadr=$(calc16 "${a_get_rnd}+${fsz}")
+a_tdq_enq=$(four_digits $fadr)
+echo -e "a_tdq_enq=$a_tdq_enq" >>$MAP_FILE_NAME
+f_tdq_enq() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regDE
+	lr35902_push_reg regHL
+
+	lr35902_copy_to_regA_from_addr $var_tdq_stat
+	lr35902_test_bitN_of_reg $GBOS_TDQ_STAT_BITNUM_FULL regA
+	(
+		# Aへロードしたtdq.statをCへコピー
+		lr35902_copy_to_from regC regA
+
+		# tdq.tailが指す位置に追加
+		lr35902_copy_to_regA_from_addr $var_tdq_tail_bh
+		lr35902_copy_to_from regL regA
+		lr35902_copy_to_regA_from_addr $var_tdq_tail_th
+		lr35902_copy_to_from regH regA
+
+		lr35902_copy_to_from regA regE
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_copy_to_from regA regD
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_copy_to_from regA regB
+		lr35902_copyinc_to_ptrHL_from_regA
+
+		# HL == TDQ_END だったら HL = TDQ_FIRST
+		# L == TDQ_END[7:0] ?
+		lr35902_copy_to_from regA regL
+		lr35902_compare_regA_and $(echo $GBOS_TDQ_END | cut -c3-4)
+		(
+			# L == TDQ_END[7:0]
+
+			# H == TDQ_END[15:8] ?
+			lr35902_copy_to_from regA regH
+			lr35902_compare_regA_and $(echo $GBOS_TDQ_END | cut -c1-2)
+			(
+				# H == TDQ_END[15:8]
+
+				# HL = TDQ_FIRST
+				lr35902_set_reg regL $(echo $GBOS_TDQ_FIRST | cut -c3-4)
+				lr35902_set_reg regH $(echo $GBOS_TDQ_FIRST | cut -c1-2)
+			) >src/tdq_enqueue.1.o
+			local sz_1=$(stat -c '%s' src/tdq_enqueue.1.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_1)
+			cat src/tdq_enqueue.1.o
+		) >src/tdq_enqueue.2.o
+		local sz_2=$(stat -c '%s' src/tdq_enqueue.2.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_2)
+		cat src/tdq_enqueue.2.o
+
+		lr35902_copy_to_from regA regL
+		lr35902_copy_to_addr_from_regA $var_tdq_tail_bh
+		lr35902_copy_to_from regA regH
+		lr35902_copy_to_addr_from_regA $var_tdq_tail_th
+
+		# HL == tdq.head だったら tdq.stat に is_full ビットをセット
+		# tdq.head[7:0] == tdq.tail[7:0] ?
+		lr35902_copy_to_regA_from_addr $var_tdq_head_bh
+		lr35902_compare_regA_and regL
+		(
+			# tdq.head[7:0] == tdq.tail[7:0]
+
+			# tdq.head[15:8] == tdq.tail[15:8] ?
+			lr35902_copy_to_regA_from_addr $var_tdq_head_th
+			lr35902_compare_regA_and regH
+			(
+				# tdq.head[15:8] == tdq.tail[15:8]
+
+				# C に full ビットをセット
+				lr35902_set_bitN_of_reg $GBOS_TDQ_STAT_BITNUM_FULL regC
+			) >src/tdq_enqueue.3.o
+			local sz_3=$(stat -c '%s' src/tdq_enqueue.3.o)
+			lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_3)
+			cat src/tdq_enqueue.3.o
+		) >src/tdq_enqueue.4.o
+		local sz_4=$(stat -c '%s' src/tdq_enqueue.4.o)
+		lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_4)
+		cat src/tdq_enqueue.4.o
+
+		# C の empty フラグをクリア
+		lr35902_res_bitN_of_reg $GBOS_TDQ_STAT_BITNUM_EMPTY regC
+
+		# tdq.stat = C
+		lr35902_copy_to_from regA regC
+		lr35902_copy_to_addr_from_regA $var_tdq_stat
+	) >src/tdq_enqueue.5.o
+	local sz_5=$(stat -c '%s' src/tdq_enqueue.5.o)
+	lr35902_rel_jump_with_cond NZ $(two_digits_d $sz_5)
+	cat src/tdq_enqueue.5.o
+
+	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regDE
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -2910,6 +3018,7 @@ global_functions() {
 	f_print_regA
 	f_tile_to_byte
 	f_get_rnd
+	f_tdq_enq
 }
 
 gbos_vec() {
