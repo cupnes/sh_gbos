@@ -93,6 +93,22 @@ f_draw_app_name() {
 	lr35902_inc regE
 	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RU
 	lr35902_call $a_tdq_enq
+	## (
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_OPEN_BRACKET
+	lr35902_call $a_tdq_enq
+	## か
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_KA
+	lr35902_call $a_tdq_enq
+	## り
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_HIRA_RI
+	lr35902_call $a_tdq_enq
+	## )
+	lr35902_inc regE
+	lr35902_set_reg regB $GBOS_TILE_NUM_CLOSE_BRACKET
+	lr35902_call $a_tdq_enq
 
 	# 使用したレジスタをpop
 	lr35902_pop_reg regDE
