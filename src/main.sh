@@ -3407,6 +3407,12 @@ init() {
 	lr35902_copy_to_addr_from_regA $var_fs_base_th
 
 	# 初期アイコンを配置
+	## DASをゼロクリア
+	lr35902_xor_to_regA regA
+	lr35902_copy_to_addr_from_regA $var_draw_act_stat
+	# ウィンドウステータスをゼロクリア
+	lr35902_copy_to_addr_from_regA $var_win_stat
+	## ディレクトリ表示の関数呼び出し
 	lr35902_call $a_view_dir
 	(
 		lr35902_call $a_view_dir_cyc
@@ -3433,7 +3439,7 @@ init() {
 	lr35902_set_reg regA 01
 	lr35902_copy_to_ioport_from_regA $GB_IO_IE
 
-	# 変数初期化
+	# その他の変数初期化
 	# - マウスカーソルX,Y座標を画面左上で初期化
 	lr35902_set_reg regA $GBOS_OBJ_WIDTH
 	lr35902_copy_to_addr_from_regA $var_mouse_x
@@ -3443,17 +3449,12 @@ init() {
 	lr35902_clear_reg regA
 	lr35902_copy_to_addr_from_regA $var_btn_stat
 	lr35902_copy_to_addr_from_regA $var_prv_btn
-	# - DASをゼロクリア
-	lr35902_copy_to_addr_from_regA $var_draw_act_stat
 	# - アプリ用ボタンリリースフラグをゼロクリア
 	lr35902_copy_to_addr_from_regA $var_app_release_btn
 	# - 実行ファイル用変数をゼロクリア
 	lr35902_copy_to_addr_from_regA $var_exe_1
 	lr35902_copy_to_addr_from_regA $var_exe_2
 	lr35902_copy_to_addr_from_regA $var_exe_3
-	# - ウィンドウステータスをディレクトリ表示中で初期化
-	lr35902_set_bitN_of_reg $GBOS_WST_BITNUM_DIR regA
-	lr35902_copy_to_addr_from_regA $var_win_stat
 	# - tdq.head = tdq.tail = TDQ_FIRST
 	lr35902_set_reg regA $(echo $GBOS_TDQ_FIRST | cut -c3-4)
 	lr35902_copy_to_addr_from_regA $var_tdq_head_bh
