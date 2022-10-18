@@ -46,8 +46,8 @@ case "$1" in
 	;;
 esac
 
-set -uex
-# set -ue
+# set -uex
+set -ue
 
 . include/gb.sh
 . src/main.sh
@@ -103,21 +103,26 @@ print_fs_system() {
 			cp apps/binedit/binedit.exe fs_system/0100.exe
 		fi
 
-		# sound_ch2_rand_description.2bpp
+		# har22a_cover.2bpp
 		if [ ! -f fs_system/0200.2bpp ]; then
-			cp imgs/sound_ch2_rand_description.2bpp fs_system/0200.2bpp
+			cp imgs/har22a_cover.2bpp fs_system/0200.2bpp
+		fi
+
+		# sound_ch2_rand_description.2bpp
+		if [ ! -f fs_system/0300.2bpp ]; then
+			cp imgs/sound_ch2_rand_description.2bpp fs_system/0300.2bpp
 		fi
 
 		# sound_ch2_rand.exe
-		if [ ! -f fs_system/0300.exe ]; then
+		if [ ! -f fs_system/0400.exe ]; then
 			make -C apps/sound_ch2_rand
-			cp apps/sound_ch2_rand/sound_ch2_rand.exe fs_system/0300.exe
+			cp apps/sound_ch2_rand/sound_ch2_rand.exe fs_system/0400.exe
 		fi
 
 		# colophon_random_sound_play.txt
-		if [ ! -f fs_system/0400.txt ]; then
+		if [ ! -f fs_system/0500.txt ]; then
 			make -C docs/colophon_random_sound_play
-			cp docs/colophon_random_sound_play/colophon_random_sound_play.txt fs_system/0400.txt
+			cp docs/colophon_random_sound_play/colophon_random_sound_play.txt fs_system/0500.txt
 		fi
 
 		# # cartram_formatter.exe
