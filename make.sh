@@ -119,10 +119,10 @@ print_fs_system() {
 			cp apps/sound_ch2_rand/sound_ch2_rand.exe fs_system/0400.exe
 		fi
 
-		# colophon_random_sound_play.txt
+		# colophon_har22a.txt
 		if [ ! -f fs_system/0500.txt ]; then
-			make -C docs/colophon_random_sound_play
-			cp docs/colophon_random_sound_play/colophon_random_sound_play.txt fs_system/0500.txt
+			make -C docs/colophon_har22a
+			cp docs/colophon_har22a/colophon_har22a.txt fs_system/0500.txt
 		fi
 
 		# # cartram_formatter.exe
