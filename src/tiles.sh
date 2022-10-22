@@ -8,7 +8,7 @@ SRC_TILES_SH=true
 GBOS_GFUNC_START=1000
 
 GBOS_TILEDATA_AREA_BYTES=$(calc16 "${GBOS_GFUNC_START}-150")
-GBOS_NUM_ALL_TILES=8b
+GBOS_NUM_ALL_TILES=8d
 GBOS_NUM_ALL_TILE_BYTES=$(four_digits $(calc16 "${GBOS_NUM_ALL_TILES}*10"))
 
 tiles_bc_form="ibase=16;${GBOS_TILEDATA_AREA_BYTES}-${GBOS_NUM_ALL_TILE_BYTES}"
@@ -482,4 +482,12 @@ char_tiles() {
 	# 8a: 」
 	echo -en '\x00\x00\x04\x04\x04\x04\x04\x04'
 	echo -en '\x04\x04\x04\x04\x04\x04\x3c\x3c'
+
+	# 細胞
+	# 8b: cell-0
+	echo -en '\x00\x00\x00\x00\x00\x00\x3e\x3e'
+	echo -en '\x41\x41\x41\x41\x41\x41\x7f\x7f'
+	# 8c: cell-1
+	echo -en '\x00\x00\x00\x00\x1c\x1c\x22\x22'
+	echo -en '\x41\x41\x41\x41\x41\x41\x3e\x3e'
 }
