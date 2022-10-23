@@ -68,10 +68,34 @@ var_exe_3=c025	# ファイルタイプ
 # タイマー割り込みで、このアドレスへジャンプしてくる
 # push AF -> push HLの後、ここへジャンプしてくるため
 # 最低限、pop HL(0xe1) -> pop AF(0xf1) -> reti(0xd9) は行うこと
+# タイマーハンドラの実装はinclude/timer.shのtimer_init_handler()
+# 2022-09-22現在、timer_init_handler()で$var_timer_handlerに並べているのは
+# 上記したpop HL・pop AF・retiの3バイト
+# ただし、今後、タイマーハンドラに色々と実装するかもしれない事を考えて
+# 100バイトの領域は確保しておくことにする
 var_timer_handler=c026
-# 現状、0xc028 までは使っている
+# ↑100(0x64)バイトは確保しておくということで、
+# 　0xc026 - 0xc089 は変数等に使わないこと
 
-# 変数領域が$GBOS_TDQ_FIRSTに達しないようにすること
-# (include/tdq.sh参照)
+# バイナリ生物用変数
+var_cell_next_tile=c08a	# 次に描画する細胞タイルのタイル番号
+var_cell_data_first_bh=c08b	# 1つ目の細胞データのアドレス(下位8ビット)
+var_cell_data_first_th=c08c	# 1つ目の細胞データのアドレス(上位8ビット)
+var_cell_data_current_bh=c08d	# 選択中の細胞データのアドレス(下位8ビット)
+var_cell_data_current_th=c08e	# 選択中の細胞データのアドレス(上位8ビット)
+
+# 0xc08f : 未使用
+# ※ 念の為、細胞データを2バイト境界に配置する為
+
+# 0xc090 - 0xc161 : 細胞データ1
+# (include/binbio.sh 参照)
+# var_cell_tadr_bh=c092	# 描画アドレス(下位8ビット)
+# var_cell_tadr_th=c093	# 描画アドレス(上位8ビット)
+# TODO 細胞データ初期化関数を追加し↑2つの変数は消す
+
+# 0xc300 - 0xcefd : TDQ
+# (include/tdq.sh 参照)
 
 var_dbg_over_vblank=cf00	# vblank期間を超えたことを示すフラグ
+
+# 0xdc00 - : タイルミラー領域

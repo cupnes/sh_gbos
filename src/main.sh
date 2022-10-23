@@ -14,6 +14,7 @@ SRC_MAIN_SH=true
 . include/fs.sh
 . include/con.sh
 . include/timer.sh
+. include/binbio.sh
 . src/tiles.sh
 
 rm -f $MAP_FILE_NAME
@@ -2955,6 +2956,115 @@ f_tdq_enq() {
 	lr35902_return
 }
 
+# 指定されたアドレス先を細胞データで初期化する
+# in : regH  - 細胞データで初期化するアドレス[15:8]
+#      regL  - 細胞データで初期化するアドレス[7:0]
+f_tdq_enq >src/f_tdq_enq.o
+fsz=$(to16 $(stat -c '%s' src/f_tdq_enq.o))
+fadr=$(calc16 "${a_tdq_enq}+${fsz}")
+a_init_cell_data=$(four_digits $fadr)
+echo -e "a_init_cell_data=$a_init_cell_data" >>$MAP_FILE_NAME
+f_init_cell_data() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regHL
+
+	# next_cell_addr: 次の細胞のアドレス
+	# NULL(0x0000)で初期化
+	lr35902_xor_to_regA regA
+	lr35902_copyinc_to_ptrHL_from_regA
+	lr35902_copyinc_to_ptrHL_from_regA
+
+	# vram_addr: 描画先VRAMアドレス
+	# NULL(0x0000)で初期化
+	lr35902_copyinc_to_ptrHL_from_regA
+	lr35902_copyinc_to_ptrHL_from_regA
+
+	# life_duration: 寿命
+	# 0x0000で初期化
+	lr35902_copyinc_to_ptrHL_from_regA
+	lr35902_copyinc_to_ptrHL_from_regA
+
+	# life_left: 余命
+	# 0x0000で初期化
+	lr35902_copyinc_to_ptrHL_from_regA
+	lr35902_copyinc_to_ptrHL_from_regA
+
+	# fitness: 適応度
+	# 0x00で初期化
+	lr35902_copyinc_to_ptrHL_from_regA
+
+	# bin_size: 機械語バイナリサイズ
+	# 0x01で初期化
+	lr35902_inc regA
+	lr35902_copyinc_to_ptrHL_from_regA
+
+	# bin_data: 機械語バイナリ
+	# ret命令(0xc9)を配置
+	lr35902_set_reg regA c9
+	lr35902_copyinc_to_ptrHL_from_regA
+	# 残り99(0x63)バイト分を0x00で初期化
+	lr35902_xor_to_regA regA
+	lr35902_set_reg regB 63
+	(
+		lr35902_copyinc_to_ptrHL_from_regA
+		lr35902_dec regB
+	) >src/f_init_cell_data.1.o
+	cat src/f_init_cell_data.1.o
+	local sz_1=$(stat -c '%s' src/f_init_cell_data.1.o)
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+
+	# bin_attr: 機械語バイナリ属性
+	# 0xe0を配置
+	lr35902_set_reg regA e0
+	lr35902_copyinc_to_ptrHL_from_regA
+	# 残り99(0x63)バイト分を0x00で初期化
+	lr35902_xor_to_regA regA
+	lr35902_set_reg regB 63
+	cat src/f_init_cell_data.1.o
+	lr35902_rel_jump_with_cond NZ $(two_comp_d $((sz_1 + 2)))
+
+	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
+# 指定されたアドレスの細胞データへ指定されたVRAMアドレスを設定する
+# in : regH  - 細胞データアドレス[15:8]
+#      regL  - 細胞データアドレス[7:0]
+#      regD  - VRAMアドレス[15:8]
+#      regE  - VRAMアドレス[7:0]
+f_init_cell_data >src/f_init_cell_data.o
+fsz=$(to16 $(stat -c '%s' src/f_init_cell_data.o))
+fadr=$(calc16 "${a_init_cell_data}+${fsz}")
+a_set_vram_addr_to_cell=$(four_digits $fadr)
+echo -e "a_set_vram_addr_to_cell=$a_set_vram_addr_to_cell" >>$MAP_FILE_NAME
+f_set_vram_addr_to_cell() {
+	# push
+	lr35902_push_reg regAF
+	lr35902_push_reg regBC
+	lr35902_push_reg regHL
+
+	# regHL += VRAMアドレスへのオフセット(2バイト)
+	lr35902_set_reg regBC 0002
+	lr35902_add_to_regHL regBC
+
+	# *regHL = regDE
+	lr35902_copy_to_ptrHL_from regE
+	lr35902_dec regBC
+	lr35902_add_to_regHL regBC
+	lr35902_copy_to_ptrHL_from regD
+
+	# pop & return
+	lr35902_pop_reg regHL
+	lr35902_pop_reg regBC
+	lr35902_pop_reg regAF
+	lr35902_return
+}
+
 # V-Blankハンドラ
 # f_vblank_hdlr() {
 	# V-Blank/H-Blank時の処理は、
@@ -3019,6 +3129,8 @@ global_functions() {
 	f_tile_to_byte
 	f_get_rnd
 	f_tdq_enq
+	f_init_cell_data
+	f_set_vram_addr_to_cell
 }
 
 gbos_vec() {
@@ -3469,6 +3581,14 @@ init() {
 	lr35902_copy_to_addr_from_regA $var_mouse_enable
 	# - タイマーハンドラ初期化
 	timer_init_handler
+	# - 次に描画する細胞タイルのタイル番号初期化
+	lr35902_set_reg regA $GBOS_TILE_NUM_CELL_1
+	lr35902_copy_to_addr_from_regA $var_cell_next_tile
+
+	# 初期配置の細胞の初期化
+	lr35902_set_reg regL $(echo $BINBIO_CELL_DATA_1 | cut -c3-4)
+	lr35902_set_reg regH $(echo $BINBIO_CELL_DATA_1 | cut -c1-2)
+	lr35902_call $a_init_cell_data
 
 	# タイルミラー領域の初期化
 	init_tmrr
