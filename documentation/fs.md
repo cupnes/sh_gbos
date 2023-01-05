@@ -1,0 +1,15 @@
+# ファイルシステム
+## クリックからファイルシステムへのアクセスまでの流れ
+例) 左クリック(Bボタン)の場合
+- [event_driven()](../src/main.sh#L3823)内で[btn_release_handler()を呼び出し](../src/main.sh#L3928)
+  - [btn_release_handler()](../src/main.sh#L3561)内で[f_click_event()を呼び出し](../src/main.sh#L3567)
+    - [f_click_event()](../src/main.sh#L2694)内で、
+      - [f_check_click_icon_area_{x,y}()を呼び出してクリックした場所のファイル番号を取得](../src/main.sh#L2719L2720)
+      - [view_file()を呼び出してファイルアクセス](../src/main.sh#L2727)
+        - [view_file()](../src/main.sh#L2590)内で、
+          - ファイルシステムを解析し指定されたファイル番号のファイルのファイルタイプを取得
+          - ファイルタイプに応じた実行/閲覧の関数を呼び出す
+            - 例えば画像の場合[f_view_img()](../src/main.sh#L2684)を呼び出す
+              - [f_view_img()](../src/main.sh#L814)内で、
+                - ファイルシステムを解析し指定されたファイル番号のファイルデータ先頭アドレスを取得
+                - 取得したアドレス以下を画像データとして画面描画するように周期関数([f_view_img_cyc()](../src/main.sh#L918))向け設定
