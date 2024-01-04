@@ -17,6 +17,7 @@ CON_EOL_MASK=1f
 CON_EOL_VAL=11
 
 # 最終行判定
+# TODO この定数では最終行判定できないのでは?
 CON_LAST_LINE_MASK=e0
 CON_LAST_LINE_VAL=e0
 
